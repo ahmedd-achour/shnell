@@ -1,0 +1,30 @@
+.profile-page-container {
+  background-color: var(--color-bg-primary);
+  min-height: 100vh;
+}
+
+.avatar-hero-pill {
+  width: 64px;
+  height: 64px;
+  border-radius: var(--radius-pill);
+  background: var(--color-brand-primary);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 1.8rem;
+  box-shadow: var(--shadow-brand);
+}
+
+.live-pulse-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--color-success);
+  box-shadow: 0 0 10px var(--color-success);
+}
+
+.fs-8 { font-size: 0.75rem; }
+.text-emerald { color: var(--color-success) !important; }
+.text-brand { color: var(--color-brand-primary) !important; }

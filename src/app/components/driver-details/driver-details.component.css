@@ -1,0 +1,103 @@
+/* ------------------------------------------- */
+/* Driver Details Component Styles (Dashboard) */
+/* ------------------------------------------- */
+
+/* Host element styling to set the overall background for the component */
+:host {
+  display: block;
+  padding: 1.5rem;
+  background-color: #f4f7f6; /* Light gray background for the dashboard */
+  min-height: 100vh;
+}
+
+/* Section Headers (h2, h3) */
+h2, h3 {
+  color: #34495e; /* Darker, professional color */
+  border-bottom: 2px solid #e9ecef;
+  padding-bottom: 0.75rem;
+  margin-bottom: 1.5rem;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+
+/* Driver Name Header */
+h4 {
+  color: #007bff; /* Primary accent color for the main name */
+  font-weight: 700;
+  margin-bottom: 1.25rem;
+}
+
+/* Card Styling for Dashboard Look */
+.card {
+  border: none;
+  border-radius: 12px; /* Rounded corners */
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08); /* Subtle shadow for depth */
+  transition: transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
+  background-color: #ffffff; /* White card background */
+}
+
+/* Card Hover Effect */
+.card:hover {
+  transform: translateY(-2px); /* Slight lift on hover */
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.15);
+}
+
+.card-body {
+  padding: 1.5rem;
+}
+
+/* Content Text Styling */
+.card-body p {
+  margin-bottom: 0.6rem;
+  color: #495057;
+  font-size: 0.95rem;
+  display: flex; /* Use flex to align strong and data */
+}
+
+/* Label (Strong) Styling */
+.card-body strong {
+  color: #343a40;
+  font-weight: 600;
+  display: inline-block;
+  min-width: 120px; /* Ensures labels align vertically */
+  margin-right: 5px;
+}
+
+/* Image Styling */
+img {
+  border-radius: 50%; /* Make profile image round */
+  border: 4px solid #dee2e6;
+  object-fit: cover;
+  margin-top: 1rem;
+  display: block;
+}
+
+/* Vehicle image can be squared */
+.card-body img[alt="Vehicle Image"] {
+    border-radius: 8px;
+    border: 2px solid #dee2e6;
+}
+
+/* Rating Text */
+p:has(strong[aria-label="Average Rating:"]),
+p:has(strong[aria-label="Total Ratings:"]) {
+  font-size: 1.1rem;
+  color: #28a745; /* Green for positive ratings */
+}
+
+/* Loading and Error Message Styling */
+.text-center {
+  color: #6c757d;
+  font-style: italic;
+  padding: 1rem;
+}
+
+.alert-danger {
+  border-radius: 8px;
+  /* Use a slightly darker red theme for better visibility */
+  background-color: #f7cac9;
+  border-color: #f1948a;
+  color: #900d09;
+  padding: 1rem;
+  font-weight: 500;
+}

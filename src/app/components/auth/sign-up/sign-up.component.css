@@ -1,0 +1,191 @@
+/* --- Global Styles & Variables (Kept the same) --- */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+:root {
+  --primary-color: #007bff;
+  --primary-dark: #0056b3;
+  --secondary-color: #6c757d;
+  --text-dark: #333;
+  --text-light: #fff;
+  --background-light: #f4f7fa;
+  --card-shadow: 0 10px 30px rgba(0, 0, 0, 0.1), 0 4px 12px rgba(0, 0, 0, 0.05);
+  --border-radius: 12px;
+  --success-color: #28a745;
+  --error-color: #dc3545;
+  font-family: 'Poppins', sans-serif;
+}
+
+
+
+
+/* --- Full Screen Container --- */
+.full-screen-b2b-container {
+  display: flex;
+  min-height: 100vh;
+  width: 100vw;
+  overflow: hidden; /* Crucial: No scrolling on the main container */
+}
+
+/* --- Left Panel: Image (No change needed here) --- */
+.image-panel {
+  flex: 1;
+  background: url('../../../../img/shnell.jpeg') no-repeat center center / cover;
+  position: relative;
+  min-width: 50%;
+}
+
+.image-panel::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0, 0, 0, 0.2);
+}
+
+/* --- Right Panel: Form (KEY CHANGE) --- */
+.form-panel {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-color: var(--background-light);
+  padding: 1.5rem; /* Reduced padding */
+  min-width: 50%;
+  /* REMOVED: overflow-y: auto; -> Ensures the panel itself does not scroll */
+}
+
+.signup-card {
+  background-color: var(--text-light);
+  border-radius: var(--border-radius);
+  max-width: 450px;
+  width: 100%;
+  padding: 2rem 2rem; /* Reduced overall card padding */
+  box-shadow: var(--card-shadow);
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+
+  /* CRUCIAL for non-scrollable form content */
+  max-height: 100%;
+  overflow: hidden;
+}
+
+/* --- Logo & Titles --- */
+.logo-container { margin-bottom: 1rem !important; }
+.logo {
+  width: 90px;
+  height: auto;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.title {
+  font-size: 1.8rem; /* Slightly smaller title for more space */
+  font-weight: 700;
+  color: var(--text-dark);
+  margin-bottom: 0.3rem; /* Reduced margin */
+}
+
+.subtitle {
+  font-size: 0.95rem;
+  color: var(--secondary-color);
+  margin-bottom: 1rem; /* Reduced margin */
+}
+
+/* --- Form Specific Styles (KEY CHANGE: Vertical compression) --- */
+form {
+  display: flex;
+  flex-direction: column;
+  /* Allow the form content to scroll internally if necessary, but keep the card static */
+  overflow-y: auto;
+  padding-right: 0.5rem; /* Add padding to account for scrollbar width */
+}
+
+/* Integration of your custom input style for generic inputs */
+input {
+  /* This style is generally applied by Material, but repeated here for robustness */
+  width: 100%;
+  padding: 0.8rem 1rem;
+  margin-bottom: 1.2rem;
+  border: 1px solid #ddd;
+  border-radius: 0.5rem;
+  font-size: 0.95rem;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+/* Material Form Fields & Custom Select */
+mat-form-field {
+  width: 100%;
+  margin-bottom: 0.5rem !important; /* SIGNIFICANT REDUCTION in field margin */
+}
+
+/* Custom Select Styling */
+.form-select {
+  padding: 0.7rem 1rem; /* Reduced padding */
+  border: 1px solid #ced4da;
+  height: auto;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23343a40' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M2 5l6 6 6-6'/%3e%3c/svg%3e");
+  background-repeat: no-repeat;
+  background-position: right 0.75rem center;
+  background-size: 16px 12px;
+}
+.form-select:focus {
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 0.25rem rgba(0, 123, 255, 0.25);
+  outline: 0;
+}
+
+.form-label.select-label {
+  margin-bottom: 0.3rem; /* Reduced margin */
+  font-size: 0.85rem; /* Smaller font */
+}
+
+/* Terms Checkbox */
+mat-checkbox {
+    margin-bottom: 0.5rem !important; /* Reduced margin */
+    font-size: 0.9rem; /* Smaller font */
+}
+
+/* Submit Button */
+button[mat-raised-button] {
+  padding: 0.6rem 1.5rem; /* Reduced padding */
+  margin-top: 0.5rem; /* Reduced margin */
+  border-radius: 50px;
+}
+
+/* Footer Navigation */
+p.text-center.mt-3 {
+  font-size: 0.85rem; /* Smallest font */
+  margin-top: 0.5rem !important; /* Reduced margin */
+}
+
+/* --- Responsive Adjustments (KEY CHANGE: Hiding Image on Mobile) --- */
+@media (max-width: 992px) {
+  .full-screen-b2b-container {
+    flex-direction: column;
+    overflow-y: auto; /* Allow scrolling when stacked */
+  }
+
+  .image-panel {
+    display: none; /* HIDE IMAGE on tablets/mobiles to focus on the form */
+  }
+
+  .form-panel {
+    width: 100%;
+    min-width: 100%;
+    padding: 1rem;
+    overflow-y: auto; /* Allows form scrolling on mobile */
+  }
+
+  .signup-card {
+    padding: 1.5rem;
+    margin: 1rem 0;
+    max-height: none; /* Remove height constraint when scrolling is allowed */
+  }
+}

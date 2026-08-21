@@ -1,0 +1,5 @@
+.dashboard-card {
+  background: rgba(18, 26, 47, 0.7);
+  backdrop-filter: blur(12px);
+  border-radius: 12px;
+}

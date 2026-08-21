@@ -1,0 +1,90 @@
+<div class="map-tab-container position-relative">
+  <!-- Map Control Top Header Bar -->
+  <div class="card border-0 shadow-lg dashboard-card mb-3">
+    <div class="card-body p-3">
+      <div class="row g-3 align-items-center">
+        <div class="col-12 col-md-6 col-lg-7">
+          <div class="input-group">
+            <span class="input-group-text bg-dark border-secondary text-muted"><i class="bi bi-geo-alt-fill text-warning"></i></span>
+            <input
+              type="text"
+              class="form-control"
+              placeholder="Search active driver by name, phone or RTDB ID..."
+              [(ngModel)]="searchQuery"
+              (ngModelChange)="updateMarkers()"
+            />
+          </div>
+        </div>
+        <div class="col-12 col-md-6 col-lg-5 d-flex align-items-center justify-content-md-end gap-3">
+          <div class="d-flex align-items-center gap-2">
+            <span class="pulse-ring"></span>
+            <span class="fw-bold text-white small">{{ driverLocations.length }} Active RTDB Driver Pings</span>
+          </div>
+          <button class="btn btn-sm btn-outline-warning rounded-pill px-3" (click)="updateMarkers()">
+            <i class="bi bi-arrow-clockwise me-1"></i> Recenter Map
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row g-3">
+    <!-- Interactive Leaflet Map Viewport -->
+    <div class="col-12 col-lg-8 col-xl-9">
+      <div class="card border-0 shadow-sm dashboard-card overflow-hidden">
+        <div class="card-body p-0 position-relative">
+          <div #mapElement class="map-viewport"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Live Driver Side Telemetry Panel -->
+    <div class="col-12 col-lg-4 col-xl-3">
+      <div class="card border-0 shadow-sm dashboard-card h-100">
+        <div class="card-header bg-transparent border-bottom border-subtle py-3 d-flex justify-content-between align-items-center">
+          <h6 class="fw-bold text-white mb-0"><i class="bi bi-radar text-warning me-2"></i>Live Fleet Telemetry</h6>
+          <span class="badge bg-dark border text-muted fs-8">{{ filteredLocations.length }} online</span>
+        </div>
+        <div class="card-body p-2 overflow-auto driver-list-viewport">
+          <div
+            *ngFor="let loc of filteredLocations"
+            class="driver-card p-3 mb-2 rounded-3 cursor-pointer border border-subtle"
+            [class.active-selected]="selectedDriver?.driverId === loc.driverId"
+            (click)="centerOnDriver(loc)">
+            <div class="d-flex justify-content-between align-items-start mb-2">
+              <div>
+                <h6 class="fw-bold text-white mb-0 fs-7">
+                  {{ loc.driverName || 'Driver #' + loc.driverId.substring(0, 6) }}
+                </h6>
+                <small class="text-muted font-monospace fs-8">UID: {{ loc.driverId }}</small>
+              </div>
+              <span class="status-pill success fs-8">
+                <i class="bi bi-clock me-1"></i>{{ getTimeAgo(loc.ts) }}
+              </span>
+            </div>
+
+            <div class="card bg-dark text-white shadow-lg border-0 rounded-3">
+              <div class="col-6"><i class="bi bi-geo me-1"></i>Geohash: <span class="text-info font-mono">{{ loc.g || 'N/A' }}</span></div>
+              <div class="col-6"><i class="bi bi-reception-4 me-1"></i>Accuracy: <span class="text-white">{{ loc.accuracy || 10 }}m</span></div>
+              <div class="col-12"><i class="bi bi-pin-map me-1"></i>Coords: <span class="text-warning font-mono">[{{ loc.coordinates[1] | number:'1.4-4' }}, {{ loc.coordinates[0] | number:'1.4-4' }}]</span></div>
+            </div>
+
+            <div class="d-flex justify-content-between align-items-center mt-2 pt-2 border-top border-subtle gap-1">
+              <button class="btn btn-xs btn-outline-info rounded-pill px-2 py-1 fs-8 text-nowrap fw-semibold" (click)="$event.stopPropagation(); openDriverDetailsInNewTab(loc.driverId)">
+                <i class="bi bi-box-arrow-up-right me-1"></i> See Details
+              </button>
+              <button class="btn btn-xs btn-saas-primary rounded-pill px-3 py-1 fs-8 text-nowrap" (click)="$event.stopPropagation(); onNotifyDriver(selectedDriver?.user)">
+                <i class="bi bi-bell-fill me-1"></i> Signal
+              </button>
+            </div>
+          </div>
+
+          <div *ngIf="filteredLocations.length === 0" class="text-center py-5 text-muted">
+            <i class="bi bi-geo-alt display-6 d-block mb-2"></i>
+            <p class="small mb-0">No active driver RTDB pings recorded.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

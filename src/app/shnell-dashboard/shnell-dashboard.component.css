@@ -1,0 +1,53 @@
+.dashboard-root {
+  background-color: var(--color-bg-primary);
+  color: var(--color-text-main);
+}
+
+.dash-header {
+  background: var(--color-surface-card) !important;
+  border: 1px solid var(--color-border-subtle) !important;
+  border-radius: var(--radius-xl) !important;
+  box-shadow: var(--shadow-md);
+}
+
+.brand-badge {
+  background: var(--color-brand-subtle);
+  border: 1px solid var(--color-brand-border);
+  color: var(--color-text-main);
+  font-family: 'Outfit', sans-serif;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+}
+
+.text-brand {
+  color: var(--color-brand-primary) !important;
+}
+
+.dash-nav-tabs .nav-link {
+  color: var(--color-text-muted);
+  background: var(--color-surface-subtle);
+  border: 1px solid var(--color-border-subtle);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  font-size: 0.875rem;
+}
+
+.dash-nav-tabs .nav-link:hover {
+  color: var(--color-text-main);
+  border-color: var(--color-border-medium);
+  background: var(--color-surface-card-hover);
+}
+
+.dash-nav-tabs .nav-link.active {
+  color: #ffffff !important;
+  background: var(--color-brand-primary) !important;
+  border-color: var(--color-brand-primary) !important;
+  box-shadow: var(--shadow-brand);
+}
+
+.loading-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: var(--color-surface-overlay);
+  backdrop-filter: blur(12px);
+}

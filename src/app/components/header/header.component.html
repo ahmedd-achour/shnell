@@ -1,0 +1,94 @@
+<div class="container-fluid bg-dark d-none d-lg-block">
+  <div class="row py-2 px-lg-5">
+    <div class="col-lg-6 text-center text-lg-left mb-2 mb-lg-0">
+      <div class="d-inline-flex align-items-center text-white">
+        <small><i class="fa fa-phone-alt mr-2"></i>+216 28 29 20 24</small>
+        <small class="px-3">|</small>
+        <small><i class="fa fa-envelope mr-2"></i>shnellservices&#64;gmail.com</small>
+      </div>
+    </div>
+    <div class="col-lg-6 text-center text-lg-right">
+      <div class="d-inline-flex align-items-center">
+        <a class="text-white px-2" href="https://www.facebook.com/share/14P8CrCLgNL/"><i class="fab fa-facebook-f"></i></a>
+        <a class="text-white px-2" href="https://bsky.app/profile/xschnell.bsky.social">  <img src="img/bluesky-brands-solid-full (3).svg" alt="Bluesky" width="18" height="18" style="margin-top: -2px;" />
+</a>
+        <a class="text-white px-2" href="https://www.instagram.com/_xschnell_?igsh=MTRqYmFoa3IxdXI2dQ=="><i class="fab fa-instagram"></i></a>
+        <a class="text-white pl-2" href="https://youtube.com/@xschnell?si=yicXOm8X57OlepZB"><i class="fab fa-youtube"></i></a>
+      </div>
+    </div>
+  </div>
+</div>
+ <!-- TOP CONTACT BAR (DESKTOP ONLY) -->
+
+
+<!-- NAVBAR -->
+<nav class="navbar main-navbar navbar-expand-lg navbar-light py-3 py-lg-0 px-lg-5">
+  <!-- MOBILE TOGGLE BUTTON -->
+  <div
+    class="navbar-toggler ml-auto mr-3 d-lg-none"
+    style="background-color:rgb(175,153,56); border-radius:10px; position:fixed; z-index:1050; margin-top: 25px;"
+    (click)="toggleMenu()"
+    aria-label="Toggle navigation"
+  >
+    <span class="navbar-toggler-icon"></span>
+  </div>
+
+
+  <!-- DESKTOP MENU -->
+  <div class="collapse navbar-collapse justify-content-between px-lg-3 d-none d-lg-flex">
+
+    <div class="navbar-nav m-auto py-0 text-center">
+
+      <div
+        *ngFor="let item of navItems"
+        [routerLink]="item.path"
+        routerLinkActive="active"
+        [routerLinkActiveOptions]="{ exact: true }"
+        class="nav-item nav-link"
+      >
+        {{ item.label }}
+      </div>
+
+    </div>
+
+  </div>
+
+</nav>
+
+
+<!-- MOBILE SIDEBAR -->
+<div class="mobile-sidebar" [class.open]="isMenuOpen">
+
+  <div class="sidebar-header">
+
+    <button class="close-btn" (click)="toggleMenu()">
+      ✕
+    </button>
+
+  </div>
+
+
+  <div class="sidebar-links">
+
+    <div
+      *ngFor="let item of navItems"
+      [routerLink]="item.path"
+      routerLinkActive="active"
+      [routerLinkActiveOptions]="{ exact: true }"
+      (click)="toggleMenu()"
+      class="sidebar-item"
+    >
+      {{ item.label }}
+    </div>
+
+  </div>
+
+</div>
+
+
+<!-- BACKDROP -->
+<div
+  class="sidebar-backdrop"
+  *ngIf="isMenuOpen"
+  (click)="toggleMenu()"
+></div>

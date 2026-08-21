@@ -1,0 +1,107 @@
+<div id="wrapper" [class.toggled]="sidebarCollapsed">
+  <!-- Modern SaaS Navigation Sidebar -->
+  <aside id="sidebar-wrapper" [class.collapsed]="sidebarCollapsed">
+    <!-- Brand Header -->
+    <div class="sidebar-brand d-flex align-items-center justify-content-between p-3 border-bottom border-subtle">
+      <div class="d-flex align-items-center gap-3 cursor-pointer" (click)="navigate({path: 'home-admin'})">
+        <div class="brand-icon-box">
+          <i class="bi bi-lightning-charge-fill"></i>
+        </div>
+        <div class="brand-text" *ngIf="!sidebarCollapsed">
+          <span class="brand-name">SHNELL</span>
+          <span class="brand-tag">FLEET OS</span>
+        </div>
+      </div>
+      <button class="btn-toggle-icon d-none d-lg-flex" (click)="toggleSidebar()" [title]="sidebarCollapsed ? 'Expand Sidebar' : 'Collapse Sidebar'">
+        <i class="bi" [ngClass]="sidebarCollapsed ? 'bi-chevron-right' : 'bi-chevron-left'"></i>-
+      </button>
+    </div>
+
+    <!-- User Status Banner if Unauthorized -->
+    <div *ngIf="unauthorizedMessage" class="alert alert-warning m-3 p-2 fs-8 rounded-3">
+      <i class="bi bi-exclamation-triangle-fill me-1"></i> {{ unauthorizedMessage }}
+    </div>
+
+    <!-- Navigation Menu -->
+    <div class="sidebar-nav py-3">
+      <div class="nav-section-title px-3 pb-2 text-uppercase fs-8 fw-semibold text-muted" *ngIf="!sidebarCollapsed">
+        Platform Navigation
+      </div>
+
+      <ul class="nav flex-column gap-1 px-2">
+        <li class="nav-item" *ngFor="let item of navItems">
+          <a class="nav-link d-flex align-items-center gap-3 rounded-3"
+             [class.active]="isActive(item)"
+             (click)="navigate(item)">
+            <div class="nav-icon-container">
+              <i class="bi" [ngClass]="item.icon"></i>
+            </div>
+            <span class="nav-label" *ngIf="!sidebarCollapsed">{{ item.label }}</span>
+            <span class="active-indicator" *ngIf="isActive(item)"></span>
+          </a>
+        </li>
+      </ul>
+    </div>
+
+    <!-- Bottom User Profile Footer -->
+    <div class="sidebar-footer p-3 border-top border-subtle mt-auto" *ngIf="user">
+      <div class="d-flex align-items-center justify-content-between">
+        <div class="d-flex align-items-center gap-2 overflow-hidden">
+          <div class="user-avatar-pill">
+            {{ user.name ? (user.name.charAt(0) | uppercase) : 'U' }}
+          </div>
+          <div class="user-meta" *ngIf="!sidebarCollapsed">
+            <div class="user-name text-truncate">{{ user.name || 'Admin User' }}</div>
+            <div class="user-role-badge text-uppercase">{{ user.role }}</div>
+          </div>
+        </div>
+        <button *ngIf="!sidebarCollapsed" class="btn-signout" (click)="router.navigate(['/sign-in'])" title="Sign Out">
+          <i class="bi bi-box-arrow-right"></i>
+        </button>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main Content Page Wrapper -->
+  <div id="page-content-wrapper">
+    <!-- Header Top Navbar Bar -->
+    <header class="main-topbar d-flex align-items-center justify-content-between px-4 py-3 border-bottom border-subtle">
+      <div class="d-flex align-items-center gap-3">
+        <button class="btn btn-sm btn-icon-glass d-lg-none" (click)="toggleSidebar()">
+          <i class="bi bi-list fs-5"></i>-
+        </button>
+
+        <div class="topbar-search d-none d-md-flex align-items-center">
+          <i class="bi bi-search search-icon"></i>
+          <input type="text" class="search-input" placeholder="Search orders, drivers, vehicles or stops...">
+          <kbd class="search-kbd">⌘K</kbd>
+        </div>
+      </div>
+
+      <div class="d-flex align-items-center gap-3">
+        <!-- Telemetry Live Status -->
+        <div class="live-status-pill d-none d-sm-flex align-items-center gap-2 px-3 py-1 rounded-pill">
+          <span class="live-pulse-dot"></span>
+          <span class="fs-8 fw-semibold text-emerald">SYSTEM ONLINE</span>
+        </div>
+
+        <!-- Quick Notifications Pill -->
+        <button class="btn-topbar-action" title="System Notifications">
+          <i class="bi bi-bell"></i>
+          <span class="badge-dot"></span>
+        </button>
+
+        <!-- Current User Chip -->
+        <div class="user-chip-bar d-flex align-items-center gap-2 px-3 py-1 rounded-pill" *ngIf="user">
+          <i class="bi bi-shield-check text-indigo"></i>
+          <span class="fs-8 fw-semibold">{{ user.email }}</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main View Outlet Container -->
+    <main class="page-body-container p-4">
+      <router-outlet></router-outlet>
+    </main>
+  </div>
+</div>

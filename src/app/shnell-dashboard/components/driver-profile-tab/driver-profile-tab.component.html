@@ -1,0 +1,320 @@
+<div class="driver-profile-container">
+  <!-- Driver Selector Header -->
+  <div class="card border-0 shadow-sm dashboard-card mb-4">
+    <div class="card-body p-3 d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3">
+      <div>
+        <h4 class="mb-1 text-white font-heading"><i class="bi bi-person-badge-fill me-2 text-primary"></i>Driver Dossier & Admin Telemetry</h4>
+        <p class="text-muted small mb-0">Inspect driver records, update admin states, manage asset approvals & dispatch cross-tab FCM notifications.</p>
+      </div>
+      <div class="d-flex align-items-center gap-2">
+        <label class="text-muted small fw-semibold">Select Driver:</label>
+        <select class="form-select form-select-sm bg-dark text-white border-secondary" [ngModel]="driverId" (change)="onDriverSelectChange($event)" style="min-width: 240px;">
+          <option value="" disabled>-- Select Driver --</option>
+          <option *ngFor="let d of driversList" [value]="d.uid || d.id">
+            {{ d.name }} ({{ d.phone || d.email }})
+          </option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <div *ngIf="loading" class="text-center py-5">
+    <div class="spinner-border text-primary" role="status"></div>
+    <div class="text-muted mt-2">Loading Driver Telemetry Dossier...</div>
+  </div>
+
+  <div *ngIf="!loading && selectedDriver" class="row g-4">
+    <!-- Driver Profile Info Card -->
+    <div class="col-12 col-lg-4">
+      <div class="card border-0 shadow-sm dashboard-card h-100">
+        <div class="card-header bg-dark border-secondary p-3">
+          <h5 class="card-title text-white mb-0"><i class="bi bi-info-circle me-2 text-info"></i>Driver Identity & Status</h5>
+        </div>
+        <div class="card-body p-4">
+          <div class="text-center mb-4">
+            <div class="avatar-lg bg-primary text-white rounded-circle d-inline-flex align-items-center justify-content-center fs-2 fw-bold mb-3 shadow" style="width: 80px; height: 80px;">
+              {{ selectedDriver.name ? selectedDriver.name.charAt(0).toUpperCase() : 'D' }}
+            </div>
+            <h4 class="text-white mb-1">{{ selectedDriver.name }}</h4>
+            <div class="d-flex align-items-center justify-content-center gap-2 mb-2">
+              <span class="badge" [ngClass]="selectedDriver.role === 'driver' ? 'bg-primary' : 'bg-secondary'">
+                {{ selectedDriver.role | uppercase }}
+              </span>
+              <span class="badge" [ngClass]="selectedDriver.accType === 'pro' ? 'bg-warning text-dark' : 'bg-info text-white'">
+                {{ (selectedDriver.accType || 'standard') | uppercase }}
+              </span>
+              <span class="badge" [ngClass]="selectedDriver.isBan || selectedDriver.isBanned ? 'bg-danger' : 'bg-success'">
+                {{ selectedDriver.isBan || selectedDriver.isBanned ? 'BANNED' : 'ACTIVE' }}
+              </span>
+            </div>
+          </div>
+
+          <ul class="list-group list-group-flush bg-transparent mb-4">
+            <li class="list-group-item bg-transparent text-light border-secondary d-flex justify-content-between px-0">
+              <span class="text-muted"><i class="bi bi-envelope me-2"></i>Email</span>
+              <span class="fw-semibold text-break">{{ selectedDriver.email || 'N/A' }}</span>
+            </li>
+            <li class="list-group-item bg-transparent text-light border-secondary d-flex justify-content-between px-0">
+              <span class="text-muted"><i class="bi bi-telephone me-2"></i>Phone</span>
+              <span class="fw-semibold">{{ selectedDriver.phone || 'N/A' }}</span>
+            </li>
+            <li class="list-group-item bg-transparent text-light border-secondary d-flex justify-content-between px-0">
+              <span class="text-muted"><i class="bi bi-shield-check me-2"></i>Phone Verified</span>
+              <span class="badge" [ngClass]="selectedDriver.isPhoneVerified ? 'bg-success' : 'bg-danger'">
+                {{ selectedDriver.isPhoneVerified ? 'Verified' : 'Unverified' }}
+              </span>
+            </li>
+            <li class="list-group-item bg-transparent text-light border-secondary d-flex justify-content-between px-0 align-items-center">
+              <span class="text-muted"><i class="bi bi-wallet2 me-2"></i>Wallet Balance</span>
+              <span class="fs-5 fw-bold text-success">{{ (selectedDriver.balance || 0) | number:'1.2-2' }} TND</span>
+            </li>
+          </ul>
+
+          <!-- ROOM FOR UPDATE: Quick Admin Actions -->
+          <div class="bg-subtle p-3 rounded-3 border border-subtle">
+            <h6 class="text-white fw-bold mb-3"><i class="bi bi-sliders me-2 text-warning"></i>Update Driver Admin States</h6>
+
+            <!-- Toggle Ban / Active Status -->
+            <div class="mb-3">
+              <label class="text-muted fs-8 fw-semibold d-block mb-1">Account Restriction Status:</label>
+              <button
+                class="btn btn-sm w-100 rounded-pill fw-bold"
+                [ngClass]="selectedDriver.isBan || selectedDriver.isBanned ? 'btn-outline-success' : 'btn-outline-danger'"
+                [disabled]="isProcessing"
+                (click)="toggleBanStatus()">
+                <i class="bi" [ngClass]="selectedDriver.isBan || selectedDriver.isBanned ? 'bi-check-circle me-1' : 'bi-slash-circle me-1'"></i>
+                {{ selectedDriver.isBan || selectedDriver.isBanned ? 'Unban / Activate Driver' : 'Ban Driver Account' }}
+              </button>
+            </div>
+
+            <!-- Change Account Tier (Pro/Standard/Eco) -->
+            <div class="mb-3">
+              <label class="text-muted fs-8 fw-semibold d-block mb-1">Update Account Tier (AccType):</label>
+              <div class="btn-group w-100 btn-group-sm">
+                <button
+                  class="btn btn-outline-warning"
+                  [class.active]="selectedDriver.accType === 'pro'"
+                  (click)="updateAccType('pro')">
+                  PRO
+                </button>
+                <button
+                  class="btn btn-outline-info"
+                  [class.active]="selectedDriver.accType === 'standard' || !selectedDriver.accType"
+                  (click)="updateAccType('standard')">
+                  Standard
+                </button>
+                <button
+                  class="btn btn-outline-secondary"
+                  [class.active]="selectedDriver.accType === 'eco'"
+                  (click)="updateAccType('eco')">
+                  Eco
+                </button>
+              </div>
+            </div>
+
+            <!-- Recharge Balance -->
+            <div>
+              <label class="text-muted fs-8 fw-semibold d-block mb-1">Credit / Recharge Wallet Balance (TND):</label>
+              <div class="input-group input-group-sm">
+                <input type="number" class="form-control bg-dark text-white border-secondary" [(ngModel)]="rechargeAmount" placeholder="Amount (TND)" />
+                <button class="btn btn-success fw-bold" [disabled]="isProcessing" (click)="rechargeDriverBalance()">
+                  <i class="bi bi-plus-circle me-1"></i> Add Funds
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Vehicles & Assets Approval Section + Send Notification -->
+    <div class="col-12 col-lg-8">
+      <!-- Vehicles & Assets Approval Card -->
+      <div class="card border-0 shadow-sm dashboard-card mb-4">
+        <div class="card-header bg-dark border-secondary p-3 d-flex justify-content-between align-items-center">
+          <h5 class="card-title text-white mb-0"><i class="bi bi-truck me-2 text-warning"></i>Fleet Applications & Assets Approval</h5>
+          <span class="badge bg-secondary">{{ driverVehicles.length }} Vehicle(s)</span>
+        </div>
+        <div class="card-body p-4">
+          <div *ngIf="driverVehicles.length === 0" class="text-center text-muted py-4">
+            <i class="bi bi-truck display-4 d-block mb-2 text-brand"></i>
+            No registered vehicles or asset applications found for this driver.
+          </div>
+
+          <div *ngFor="let v of driverVehicles" class="vehicle-card border border-secondary rounded-3 p-3 mb-3 bg-dark">
+            <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+              <div>
+                <h5 class="text-white mb-1"><i class="bi bi-front me-2 text-primary"></i>{{ v.type || 'Vehicle Asset' }}</h5>
+                <div class="small text-muted font-monospace" *ngIf="getDisplayRef(v.cin) || getDisplayRef(v.carteGrise)">
+                  <span *ngIf="getDisplayRef(v.cin)">CIN: {{ getDisplayRef(v.cin) }}</span>
+                  <span *ngIf="getDisplayRef(v.cin) && getDisplayRef(v.carteGrise)"> | </span>
+                  <span *ngIf="getDisplayRef(v.carteGrise)">Carte Grise: {{ getDisplayRef(v.carteGrise) }}</span>
+                </div>
+              </div>
+              <div class="d-flex align-items-center gap-2">
+                <span class="badge" [ngClass]="v.isAdminApproved ? 'bg-success' : 'bg-warning text-dark'">
+                  Admin Status: {{ v.isAdminApproved ? 'APPROVED' : 'PENDING' }}
+                </span>
+                <button
+                  class="btn btn-xs rounded-pill fw-bold"
+                  [ngClass]="v.isAdminApproved ? 'btn-outline-warning' : 'btn-success'"
+                  (click)="toggleVehicleApproval(v)">
+                  <i class="bi" [ngClass]="v.isAdminApproved ? 'bi-x-circle me-1' : 'bi-check-circle me-1'"></i>
+                  {{ v.isAdminApproved ? 'Revoke Approval' : 'Approve Asset' }}
+                </button>
+              </div>
+            </div>
+
+            <!-- Documents Preview Grid -->
+            <div class="row g-2">
+              <div class="col-6 col-md-3" *ngIf="getCarteGriseAssetUrl(v)">
+                <div class="asset-thumb rounded overflow-hidden border border-secondary cursor-pointer position-relative" (click)="openAssetModal(getCarteGriseAssetUrl(v))">
+                  <img [src]="getCarteGriseAssetUrl(v)" (error)="handleImageError($event)" class="img-fluid w-100" style="height: 90px; object-fit: cover;" alt="Carte Grise Identification Document" />
+                  <div class="small text-center text-white p-1 bg-black fs-8 fw-bold">Carte Grise Doc</div>
+                </div>
+              </div>
+              <div class="col-6 col-md-3" *ngIf="getCinAssetUrl(v)">
+                <div class="asset-thumb rounded overflow-hidden border border-secondary cursor-pointer position-relative" (click)="openAssetModal(getCinAssetUrl(v))">
+                  <img [src]="getCinAssetUrl(v)" (error)="handleImageError($event)" class="img-fluid w-100" style="height: 90px; object-fit: cover;" alt="CIN Identity Document" />
+                  <div class="small text-center text-white p-1 bg-black fs-8 fw-bold">CIN Identity Doc</div>
+                </div>
+              </div>
+              <div class="col-6 col-md-3" *ngIf="getVehicleAssetUrl(v)">
+                <div class="asset-thumb rounded overflow-hidden border border-secondary cursor-pointer position-relative" (click)="openAssetModal(getVehicleAssetUrl(v))">
+                  <img [src]="getVehicleAssetUrl(v)" (error)="handleImageError($event)" class="img-fluid w-100" style="height: 90px; object-fit: cover;" alt="Vehicle Asset Photograph" />
+                  <div class="small text-center text-white p-1 bg-black fs-8 fw-bold">Vehicle Photo Asset</div>
+                </div>
+              </div>
+              <div class="col-6 col-md-3" *ngFor="let extra of getAdditionalAssets(v)">
+                <div class="asset-thumb rounded overflow-hidden border border-secondary cursor-pointer position-relative" (click)="openAssetModal(extra.url)">
+                  <img [src]="extra.url" (error)="handleImageError($event)" class="img-fluid w-100" style="height: 90px; object-fit: cover;" [alt]="extra.label" />
+                  <div class="small text-center text-white p-1 bg-black fs-8 fw-bold">{{ extra.label }}</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Send FCM Notification Card (Cross-Tab Linked) -->
+      <div class="card border-0 shadow-sm dashboard-card mb-4">
+        <div class="card-header bg-dark border-secondary p-3">
+          <h5 class="card-title text-white mb-0"><i class="bi bi-bell-fill me-2 text-warning"></i>Send Live Driver Notification (Cross-Tab Synchronized)</h5>
+        </div>
+        <div class="card-body p-4">
+          <div class="alert alert-success border-0 rounded-3 mb-3" *ngIf="notifSentSuccess">
+            <i class="bi bi-check-circle-fill me-2"></i> Notification broadcasted live across all open tabs to {{ selectedDriver.name }}!
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label text-muted fs-8 fw-semibold">Notification Title:</label>
+            <input type="text" class="form-control bg-dark text-white border-secondary" [(ngModel)]="notifTitle" placeholder="e.g. Account Approved / Dispatch Alert" />
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label text-muted fs-8 fw-semibold">Message Body:</label>
+            <textarea class="form-control bg-dark text-white border-secondary" rows="3" [(ngModel)]="notifBody" placeholder="Enter message text for the driver..."></textarea>
+          </div>
+
+          <button class="btn btn-saas-primary rounded-pill px-4 fw-bold" [disabled]="!notifTitle || !notifBody" (click)="sendDriverNotification()">
+            <i class="bi bi-send-fill me-1"></i> Send Cross-Tab Notification
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bids Record & Deals History Tabs Grid -->
+    <div class="col-12 col-lg-6">
+      <div class="card border-0 shadow-sm dashboard-card h-100">
+        <div class="card-header bg-dark border-secondary p-3 d-flex justify-content-between align-items-center">
+          <h5 class="card-title text-white mb-0"><i class="bi bi-journal-text me-2 text-info"></i>Driver Bids Record</h5>
+          <span class="badge bg-info text-white">{{ driverBids.length }} Bid(s)</span>
+        </div>
+        <div class="card-body p-0">
+          <div class="table-responsive" style="max-height: 350px;">
+            <table class="table table-dark table-striped align-middle mb-0">
+              <thead>
+                <tr>
+                  <th class="ps-3">Order ID</th>
+                  <th>Amount (TND)</th>
+                  <th>Timestamp</th>
+                  <th class="pe-3 text-end">Active Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let b of driverBids">
+                  <td class="ps-3 font-monospace text-info small">{{ b.idOrder }}</td>
+                  <td class="fw-bold text-success">{{ b.ammount | number:'1.2-2' }} TND</td>
+                  <td class="text-muted small">
+                    {{ b.timestamp?.seconds ? (b.timestamp.seconds * 1000 | date:'short') : (b.timestamp | date:'short') || 'N/A' }}
+                  </td>
+                  <td class="pe-3 text-end">
+                    <span class="badge" [ngClass]="b.isActive ? 'bg-success' : 'bg-secondary'">
+                      {{ b.isActive ? 'Active' : 'Inactive' }}
+                    </span>
+                  </td>
+                </tr>
+                <tr *ngIf="driverBids.length === 0">
+                  <td colspan="4" class="text-center text-muted py-4">No bids submitted by this driver yet.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-12 col-lg-6">
+      <div class="card border-0 shadow-sm dashboard-card h-100">
+        <div class="card-header bg-dark border-secondary p-3 d-flex justify-content-between align-items-center">
+          <h5 class="card-title text-white mb-0"><i class="bi bi-clock-history me-2 text-success"></i>Deals History</h5>
+          <span class="badge bg-success">{{ driverDeals.length }} Deal(s)</span>
+        </div>
+        <div class="card-body p-0">
+          <div class="table-responsive" style="max-height: 350px;">
+            <table class="table table-dark table-striped align-middle mb-0">
+              <thead>
+                <tr>
+                  <th class="ps-3">Order ID</th>
+                  <th>Status</th>
+                  <th class="pe-3 text-end">Timestamp</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let item of normalizedDeals">
+                  <td class="ps-3 font-monospace text-warning small">{{ item.deal.idOrder }}</td>
+                  <td>
+                    <span class="badge" [ngClass]="item.statusClass">
+                      {{ item.statusLabel }}
+                    </span>
+                  </td>
+                  <td class="pe-3 text-end text-muted small">
+                    {{ item.deal.timestamp?.seconds ? (item.deal.timestamp.seconds * 1000 | date:'short') : (item.deal.timestamp | date:'short') || 'N/A' }}
+                  </td>
+                </tr>
+                <tr *ngIf="driverDeals.length === 0">
+                  <td colspan="3" class="text-center text-muted py-4">No deal history for this driver.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Asset Modal Overlay -->
+  <div class="modal d-block bg-black bg-opacity-75" *ngIf="activeAssetModalUrl" tabIndex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+      <div class="modal-content bg-dark text-white border-secondary">
+        <div class="modal-header border-secondary">
+          <h5 class="modal-title"><i class="bi bi-file-earmark-easel me-2 text-primary"></i>Document Image Asset Inspection</h5>
+          <button type="button" class="btn-close btn-close-white" (click)="closeAssetModal()"></button>
+        </div>
+        <div class="modal-body text-center p-3">
+          <img [src]="activeAssetModalUrl" class="img-fluid rounded shadow border border-secondary" style="max-height: 520px; object-fit: contain;" alt="Document Asset" />
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

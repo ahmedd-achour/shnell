@@ -1,0 +1,219 @@
+<div class="overview-container">
+  <!-- Top Fleet Intelligence Executive KPI Grid (12 KPI Cards) -->
+  <div class="d-flex align-items-center justify-content-between mb-3">
+    <div>
+      <h4 class="font-heading mb-0 text-white">Fleet Intelligence Telemetry</h4>
+      <small class="text-muted">Real-time performance matrix, revenue calculations & fleet operational status</small>
+    </div>
+    <span class="status-pill success fs-8">
+      <i class="live-dot me-1"></i> Live RTDB Synchronized
+    </span>
+  </div>
+
+  <!-- KPI Grid Row -->
+  <div class="row g-3 mb-4">
+    <div class="col-12 col-sm-6 col-md-4 col-xl-3" *ngFor="let m of metricCards">
+      <div class="card kpi-card h-100 p-3" [ngClass]="'accent-' + m.accent">
+        <div class="d-flex align-items-start justify-content-between mb-2">
+          <div>
+            <span class="text-uppercase fw-bold text-muted fs-8 tracking-wide d-block mb-1">{{ m.label }}</span>
+            <h3 class="fw-bold text-white mb-0 font-outfit">{{ m.value }}</h3>
+          </div>
+          <div class="icon-shape" [ngClass]="'bg-' + m.accent">
+            <i class="bi" [ngClass]="m.icon || 'bi-bar-chart-fill'"></i>
+          </div>
+        </div>
+        <div class="d-flex align-items-center justify-content-between mt-2 pt-2 border-top border-subtle">
+          <small class="text-muted fs-8 text-truncate me-2">{{ m.sub }}</small>
+          <span *ngIf="m.trend" class="trend-badge" [ngClass]="m.trendUp ? 'up' : 'down'">
+            <i class="bi" [ngClass]="m.trendUp ? 'bi-arrow-up-short' : 'bi-arrow-down-short'"></i>{{ m.trend }}
+          </span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Charts Row 1: Financial & Fleet Composition -->
+  <div class="row g-4 mb-4">
+    <!-- Financial Trends Chart with Time Filter -->
+    <div class="col-12 col-lg-8">
+      <div class="card border-0 shadow-sm dashboard-card h-100">
+        <div class="card-header bg-transparent border-bottom border-subtle d-flex flex-column flex-sm-row justify-content-between align-items-sm-center gap-2 py-3 px-4">
+          <div>
+            <h5 class="card-title font-heading text-white mb-0 fs-5">Financial Revenue & Gross Volume</h5>
+            <small class="text-muted">Gross transaction volume vs 15% platform net commission earnings</small>
+          </div>
+          <div class="d-flex align-items-center gap-2">
+            <div class="btn-group btn-group-sm rounded-pill p-1 bg-subtle border border-subtle">
+              <button class="btn btn-sm rounded-pill px-3 fs-8" [class.active]="timeRange === 'today'" [class.btn-saas-primary]="timeRange === 'today'" (click)="onTimeRangeChange('today')">Today</button>
+              <button class="btn btn-sm rounded-pill px-3 fs-8" [class.active]="timeRange === '7d'" [class.btn-saas-primary]="timeRange === '7d'" (click)="onTimeRangeChange('7d')">7 Days</button>
+              <button class="btn btn-sm rounded-pill px-3 fs-8" [class.active]="timeRange === '30d'" [class.btn-saas-primary]="timeRange === '30d'" (click)="onTimeRangeChange('30d')">30 Days</button>
+              <button class="btn btn-sm rounded-pill px-3 fs-8" [class.active]="timeRange === '1y'" [class.btn-saas-primary]="timeRange === '1y'" (click)="onTimeRangeChange('1y')">1 Year</button>
+            </div>
+            <button class="btn btn-sm btn-icon-soft" (click)="onQuickNav('deals')" title="Inspect All Orders">
+              <i class="bi bi-arrow-right-short fs-5"></i>
+            </button>
+          </div>
+        </div>
+        <div class="card-body p-4">
+          <div class="chart-wrapper" style="height: 320px;">
+            <canvas #financeChart></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Fleet Composition Chart -->
+    <div class="col-12 col-lg-4">
+      <div class="card border-0 shadow-sm dashboard-card h-100">
+        <div class="card-header bg-transparent border-bottom border-subtle d-flex justify-content-between align-items-center py-3 px-4">
+          <div>
+            <h5 class="card-title font-heading text-white mb-0 fs-5">Fleet Composition</h5>
+            <small class="text-muted">Vehicle categorization & approval share</small>
+          </div>
+          <button class="btn btn-sm btn-icon-soft" (click)="onQuickNav('vehicles')" title="Manage Fleet Applications">
+            <i class="bi bi-truck text-warning"></i>
+          </button>
+        </div>
+        <div class="card-body p-4 d-flex flex-column justify-content-center">
+          <div class="chart-wrapper" style="height: 250px;">
+            <canvas #fleetChart></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Row 1.5: Deep Bidding & Pricing Telemetry Charts -->
+  <div class="row g-4 mb-4">
+    <!-- Bids / Truck Types Chart -->
+    <div class="col-12 col-md-4">
+      <div class="card border-0 shadow-sm dashboard-card h-100">
+        <div class="card-header bg-transparent border-bottom border-subtle py-3 px-4 d-flex justify-content-between align-items-center">
+          <div>
+            <h5 class="card-title font-heading text-white mb-0 fs-6"><i class="bi bi-pie-chart-fill me-2 text-info"></i>Bids / Truck Types</h5>
+            <small class="text-muted fs-8">Distribution of bids by vehicle asset type</small>
+          </div>
+          <span class="badge bg-subtle text-info border border-info fs-8">{{ bids.length }} Bids</span>
+        </div>
+        <div class="card-body p-4 d-flex flex-column justify-content-center">
+          <div class="chart-wrapper" style="height: 240px;">
+            <canvas #bidsTruckChart></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Avg Bids per Category Chart -->
+    <div class="col-12 col-md-4">
+      <div class="card border-0 shadow-sm dashboard-card h-100">
+        <div class="card-header bg-transparent border-bottom border-subtle py-3 px-4">
+          <h5 class="card-title font-heading text-white mb-0 fs-6"><i class="bi bi-bar-chart-line-fill me-2 text-cyan"></i>Avg Bids / Category</h5>
+          <small class="text-muted fs-8">Average bid valuation (TND) per order category</small>
+        </div>
+        <div class="card-body p-4">
+          <div class="chart-wrapper" style="height: 240px;">
+            <canvas #avgBidsCategoryChart></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Avg Price per 1km per Truck Type Chart -->
+    <div class="col-12 col-md-4">
+      <div class="card border-0 shadow-sm dashboard-card h-100">
+        <div class="card-header bg-transparent border-bottom border-subtle py-3 px-4">
+          <h5 class="card-title font-heading text-white mb-0 fs-6"><i class="bi bi-speedometer2 me-2 text-warning"></i>Avg Price / 1km per Truck</h5>
+          <small class="text-muted fs-8">Distance rate efficiency (TND/km) per truck type</small>
+        </div>
+        <div class="card-body p-4">
+          <div class="chart-wrapper" style="height: 240px;">
+            <canvas #avgPriceKmChart></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Row 2: Status Bar Chart & Top Driver Leaderboard -->
+  <div class="row g-4">
+    <!-- Orders Conversion & Status Chart -->
+    <div class="col-12 col-lg-5">
+      <div class="card border-0 shadow-sm dashboard-card h-100">
+        <div class="card-header bg-transparent border-bottom border-subtle py-3 px-4">
+          <h5 class="card-title font-heading text-white mb-0 fs-5">Order Conversion & Status</h5>
+          <small class="text-muted">Processed orders, active matched deals & pending requests</small>
+        </div>
+        <div class="card-body p-4">
+          <div class="chart-wrapper" style="height: 270px;">
+            <canvas #orderChart></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Top Drivers Leaderboard Table -->
+    <div class="col-12 col-lg-7">
+      <div class="card border-0 shadow-sm dashboard-card h-100">
+        <div class="card-header bg-transparent border-bottom border-subtle d-flex justify-content-between align-items-center py-3 px-4">
+          <div>
+            <h5 class="card-title font-heading text-white mb-0 fs-5">Top Performing Drivers</h5>
+            <small class="text-muted">Leaderboard by completed delivery volume & earnings</small>
+          </div>
+          <button class="btn btn-sm btn-outline-info rounded-pill px-3 fs-8" (click)="onQuickNav('users')">
+            <i class="bi bi-person-lines-fill me-1"></i> View All Drivers
+          </button>
+        </div>
+        <div class="card-body p-0">
+          <div class="table-responsive">
+            <table  class="table table-dark table-striped table-hover align-middle">
+              <thead>
+                <tr>
+                  <th class="ps-4">Driver Name</th>
+                  <th>Vehicle Type</th>
+                  <th>Completed Deals</th>
+                  <th class="numeric">Ledger Balance</th>
+                  <th class="pe-4 text-end">Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let item of topDrivers">
+                  <td class="ps-4">
+                    <div class="d-flex align-items-center">
+                      <div class="avatar-circle-sm me-3">
+                        {{ item.driver.name ? (item.driver.name.charAt(0) | uppercase) : 'D' }}
+                      </div>
+                      <div>
+                        <div class="fw-semibold text-white fs-7">{{ item.driver.name }}</div>
+                        <small class="text-muted fs-8"><i class="bi bi-telephone me-1"></i>{{ item.driver.phone || 'N/A' }}</small>
+                      </div>
+                    </div>
+                  </td>
+                  <td>
+                    <span class="badge bg-subtle text-warning border border-warning fs-8">
+                      <i class="bi bi-truck me-1"></i>{{ item.vehicleType }}
+                    </span>
+                  </td>
+                  <td>
+                    <span class="status-pill success fs-8"><i class="bi bi-check-circle-fill me-1"></i>{{ item.dealCount }} deals</span>
+                  </td>
+                  <td class="numeric">
+                    <span class="fw-bold text-success font-mono">{{ item.earnings | number:'1.2-2' }} TND</span>
+                  </td>
+                  <td class="pe-4 text-end">
+                    <button class="btn btn-sm btn-saas-primary rounded-pill px-3 fs-8" (click)="onSendNotification(item.driver)">
+                      <i class="bi bi-bell-fill me-1"></i> Notify
+                    </button>
+                  </td>
+                </tr>
+                <tr *ngIf="topDrivers.length === 0">
+                  <td colspan="5" class="text-center py-4 text-muted">No driver records registered.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

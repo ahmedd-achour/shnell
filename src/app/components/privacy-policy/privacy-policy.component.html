@@ -1,0 +1,117 @@
+
+    <div class="jumbotron jumbotron-fluid mb-5">
+        <div class="container text-center py-5">
+            <h1 class="text-white display-3">
+Politique de confidentialité</h1>
+            <div class="d-inline-flex align-items-center text-white">
+                <p class="m-0"><a class="text-white" href="">Home</a></p>
+                <i class="fa fa-circle px-3"></i>
+                <p class="m-0">Politique</p>
+            </div>
+        </div>
+    </div>
+    <!-- Header End -->
+
+
+<div class="privacy-policy-container">
+
+  <!-- Header -->
+  <header class="policy-header">
+    <h1>{{ privacyPolicyTitle }}</h1>
+    <p class="last-updated">{{ privacyPolicyUpdated }}</p>
+  </header>
+
+  <!-- Welcome Message -->
+  <section class="welcome-section">
+    <h2>{{ welcomeMessage }}</h2>
+    <p>{{ appTitle }} est l'application dédiée aux chauffeurs partenaires de Shnell Logistics.</p>
+  </section>
+
+  <!-- Introduction -->
+  <section class="policy-section">
+    <h2>{{ introHeading }}</h2>
+    <div [innerHTML]="introBody"></div>
+  </section>
+
+  <!-- Information We Collect -->
+  <section class="policy-section">
+    <h2>{{ infoCollectionHeading }}</h2>
+    <div [innerHTML]="infoCollectionBody"></div>
+  </section>
+
+  <!-- How We Use Your Information -->
+  <section class="policy-section">
+    <h2>{{ infoUsageHeading }}</h2>
+    <div [innerHTML]="infoUsageBody"></div>
+  </section>
+
+  <!-- How We Share Your Information -->
+  <section class="policy-section">
+    <h2>{{ infoSharingHeading }}</h2>
+    <div [innerHTML]="infoSharingBody"></div>
+  </section>
+
+  <!-- Data Security -->
+  <section class="policy-section">
+    <h2>{{ dataSecurityHeading }}</h2>
+    <div [innerHTML]="dataSecurityBody"></div>
+  </section>
+
+  <!-- Data Retention -->
+  <section class="policy-section">
+    <h2>{{ dataRetentionHeading }}</h2>
+    <div [innerHTML]="dataRetentionBody"></div>
+  </section>
+
+  <!-- Your Rights -->
+  <section class="policy-section">
+    <h2>{{ dataRightsHeading }}</h2>
+    <div [innerHTML]="dataRightsBody"></div>
+  </section>
+
+  <!-- Third-Party Services -->
+  <section class="policy-section">
+    <h2>{{ thirdPartyHeading }}</h2>
+    <div [innerHTML]="thirdPartyBody"></div>
+  </section>
+
+  <!-- Children's Privacy -->
+  <section class="policy-section">
+    <h2>{{ childrenPrivacyHeading }}</h2>
+    <div [innerHTML]="childrenPrivacyBody"></div>
+  </section>
+
+  <!-- Cancellation & Discipline System -->
+  <section class="policy-section">
+    <h2>{{ cancellationHeading }}</h2>
+    <div [innerHTML]="cancellationBody"></div>
+  </section>
+
+  <!-- Suspension and Termination -->
+  <section class="policy-section">
+    <h2>{{ suspensionHeading }}</h2>
+    <div [innerHTML]="suspensionBody"></div>
+  </section>
+
+  <!-- Driver Autonomy -->
+  <section class="policy-section">
+    <h2>{{ driverPerformanceHeading }}</h2>
+    <div [innerHTML]="driverPerformanceBody"></div>
+  </section>
+
+  <!-- Contact Us -->
+  <section class="policy-section contact-section">
+    <h2>{{ contactHeading }}</h2>
+    <div [innerHTML]="contactBody"></div>
+  </section>
+
+  <!-- Footer Note -->
+  <footer class="policy-footer">
+    <p>En utilisant <strong>{{ appTitle }}</strong>, vous confirmez avoir lu, compris et accepté cette Politique de Confidentialité.</p>
+    <p class="company-info">
+      Shnell Logistics for Shnell, and Shnell Driver by Achour<br>
+      Tunis, Tunisie
+    </p>
+  </footer>
+
+</div>

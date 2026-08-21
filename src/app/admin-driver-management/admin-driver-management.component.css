@@ -1,0 +1,416 @@
+:host {
+  /* 30Y Color Engineering System */
+  --primary-gold: #f59e0b;
+  --primary-gold-dark: #b45309;
+  --bg-deep: #070a11;
+  --surface-light: #141c2e;
+  --surface-card: #1b263e;
+  --accent-success: #10b981;
+  --accent-danger: #f43f5e;
+  --accent-info: #06b6d4;
+
+  --text-main: #f8fafc;
+  --text-muted: #94a3b8;
+
+  --glass-bg: rgba(255, 255, 255, 0.03);
+  --glass-border: rgba(255, 255, 255, 0.08);
+  --shadow-xl: 0 25px 60px rgba(0, 0, 0, 0.6);
+}
+
+.admin-details-wrapper {
+  background: radial-gradient(circle at top right, #141c2e 0%, #070a11 100%);
+  color: var(--text-main);
+  min-height: 100vh;
+  font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+}
+
+/* --- Header & Navigation --- */
+.btn-back {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--glass-border);
+  color: var(--text-main);
+  padding: 0.65rem 1.4rem;
+  border-radius: 99px;
+  font-weight: 600;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.btn-back:hover {
+  background: var(--primary-gold);
+  color: #000;
+  border-color: var(--primary-gold);
+  transform: translateX(-4px);
+  box-shadow: 0 0 20px rgba(245, 158, 11, 0.3);
+}
+
+.badge-status {
+  padding: 0.5rem 1.2rem;
+  border-radius: 99px;
+  background: rgba(244, 63, 94, 0.12);
+  color: var(--accent-danger);
+  font-size: 0.8rem;
+  font-weight: 700;
+  border: 1px solid rgba(244, 63, 94, 0.25);
+}
+
+.badge-status.active {
+  background: rgba(16, 185, 129, 0.12);
+  color: var(--accent-success);
+  border: 1px solid rgba(16, 185, 129, 0.25);
+}
+
+.rating-badge-top {
+  padding: 0.5rem 1.2rem;
+  border-radius: 99px;
+  background: rgba(245, 158, 11, 0.12);
+  color: #f59e0b;
+  font-size: 0.85rem;
+  font-weight: 700;
+  border: 1px solid rgba(245, 158, 11, 0.25);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.rat-count { font-size: 0.75rem; color: var(--text-muted); font-weight: 400; }
+
+/* --- Driver Hero Card --- */
+.driver-hero-card {
+  background: linear-gradient(145deg, #141c2e 0%, #0d1322 100%);
+  border: 1px solid rgba(99, 102, 241, 0.2);
+  border-radius: 28px;
+  padding: 2.25rem;
+  box-shadow: var(--shadow-xl);
+}
+
+.profile-avatar {
+  width: 88px;
+  height: 88px;
+  background: linear-gradient(135deg, #6366f1 0%, #3b82f6 100%);
+  border-radius: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2.5rem;
+  font-weight: 800;
+  color: #ffffff;
+  position: relative;
+  box-shadow: 0 10px 25px rgba(99, 102, 241, 0.4);
+}
+
+.online-indicator {
+  position: absolute;
+  bottom: -4px;
+  right: -4px;
+  width: 22px;
+  height: 22px;
+  background: var(--accent-success);
+  border: 4px solid #141c2e;
+  border-radius: 50%;
+  box-shadow: 0 0 12px var(--accent-success);
+}
+
+.driver-name { font-weight: 800; font-size: 2rem; letter-spacing: -0.5px; }
+.driver-info-chips { font-size: 0.875rem; color: var(--text-muted); }
+.uid-tag { background: rgba(0, 0, 0, 0.6); padding: 4px 10px; border-radius: 8px; font-family: 'JetBrains Mono', monospace; font-size: 0.75rem; border: 1px solid rgba(255, 255, 255, 0.05); }
+
+/* --- Wallet Styling --- */
+.wallet-display {
+  background: rgba(7, 10, 17, 0.6);
+  padding: 1.5rem;
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.balance-value { font-size: 2.2rem; font-weight: 900; color: #fff; font-family: 'JetBrains Mono', monospace; }
+.balance-value .currency { font-size: 1rem; color: var(--primary-gold); font-family: 'Plus Jakarta Sans', sans-serif; }
+
+.recharge-box .form-control {
+  background: #070a11;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #fff;
+  border-radius: 12px 0 0 12px;
+  font-weight: 600;
+}
+
+.btn-recharge {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  border: none;
+  color: #fff;
+  padding: 0 1.2rem;
+  border-radius: 0 12px 12px 0;
+  font-weight: 700;
+  transition: all 0.25s ease;
+}
+.btn-recharge:hover {
+  filter: brightness(1.15);
+  box-shadow: 0 0 15px rgba(16, 185, 129, 0.4);
+}
+
+.btn-preset {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 2px 10px;
+  border-radius: 99px;
+  transition: all 0.2s ease;
+}
+.btn-preset:hover {
+  background: var(--primary-gold);
+  color: #000;
+  border-color: var(--primary-gold);
+}
+
+/* --- Section Labels --- */
+.tier-bar-card {
+  background: #141c2e;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: var(--shadow-md);
+}
+
+.section-label {
+  font-size: 1rem;
+  font-weight: 800;
+  color: #ffffff;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+}
+
+/* --- Vehicle Card & Document Avatars --- */
+.vehicle-card {
+  background: #141c2e;
+  border-radius: 24px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: var(--shadow-md);
+}
+
+.vehicle-card:hover {
+  border-color: rgba(99, 102, 241, 0.4);
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.5), 0 0 25px rgba(99, 102, 241, 0.15);
+}
+
+.card-glass-header {
+  padding: 1.25rem 2rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  background: rgba(255, 255, 255, 0.015);
+  border-radius: 24px 24px 0 0;
+}
+
+.plate-number { font-size: 1.25rem; font-weight: 800; font-family: 'JetBrains Mono', monospace; }
+
+.vehicle-title {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.vehicle-icon-wrap {
+  width: 52px;
+  height: 52px;
+  background: #070a11;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+.vehicle-type-img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+
+.badge--grey {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text-muted);
+  font-size: 0.725rem;
+  padding: 3px 10px;
+  border-radius: 6px;
+  text-transform: uppercase;
+  font-weight: 700;
+}
+
+/* Approval Tag */
+.approval-status {
+  padding: 8px 16px;
+  border-radius: 99px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  background: rgba(245, 158, 11, 0.12);
+  color: var(--primary-gold);
+  border: 1px solid rgba(245, 158, 11, 0.25);
+}
+.approval-status.approved {
+  color: var(--accent-success);
+  background: rgba(16, 185, 129, 0.12);
+  border-color: rgba(16, 185, 129, 0.25);
+}
+
+/* Document Previews */
+.doc-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+.doc-label-text {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.doc-preview {
+  width: 170px;
+  height: 115px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: #070a11;
+  position: relative;
+  cursor: pointer;
+  overflow: hidden;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+  transition: all 0.3s ease;
+}
+
+.doc-preview:hover {
+  transform: translateY(-4px);
+  border-color: var(--primary-gold);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.6), 0 0 15px rgba(245, 158, 11, 0.25);
+}
+
+.doc-preview img { width: 100%; height: 100%; object-fit: cover; transition: 0.4s ease; }
+.doc-preview:hover img { transform: scale(1.08); }
+
+.doc-overlay {
+  bottom: 0;
+  width: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 8px;
+  background: linear-gradient(transparent, rgba(7, 10, 17, 0.95));
+  text-align: center;
+  font-size: 0.725rem;
+  font-weight: 700;
+  color: var(--primary-gold);
+  position: absolute;
+}
+
+/* --- Action Buttons --- */
+.btn-action-outline {
+  flex: 1;
+  background: transparent;
+  border: 1.5px solid rgba(255, 255, 255, 0.1);
+  color: var(--text-main);
+  padding: 0.75rem 1.25rem;
+  border-radius: 12px;
+  font-weight: 700;
+  transition: all 0.25s ease;
+}
+
+.btn-delete {
+  border-color: rgba(244, 63, 94, 0.4);
+  color: var(--accent-danger);
+}
+.btn-delete:hover { background: var(--accent-danger); color: #fff; }
+
+.btn-reject {
+  border-color: rgba(245, 158, 11, 0.4);
+  color: var(--primary-gold);
+}
+.btn-reject:hover { background: var(--primary-gold); color: #000; }
+
+.btn-action-solid {
+  flex: 2;
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  border: none;
+  color: #fff;
+  padding: 0.75rem 1.25rem;
+  border-radius: 12px;
+  font-weight: 700;
+  transition: all 0.25s ease;
+  box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);
+}
+
+.btn-action-solid:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 25px rgba(16, 185, 129, 0.5);
+}
+
+.btn-emerald {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
+  color: #ffffff !important;
+  box-shadow: 0 0 12px rgba(16, 185, 129, 0.4);
+  border: none !important;
+}
+
+.btn-gold {
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%) !important;
+  color: #ffffff !important;
+  box-shadow: 0 0 12px rgba(245, 158, 11, 0.4);
+  border: none !important;
+}
+
+.btn-ghost {
+  background: transparent !important;
+  color: var(--text-muted) !important;
+  border: none !important;
+}
+
+.badge-pro-gold {
+  background: linear-gradient(135deg, #f59e0b 0%, #b45309 100%) !important;
+  color: #ffffff !important;
+  box-shadow: 0 0 15px rgba(245, 158, 11, 0.4);
+}
+
+.badge-eco-emerald {
+  background: linear-gradient(135deg, #10b981 0%, #047857 100%) !important;
+  color: #ffffff !important;
+  box-shadow: 0 0 15px rgba(16, 185, 129, 0.4);
+}
+
+.text-pro { color: #f59e0b !important; }
+.text-eco { color: #10b981 !important; }
+
+/* --- Lightbox / Inspection Mode --- */
+.max-view-container {
+  position: fixed;
+  top: 0; left: 0; width: 100%; height: 100%;
+  background: rgba(5, 7, 13, 0.95);
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  backdrop-filter: blur(12px);
+}
+
+.max-view-header {
+  padding: 1.5rem 2rem;
+  background: #141c2e;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.btn-close-max {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #fff;
+  padding: 0.5rem 1.25rem;
+  border-radius: 99px;
+  font-weight: 600;
+  transition: all 0.25s ease;
+}
+.btn-close-max:hover {
+  background: var(--accent-danger);
+  border-color: var(--accent-danger);
+}
+
+.img-full-view {
+  max-width: 90%;
+  max-height: 82vh;
+  margin: auto;
+  border-radius: 16px;
+  box-shadow: 0 0 50px rgba(0, 0, 0, 0.8), 0 0 30px rgba(245, 158, 11, 0.25);
+  object-fit: contain;
+}
+

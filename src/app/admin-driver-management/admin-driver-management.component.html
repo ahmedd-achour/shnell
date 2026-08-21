@@ -1,0 +1,251 @@
+<div class="admin-details-wrapper p-4" *ngIf="(driver$ | async) as driver; else loading">
+  <ng-container *ngIf="!activeAsset">
+
+    <!-- Top Navigation Bar -->
+    <div class="content-header d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
+      <button class="btn btn-outline-secondary rounded-pill px-4 btn-sm d-flex align-items-center gap-2" routerLink="/home-admin">
+        <i class="bi bi-arrow-left"></i> <span>Tableau de Bord / Command Center</span>
+      </button>
+      <div class="quick-stats-mini d-flex align-items-center gap-3">
+        <div class="status-pill warning" *ngIf="avgRating$ | async as rat">
+          <i class="bi bi-star-fill text-warning"></i>
+          <span class="fw-bold">{{ rat.avg }}</span>
+          <span class="rat-count">({{ rat.count }} avis)</span>
+        </div>
+        <span class="status-pill text-uppercase fs-8" [ngClass]="driver.isBan ? 'error' : (driver.isActive ? 'success' : 'warning')">
+          <i class="bi bi-circle-fill fs-8"></i> {{ driver.isBan ? 'Banni' : (driver.isActive ? 'En ligne' : 'Hors ligne') }}
+        </span>
+        <button class="btn btn-sm rounded-pill fw-bold" [ngClass]="driver.isBan ? 'btn-success' : 'btn-danger'" (click)="toggleBan(driver)" [disabled]="isUpdating">
+          <i class="bi" [ngClass]="driver.isBan ? 'bi-check-circle' : 'bi-slash-circle'"></i> {{ driver.isBan ? 'Débannir' : 'Bannir' }}
+        </button>
+      </div>
+    </div>
+
+    <!-- Executive Driver Hero Card -->
+    <header class="driver-hero-card mb-4 position-relative overflow-hidden card saas-card p-4">
+      <div class="row align-items-center g-4 position-relative" style="z-index: 2;">
+        <div class="col-auto">
+          <div class="profile-avatar shadow-sm">
+            {{ driver.name ? (driver.name.charAt(0) | uppercase) : 'D' }}
+            <div class="online-indicator" [title]="driver.isActive ? 'En ligne' : 'Hors ligne'"></div>
+          </div>
+        </div>
+        <div class="col">
+          <div class="d-flex align-items-center gap-2 mb-1">
+            <h1 class="driver-name mb-0 text-main font-heading fs-2">{{ driver.name }}</h1>
+            <span class="status-pill text-uppercase fs-8 fw-bold" [ngClass]="driver.accType === 'pro' ? 'warning' : 'info'">
+              <i class="bi" [ngClass]="driver.accType === 'pro' ? 'bi-shield-check me-1' : 'bi-shield me-1'"></i>
+              TIER {{ (driver.accType || 'eco') | uppercase }}
+            </span>
+          </div>
+          <div class="driver-info-chips d-flex flex-wrap gap-3 fs-8">
+            <span class="text-main"><i class="bi bi-envelope me-1 text-brand"></i> {{ driver.email }}</span>
+            <span class="text-main"><i class="bi bi-telephone me-1 text-emerald"></i> {{ driver.phone || 'Non renseigné' }}</span>
+            <span class="status-pill info font-mono"><i class="bi bi-person-badge me-1"></i> ID: {{ driver.id }}</span>
+          </div>
+        </div>
+        <div class="col-md-5 col-lg-4 text-md-end">
+          <div class="wallet-display p-3 rounded-3 bg-subtle border border-subtle">
+            <label class="text-muted small fw-bold tracking-wide d-block mb-1">SOLDE DU PORTEFEUILLE CHAUFFEUR</label>
+            <div class="balance-value my-1 font-mono text-amber fw-bold fs-3">
+              {{ (driver.balance || 0) | number:'1.2-2' }} <span class="currency fs-6">TND</span>
+            </div>
+
+            <div class="recharge-box mt-3">
+              <div class="input-group">
+                <input type="number" [(ngModel)]="rechargeAmount" class="form-control" placeholder="Montant (ex: 50)">
+                <button class="btn btn-saas-primary" (click)="addFunds(driver)" [disabled]="isUpdating || !rechargeAmount || rechargeAmount <= 0">
+                  <i class="bi bi-plus-circle me-1"></i> Recharger
+                </button>
+              </div>
+              <div class="preset-chips d-flex gap-1 mt-2 justify-content-end">
+                <button class="btn btn-xs btn-outline-secondary rounded-pill" (click)="setPresetRecharge(20)">+20</button>
+                <button class="btn btn-xs btn-outline-secondary rounded-pill" (click)="setPresetRecharge(50)">+50</button>
+                <button class="btn btn-xs btn-outline-secondary rounded-pill" (click)="setPresetRecharge(100)">+100</button>
+                <button class="btn btn-xs btn-outline-secondary rounded-pill" (click)="setPresetRecharge(200)">+200</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- Section Header & Account Tier Toggle Bar -->
+    <div class="tier-bar-card p-3 mb-4 rounded-3 card saas-card d-flex justify-content-between align-items-center flex-wrap gap-3">
+      <div class="section-label mb-0 text-main font-heading fs-6 fw-bold">
+        <i class="bi bi-truck me-2 text-brand"></i> Dossiers Techniques Flotte ({{ (vehicles$ | async)?.length || 0 }})
+      </div>
+
+      <div class="account-type-box d-flex align-items-center gap-3">
+        <span class="label-text text-muted small fw-bold">
+          Statut Abonnement :
+          <strong class="text-brand">
+            {{ (driver.accType || 'eco') | uppercase }}
+          </strong>
+        </span>
+
+        <div class="tier-btn-group d-flex p-1 rounded-pill bg-subtle border border-subtle">
+          <button
+            class="btn btn-sm rounded-pill px-3 fw-bold"
+            [class.btn-saas-primary]="driver.accType !== 'pro'"
+            [class.btn-outline-secondary]="driver.accType === 'pro'"
+            [disabled]="isUpdating"
+            (click)="setDriverAccType(driver.id, 'eco')">
+            <i class="bi bi-leaf me-1"></i> ECO Tier
+          </button>
+
+          <button
+            class="btn btn-sm rounded-pill px-3 fw-bold"
+            [class.btn-saas-primary]="driver.accType === 'pro'"
+            [class.btn-outline-secondary]="driver.accType !== 'pro'"
+            [disabled]="isUpdating"
+            (click)="setDriverAccType(driver.id, 'pro')">
+            <i class="bi bi-lightning-charge me-1"></i> PRO Tier
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Vehicles Dossier Cards Stack -->
+    <div class="vehicles-stack">
+      <div class="vehicle-card card saas-card mb-4" *ngFor="let vehicle of (vehicles$ | async)">
+        <div class="card-glass-header p-4 border-bottom border-subtle">
+          <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <div class="vehicle-title d-flex align-items-center gap-3">
+              <div class="vehicle-icon-wrap bg-subtle p-2 rounded-3 border border-subtle">
+                <i class="bi bi-truck fs-3 text-warning"></i>
+              </div>
+              <div>
+                <span class="plate-number d-block text-main font-mono fw-bold fs-5">{{ vehicle.matVehicle || vehicle.id }}</span>
+                <span class="status-pill info fs-8">{{ vehicle.type }}</span>
+              </div>
+            </div>
+            <div class="d-flex gap-2">
+              <div class="approval-status status-pill fs-8" [ngClass]="vehicle.isAdminApproved ? 'success' : 'warning'">
+                <i class="bi" [ngClass]="vehicle.isAdminApproved ? 'bi-shield-check me-1' : 'bi-shield-exclamation me-1'"></i>
+                Admin Approved: {{ vehicle.isAdminApproved ? 'OUI' : 'NON' }}
+              </div>
+              <div class="approval-status status-pill fs-8" [ngClass]="vehicle.isAssetsApproved ? 'info' : 'secondary'">
+                <i class="bi" [ngClass]="vehicle.isAssetsApproved ? 'bi-file-earmark-check me-1' : 'bi-file-earmark me-1'"></i>
+                Assets Approved: {{ vehicle.isAssetsApproved ? 'OUI' : 'NON' }}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card-glass-body p-4">
+          <div class="docs-row d-flex gap-4 flex-wrap">
+            <div class="doc-item" *ngIf="vehicle.carteGrise || vehicle.carteGriseAsset || vehicle.registrationCardUrl">
+              <div class="doc-preview rounded-3 border border-subtle overflow-hidden cursor-pointer position-relative" (click)="openImage(vehicle.registrationCardUrl || vehicle.carteGriseAsset || vehicle.carteGrise, 'Carte Grise')">
+                <img [src]="vehicle.registrationCardUrl || vehicle.carteGriseAsset || vehicle.carteGrise" alt="Carte Grise Document" (error)="handleImageError($event)" style="height: 100px; width: 150px; object-fit: cover;">
+                <div class="doc-overlay position-absolute inset-0 d-flex flex-column align-items-center justify-content-center p-2 text-center">
+                  <i class="bi bi-search text-brand fs-5 mb-1"></i>
+                  <span class="fs-8 fw-bold text-white">Carte Grise</span>
+                </div>
+              </div>
+              <div class="doc-label-text text-muted fs-8 fw-semibold mt-1">Carte Grise</div>
+            </div>
+
+            <div class="doc-item" *ngIf="vehicle.cin || vehicle.cinAsset || vehicle.nationalIdUrl">
+              <div class="doc-preview rounded-3 border border-subtle overflow-hidden cursor-pointer position-relative" (click)="openImage(vehicle.nationalIdUrl || vehicle.cinAsset || vehicle.cin, 'CIN Chauffeur')">
+                <img [src]="vehicle.nationalIdUrl || vehicle.cinAsset || vehicle.cin" alt="CIN Identity Document" (error)="handleImageError($event)" style="height: 100px; width: 150px; object-fit: cover;">
+                <div class="doc-overlay position-absolute inset-0 d-flex flex-column align-items-center justify-content-center p-2 text-center">
+                  <i class="bi bi-search text-brand fs-5 mb-1"></i>
+                  <span class="fs-8 fw-bold text-white">CIN Chauffeur</span>
+                </div>
+              </div>
+              <div class="doc-label-text text-muted fs-8 fw-semibold mt-1">CIN Chauffeur</div>
+            </div>
+
+            <div class="doc-item" *ngIf="vehicle.vehiculeAsset || vehicle.vehicleAssetUrl">
+              <div class="doc-preview rounded-3 border border-subtle overflow-hidden cursor-pointer position-relative" (click)="openImage(vehicle.vehicleAssetUrl || vehicle.vehiculeAsset, 'Photo Véhicule')">
+                <img [src]="vehicle.vehicleAssetUrl || vehicle.vehiculeAsset" alt="Vehicle Asset Photograph" (error)="handleImageError($event)" style="height: 100px; width: 150px; object-fit: cover;">
+                <div class="doc-overlay position-absolute inset-0 d-flex flex-column align-items-center justify-content-center p-2 text-center">
+                  <i class="bi bi-search text-brand fs-5 mb-1"></i>
+                  <span class="fs-8 fw-bold text-white">Photo Véhicule</span>
+                </div>
+              </div>
+              <div class="doc-label-text text-muted fs-8 fw-semibold mt-1">Photo Principal</div>
+            </div>
+
+            <div class="doc-item" *ngFor="let asset of vehicle.allAssets; let idx = index">
+              <div class="doc-preview rounded-3 border border-subtle overflow-hidden cursor-pointer position-relative" (click)="openImage(asset, 'Document #' + (idx + 1))">
+                <img [src]="asset" [alt]="'Additional Asset #' + (idx + 1)" (error)="handleImageError($event)" style="height: 100px; width: 150px; object-fit: cover;">
+                <div class="doc-overlay position-absolute inset-0 d-flex flex-column align-items-center justify-content-center p-2 text-center">
+                  <i class="bi bi-search text-brand fs-5 mb-1"></i>
+                  <span class="fs-8 fw-bold text-white">Doc #{{ idx + 1 }}</span>
+                </div>
+              </div>
+              <div class="doc-label-text text-muted fs-8 fw-semibold mt-1">Doc Secondary #{{ idx + 1 }}</div>
+            </div>
+          </div>
+
+          <!-- Admin Approval Action Controls -->
+          <div class="card-glass-footer mt-4 d-flex flex-wrap gap-2 pt-3 border-top border-subtle align-items-center justify-content-between">
+            <button class="btn btn-outline-danger btn-sm rounded-pill px-3" (click)="deleteThisVehicle(vehicle)" [disabled]="isUpdating">
+              <i class="bi bi-trash me-1"></i> Supprimer Véhicule
+            </button>
+
+            <div class="d-flex flex-wrap gap-2">
+              <!-- Assets Approval Toggle -->
+              <button
+                class="btn btn-sm rounded-pill px-3"
+                [ngClass]="vehicle.isAssetsApproved ? 'btn-outline-warning' : 'btn-info text-white'"
+                (click)="updateVehicleAssetsApproval(vehicle.id, !vehicle.isAssetsApproved)"
+                [disabled]="isUpdating">
+                <i class="bi" [ngClass]="vehicle.isAssetsApproved ? 'bi-x-circle me-1' : 'bi-file-earmark-check me-1'"></i>
+                {{ vehicle.isAssetsApproved ? 'Révoquer Documents' : 'Approuver Documents (Assets)' }}
+              </button>
+
+              <!-- Admin Approval Toggle -->
+              <button
+                class="btn btn-sm rounded-pill px-3"
+                [ngClass]="vehicle.isAdminApproved ? 'btn-outline-secondary' : 'btn-saas-primary'"
+                (click)="updateVehicleAdminApproval(vehicle.id, !vehicle.isAdminApproved)"
+                [disabled]="isUpdating">
+                <i class="bi" [ngClass]="vehicle.isAdminApproved ? 'bi-shield-slash me-1' : 'bi-shield-check me-1'"></i>
+                {{ vehicle.isAdminApproved ? 'Révoquer Admin' : 'Approuver Admin' }}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </ng-container>
+
+  <!-- High-Tech Lightbox Inspection Mode -->
+  <div class="max-view-container modal-overlay" *ngIf="activeAsset">
+    <div class="modal-box" style="max-width: 850px;">
+      <div class="d-flex justify-content-between align-items-center mb-3 border-bottom border-subtle pb-3">
+        <button class="btn btn-outline-secondary rounded-pill btn-sm" (click)="closeMaxView()">
+          <i class="bi bi-arrow-left me-1"></i> Fermer l'inspection
+        </button>
+        <div class="text-center">
+          <h4 class="mb-0 text-main font-heading">INSPECTION DOCUMENT: {{ activeAsset.label }}</h4>
+          <small class="text-brand">Chauffeur: {{ driver.name }} ({{ driver.id }})</small>
+        </div>
+        <button class="btn btn-outline-info rounded-pill px-3 btn-sm" (click)="viewInBrowser(activeAsset.url)">
+          <i class="bi bi-box-arrow-up-right me-1"></i> Plein Écran
+        </button>
+      </div>
+      <div class="d-flex align-items-center justify-content-center p-3 bg-subtle rounded-3" style="min-height: 380px;">
+        <img [src]="activeAsset.url" class="img-fluid rounded-3 shadow border border-subtle" style="max-height: 480px; object-fit: contain;" (error)="handleImageError($event)">
+      </div>
+    </div>
+  </div>
+
+  <div class="empty-state text-center py-5 card saas-card p-5" *ngIf="!activeAsset && (vehicles$ | async)?.length === 0">
+    <i class="bi bi-truck display-3 text-muted mb-3"></i>
+    <h4 class="text-main font-heading">Aucun véhicule enregistré dans le dossier</h4>
+    <p class="text-muted small">Ce chauffeur n'a pas encore soumis de documents de carte grise ou CIN.</p>
+  </div>
+</div>
+
+<ng-template #loading>
+  <div class="loader-container text-center py-5">
+    <div class="spinner-border text-brand" role="status" style="width: 3rem; height: 3rem;">
+      <span class="visually-hidden">Chargement...</span>
+    </div>
+    <div class="mt-3 text-muted font-mono fs-8">CHARGEMENT DU DOSSIER TECHNIQUE...</div>
+  </div>
+</ng-template>

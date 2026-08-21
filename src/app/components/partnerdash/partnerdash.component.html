@@ -1,0 +1,293 @@
+<div class="partnerdash-container p-4">
+  <!-- Top Header Title Bar -->
+  <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3 mb-4">
+    <div>
+      <h2 class="font-heading mb-1 text-white">Stops & Route Intelligence Dispatch</h2>
+      <p class="text-muted small mb-0">Configure pickup points, optimize dropoffs, and assign fleet drivers.</p>
+    </div>
+  </div>
+
+  <!-- SaaS Stepper Pills Navigation -->
+  <ul class="nav nav-pills saas-stepper gap-2 p-2 rounded-pill bg-card border border-subtle mb-4" role="tablist">
+    <li class="nav-item flex-fill" role="presentation">
+      <button class="nav-link w-100 rounded-pill fw-semibold" role="tab" [attr.aria-selected]="currentStep === 1" [class.active]="currentStep === 1" (click)="goToStep(1)" [disabled]="currentStep < 1">
+        <i class="bi bi-geo-alt-fill me-2"></i>1. Point de Retrait
+      </button>
+    </li>
+    <li class="nav-item flex-fill" role="presentation">
+      <button class="nav-link w-100 rounded-pill fw-semibold" role="tab" [attr.aria-selected]="currentStep === 2" [class.active]="currentStep === 2" (click)="goToStep(2)" [disabled]="currentStep < 2 || !pickupLatLng">
+        <i class="bi bi-pin-map-fill me-2"></i>2. Points de Livraison
+      </button>
+    </li>
+    <li class="nav-item flex-fill" role="presentation">
+      <button class="nav-link w-100 rounded-pill fw-semibold" role="tab" [attr.aria-selected]="currentStep === 3" [class.active]="currentStep === 3" (click)="goToStep(3)" [disabled]="currentStep < 3 || dropOffs.length === 0">
+        <i class="bi bi-truck me-2"></i>3. Choisir Livreur
+      </button>
+    </li>
+    <li class="nav-item flex-fill" role="presentation">
+      <button class="nav-link w-100 rounded-pill fw-semibold" role="tab" [attr.aria-selected]="currentStep === 4" [class.active]="currentStep === 4" (click)="goToStep(4)" [disabled]="currentStep < 4 || !selectedDriverId">
+        <i class="bi bi-check-circle-fill me-2"></i>4. Confirmer Route
+      </button>
+    </li>
+  </ul>
+
+  <!-- Step 1: Pickup Location -->
+  <div *ngIf="currentStep === 1">
+    <div class="card border-0 shadow-sm saas-card">
+      <div class="card-header bg-transparent border-bottom border-subtle p-4">
+        <h4 class="mb-1 text-white font-heading">
+          <i class="bi bi-geo-alt-fill text-brand me-2"></i> Adresse de Retrait Principal
+        </h4>
+        <small class="text-muted">Étape 1/4 : Définissez le point de départ central de vos expéditions.</small>
+      </div>
+      <div class="card-body p-4 p-md-5">
+        <div class="input-group input-group-lg mb-3">
+          <span class="input-group-text bg-dark border-subtle text-muted"><i class="bi bi-search"></i></span>
+          <input type="text" class="form-control bg-dark border-subtle text-white" [(ngModel)]="pickupAddress"
+            placeholder="Saisir l'adresse complète, URL Google Maps ou point d'intérêt..."
+            (keyup.enter)="setSmartPickup(pickupAddress)">
+          <button class="btn btn-saas-primary" (click)="setSmartPickup(pickupAddress)">
+            <i class="bi bi-send-fill me-2"></i>Définir le Retrait
+          </button>
+        </div>
+
+        <div *ngIf="pickupLatLng" class="mt-4 p-3 status-pill success d-flex align-items-center gap-2">
+          <i class="bi bi-check-circle-fill"></i>
+          <span class="fw-semibold">Point Sélectionné : {{ pickupAddress }} (Lat: {{ pickupLatLng.lat | number:'1.4-4' }}, Lng: {{ pickupLatLng.lng | number:'1.4-4' }})</span>
+        </div>
+
+        <div *ngIf="pickupLatLng" class="mt-4 text-end">
+          <button class="btn btn-saas-primary px-4 py-2" (click)="goToStep(2)">
+            Suivant : Définir les Livraisons <i class="bi bi-arrow-right me-2"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Step 2: Dropoffs & Available Stops -->
+  <div *ngIf="currentStep === 2">
+    <!-- Available Stops Selection Table -->
+    <div class="card border-0 shadow-sm saas-card mb-4">
+      <div class="card-header bg-transparent border-bottom border-subtle p-4 d-flex justify-content-between align-items-center flex-wrap gap-3">
+        <div>
+          <h4 class="mb-1 text-white font-heading">
+            <i class="bi bi-inbox-fill text-brand me-2"></i> Arrêts Disponibles (Expéditeurs)
+          </h4>
+          <small class="text-muted">Sélectionnez les livraisons à inclure dans la tournée.</small>
+        </div>
+        <div class="d-flex flex-wrap align-items-center gap-2">
+          <select class="form-select form-select-sm bg-dark border-subtle text-white w-auto" [(ngModel)]="filterGov" (change)="updateFilters()" title="Governate Filter">
+            <option value="">Tous Gouvernorats</option>
+            <option *ngFor="let gov of governorates" [value]="gov">{{gov}}</option>
+          </select>
+          <select class="form-select form-select-sm bg-dark border-subtle text-white w-auto" [(ngModel)]="filterProduct" (change)="updateFilters()" title="Product Filter">
+            <option value="">Tous Produits</option>
+            <option *ngFor="let prod of uniqueProducts" [value]="prod">{{prod}}</option>
+          </select>
+        </div>
+      </div>
+      <div class="card-body p-0">
+        <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+          <table class="table saas-table align-middle">
+            <thead>
+              <tr>
+                <th style="width: 40px;"></th>
+                <th>Client</th>
+                <th>Téléphone</th>
+                <th>Destination</th>
+                <th>Gouvernorat</th>
+                <th>Produit</th>
+                <th class="numeric">Prix (TND)</th>
+                <th class="pe-4 text-end">Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let stop of getFilteredAndSortedAvailable()">
+                <td>
+                  <input type="checkbox" class="form-check-input bg-dark border-subtle" [checked]="selectedStopIds.has($any(stop).id)" (change)="toggleStop($any(stop).id)">
+                </td>
+                <td class="fw-semibold text-white">{{ stop.name || '-' }}</td>
+                <td>{{ stop.phoneNumber || '-' }}</td>
+                <td class="text-truncate" style="max-width: 180px;">{{ stop.destinationName }}</td>
+                <td><span class="status-pill info fs-8">{{ stop.gov || '-' }}</span></td>
+                <td>{{ stop.productName || '-' }}</td>
+                <td class="numeric fw-bold text-amber">{{ stop.price | number:'1.2-2' }}</td>
+                <td class="pe-4 text-end">
+                  <button class="btn btn-icon-soft text-danger" (click)="deleteAvailableStop($any(stop).id)" title="Delete Stop">
+                    <i class="bi bi-trash"></i>
+                  </button>
+                </td>
+              </tr>
+              <tr *ngIf="getFilteredAndSortedAvailable().length === 0">
+                <td colspan="8" class="text-center py-5 text-muted">
+                  <i class="bi bi-inbox display-6 d-block mb-2"></i>Aucun arrêt disponible avec les filtres actuels.
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="p-3 border-top border-subtle d-flex justify-content-between align-items-center">
+          <div class="d-flex gap-2">
+            <button class="btn btn-saas-primary btn-sm" (click)="addSelectedToDropOffs()" [disabled]="selectedStopIds.size === 0">
+              <i class="bi bi-plus-circle me-1"></i> Ajouter {{ selectedStopIds.size }} Sélectionné(s)
+            </button>
+            <button class="btn btn-outline-danger btn-sm rounded-3" (click)="deleteSelectedStops()" [disabled]="selectedStopIds.size === 0">
+              <i class="bi bi-trash me-1"></i> Supprimer {{ selectedStopIds.size }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Active Dropoffs Card -->
+    <div class="card border-0 shadow-sm saas-card">
+      <div class="card-header bg-transparent border-bottom border-subtle p-4 d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <h4 class="mb-0 text-white font-heading">
+          <i class="bi bi-route-fill text-brand me-2"></i> Points de Livraison Sélectionnés ({{ dropOffs.length }} / {{ maxStops }})
+        </h4>
+        <div class="d-flex align-items-center gap-2">
+          <input #fileInput type="file" class="d-none" accept=".xlsx,.xls" (change)="onExcelUpload($event)" [disabled]="isProcessingExcel">
+          <button type="button" class="btn btn-outline-success btn-sm rounded-pill" (click)="fileInput.click()" [disabled]="isProcessingExcel">
+            <i class="bi bi-file-earmark-excel me-1"></i>{{ isProcessingExcel ? 'Traitement...' : 'Importer Excel' }}
+          </button>
+        </div>
+      </div>
+
+      <div class="card-body p-4">
+        <div class="row g-3 mb-4">
+          <div class="col-md-3">
+            <input type="text" class="form-control bg-dark border-subtle text-white" [(ngModel)]="newDropOffName" placeholder="Nom du client" />
+          </div>
+          <div class="col-md-3">
+            <input type="text" class="form-control bg-dark border-subtle text-white" [(ngModel)]="newDropOffPhone" placeholder="Téléphone" />
+          </div>
+          <div class="col-md-4">
+            <input type="text" class="form-control bg-dark border-subtle text-white" [(ngModel)]="newDropOffDestination" placeholder="Adresse ou Google Maps URL" />
+          </div>
+          <div class="col-md-2">
+            <button class="btn btn-saas-primary w-100" (click)="addDropOff()" [disabled]="dropOffs.length >= maxStops">
+              {{ editIndex !== null ? 'Mettre à jour' : 'Ajouter' }}
+            </button>
+          </div>
+        </div>
+
+        <div class="table-responsive">
+          <table class="table saas-table align-middle">
+            <thead>
+              <tr>
+                <th>Nom Client</th>
+                <th>Téléphone</th>
+                <th>Destination</th>
+                <th class="pe-4 text-end">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let drop of dropOffs; let i = index">
+                <td class="fw-semibold text-white">{{ drop.name || '-' }}</td>
+                <td>{{ drop.phoneNumber || '-' }}</td>
+                <td class="text-truncate" style="max-width: 250px;">{{ drop.destinationName }}</td>
+                <td class="pe-4 text-end">
+                  <div class="d-flex justify-content-end gap-1">
+                    <button class="btn btn-icon-soft" (click)="editStop(i)" title="Edit"><i class="bi bi-pencil"></i></button>
+                    <button class="btn btn-icon-soft text-danger" (click)="deleteStop(i)" title="Delete"><i class="bi bi-trash"></i></button>
+                  </div>
+                </td>
+              </tr>
+              <tr *ngIf="dropOffs.length === 0">
+                <td colspan="4" class="text-center py-4 text-muted">
+                  Aucun point de livraison sélectionné.
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="mt-4 d-flex justify-content-between">
+          <button class="btn btn-outline-secondary rounded-pill px-4" (click)="goToStep(1)"><i class="bi bi-arrow-left me-1"></i>Précédent</button>
+          <button *ngIf="dropOffs.length > 0" class="btn btn-saas-primary rounded-pill px-4" (click)="goToStep(3)">Suivant : Choisir Livreur <i class="bi bi-arrow-right ms-1"></i></button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Step 3: Driver Selection -->
+  <div *ngIf="currentStep === 3">
+    <div class="card border-0 shadow-sm saas-card">
+      <div class="card-header bg-transparent border-bottom border-subtle p-4">
+        <h4 class="mb-1 text-white font-heading">
+          <i class="bi bi-truck text-brand me-2"></i> Assigner un Livreur Flotte
+        </h4>
+        <small class="text-muted">Étape 3/4 : Sélectionnez le conducteur responsable de cette tournée.</small>
+      </div>
+      <div class="card-body p-4">
+        <div class="mb-3">
+          <input type="text" class="form-control bg-dark border-subtle text-white style-search" style="max-width: 320px;" [(ngModel)]="driverSearch" placeholder="Rechercher conducteur par nom..." (input)="filterDrivers()">
+        </div>
+        <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+          <table class="table saas-table align-middle">
+            <thead>
+              <tr>
+                <th>Nom Conducteur</th>
+                <th>Téléphone</th>
+                <th class="pe-4 text-end">Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let driver of filteredDrivers; let i = index">
+                <td class="fw-semibold text-white">{{ driver.name }}</td>
+                <td>{{ driver.phone }}</td>
+                <td class="pe-4 text-end">
+                  <button class="btn btn-sm px-3 py-1 rounded-pill fw-semibold"
+                    [ngClass]="selectedDriverIndex === i ? 'btn-success' : 'btn-saas-primary'"
+                    (click)="selectDriver(i)">
+                    <i class="bi bi-check-lg me-1" *ngIf="selectedDriverIndex === i"></i>
+                    {{ selectedDriverIndex === i ? 'Assigné' : 'Assigner' }}
+                  </button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="mt-4 d-flex justify-content-between">
+          <button class="btn btn-outline-secondary rounded-pill px-4" (click)="goToStep(2)"><i class="bi bi-arrow-left me-1"></i>Précédent</button>
+          <button *ngIf="selectedDriverId" class="btn btn-saas-primary rounded-pill px-4" (click)="goToStep(4)">Suivant : Confirmer Route <i class="bi bi-arrow-right ms-1"></i></button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Step 4: Confirm Route -->
+  <div *ngIf="currentStep === 4">
+    <div class="card border-0 shadow-sm saas-card text-center p-4 p-md-5">
+      <div class="mb-4">
+        <i class="bi bi-check2-circle display-3 text-brand mb-2"></i>
+        <h3 class="font-heading text-white mb-2">Résumé Final de la Route Logistique</h3>
+        <p class="text-muted">Vérifiez toutes les données avant de lancer la tournée.</p>
+      </div>
+
+      <div class="bg-dark p-4 rounded-3 border border-subtle mb-4 text-start max-w-lg mx-auto" style="max-width: 600px;">
+        <div class="d-flex justify-content-between border-bottom border-subtle pb-2 mb-2">
+          <span class="text-muted">Adresse Retrait:</span>
+          <span class="fw-bold text-white">{{ pickupAddress }}</span>
+        </div>
+        <div class="d-flex justify-content-between border-bottom border-subtle pb-2 mb-2">
+          <span class="text-muted">Nombre de Livraisons:</span>
+          <span class="fw-bold text-brand">{{ dropOffs.length }} Points</span>
+        </div>
+        <div class="d-flex justify-content-between">
+          <span class="text-muted">Livreur Assigné:</span>
+          <span class="fw-bold text-emerald">{{ selectedDriverIndex !== null ? driversof[selectedDriverIndex].name : 'Non sélectionné' }}</span>
+        </div>
+      </div>
+
+      <div class="d-flex justify-content-center gap-3">
+        <button class="btn btn-outline-secondary rounded-pill px-4" (click)="goToStep(3)">Modifier Livreur</button>
+        <button class="btn btn-saas-primary rounded-pill px-5 py-2 fw-bold" (click)="confirmAll()" [disabled]="dropOffs.length === 0 || !selectedDriverId || isprocessed">
+          <span *ngIf="isprocessed" class="spinner-border spinner-border-sm me-2"></span>
+          {{ isprocessed ? 'Lancement en cours...' : 'Confirmer & Lancer la Tournée' }}
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

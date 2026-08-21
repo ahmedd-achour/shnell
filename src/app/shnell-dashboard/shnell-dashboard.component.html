@@ -1,0 +1,122 @@
+<div class="dashboard-root min-vh-100 position-relative" [attr.data-theme]="isDarkMode ? 'dark' : 'light'">
+  <!-- Skeleton Loading Overlay -->
+  <div class="loading-overlay d-flex flex-column align-items-center justify-content-center" *ngIf="loading">
+    <div class="spinner-border text-brand mb-3" style="width: 3.5rem; height: 3.5rem;" role="status"></div>
+    <div class="loading-label mono tracking-wider text-brand fw-bold fs-7">SYNCHRONIZING FLEET PLATFORM DATA...</div>
+  </div>
+
+  <!-- Main Content -->
+  <main class="dashboard-content-area flex-grow-1 p-0" *ngIf="!loading">
+    
+    <!-- Header with Stats -->
+    <header class="dash-header mb-4 p-4 d-flex justify-content-between align-items-center">
+      <div>
+        <h2 class="mb-0 font-heading text-main fs-4 text-capitalize">{{ activeTab.replace('-', ' ') }}</h2>
+        <small class="text-muted d-block fs-8">{{ today | date:'fullDate' }}</small>
+      </div>
+      <div class="d-flex gap-3 align-items-center">
+        <!-- Active Drivers Live Pill -->
+        <div class="status-pill success px-3 py-2 d-flex align-items-center gap-2">
+          <span class="pulse-ring"></span>
+          <span class="fs-8 fw-bold mono">{{ activeDriversCount }} DRIVERS LIVE</span>
+        </div>
+
+        <!-- Pending Fleet Approvals Pill -->
+        <div class="status-pill warning px-3 py-2 d-flex align-items-center gap-2 cursor-pointer" (click)="setTab('vehicles')">
+          <i class="bi bi-truck text-warning"></i>
+          <span class="fs-8 fw-bold mono">{{ pendingVehiclesCount }} PENDING APPROVALS</span>
+          <span *ngIf="pendingVehiclesCount > 0" class="badge bg-warning text-dark rounded-circle px-2">!</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- Error Banner -->
+    <div class="alert alert-danger border-0 shadow-sm mb-4 rounded-3" *ngIf="error">
+      <i class="bi bi-exclamation-triangle-fill me-2"></i>{{ error }}
+    </div>
+
+    <!-- Dynamic Active Component View -->
+    <app-overview-tab
+      *ngIf="activeTab === 'overview'"
+      [users]="users"
+      [vehicles]="vehicles"
+      [orders]="orders"
+      [deals]="deals"
+      [commissions]="commissions"
+      [bids]="bids"
+      (navigateTab)="setTab($any($event))"
+      (inspectDriver)="onInspectDriver($event)"
+      (selectUserForNotification)="onSelectUserForNotification($event)">
+    </app-overview-tab>
+
+    <app-users-tab
+      *ngIf="activeTab === 'users'"
+      [users]="users"
+      [driverLocations]="driverLocations"
+      (inspectDriver)="onInspectDriver($event)"
+      (selectUserForNotification)="onSelectUserForNotification($event)">
+    </app-users-tab>
+
+    <app-vehicles-tab
+      *ngIf="activeTab === 'vehicles'"
+      [vehicles]="vehicles"
+      [users]="users"
+      (inspectDriver)="onInspectDriver($event)">
+    </app-vehicles-tab>
+
+    <app-deals-tab
+      *ngIf="activeTab === 'deals'"
+      [orders]="orders"
+      [deals]="deals"
+      [commissions]="commissions"
+      [users]="users">
+    </app-deals-tab>
+
+    <app-live-map-tab
+      *ngIf="activeTab === 'live-map'"
+      [driverLocations]="driverLocations"
+      [users]="users"
+      [vehicles]="vehicles"
+      (inspectDriver)="onInspectDriver($event)"
+      (selectUserForNotification)="onSelectUserForNotification($event)">
+    </app-live-map-tab>
+
+    <app-driver-profile-tab
+      *ngIf="activeTab === 'driver-profile'"
+      [driverId]="selectedDriverIdForInspection"
+      [driversList]="users">
+    </app-driver-profile-tab>
+
+    <app-settings-tab
+      *ngIf="activeTab === 'settings'">
+    </app-settings-tab>
+
+    <app-notifications-tab
+      *ngIf="activeTab === 'notifications'"
+      [users]="users"
+      [preselectedUser]="selectedUserForNotification">
+    </app-notifications-tab>
+
+    <app-dispatch-order-tab
+      *ngIf="activeTab === 'dispatch-order'"
+      [users]="users"
+      [vehicles]="vehicles"
+      [driverLocations]="driverLocations"
+      (navigateTab)="setTab($any($event))"
+      (inspectDriver)="onInspectDriver($event)">
+    </app-dispatch-order-tab>
+  </main>
+
+  <!-- Live Cross-Tab Toast Alert -->
+  <div class="position-fixed bottom-0 end-0 p-3" style="z-index: 1100;" *ngIf="liveToastMessage">
+    <div class="toast show align-items-center text-white bg-dark border border-brand rounded-4 shadow-lg p-2" role="alert">
+      <div class="d-flex align-items-center">
+        <div class="toast-body fs-7 fw-semibold">
+          <i class="bi bi-broadcast text-warning me-2 fs-5"></i>
+          {{ liveToastMessage }}
+        </div>
+        <button type="button" class="btn-close btn-close-white me-2 m-auto" (click)="liveToastMessage = null"></button>
+      </div>
+    </div>
+  </div>
+</div>

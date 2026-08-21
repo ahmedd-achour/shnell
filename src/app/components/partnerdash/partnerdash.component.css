@@ -1,0 +1,30 @@
+.partnerdash-container {
+  background-color: var(--color-bg-primary);
+  min-height: 100vh;
+}
+
+.saas-stepper .nav-link {
+  color: var(--color-text-muted);
+  background: transparent;
+  transition: all var(--transition-fast);
+  border: 1px solid transparent;
+  font-size: 0.85rem;
+}
+
+.saas-stepper .nav-link:hover:not(:disabled) {
+  color: var(--color-text-main);
+  background: var(--color-surface-card-hover);
+}
+
+.saas-stepper .nav-link.active {
+  color: #ffffff;
+  background: var(--color-brand-primary);
+  box-shadow: var(--shadow-brand);
+}
+
+.saas-stepper .nav-link:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.fs-8 { font-size: 0.75rem; }

@@ -1,0 +1,24 @@
+<div class="container">
+  <div class="content">
+
+
+    <button
+      class="btn btn-primary btn-lg"
+      (click)="setCurrentLocation()"
+      [disabled]="isLoading"
+    >
+      <ng-container *ngIf="!isLoading; else loading">
+        Définir votre emplacement
+      </ng-container>
+    </button>
+
+    <ng-template #loading>
+      <div class="spinner"></div>
+      <span class="loading-text">Mise à jour en cours...</span>
+    </ng-template>
+
+    <p *ngIf="errorMessage" class="error-message mt-3">
+      {{ errorMessage }}
+    </p>
+  </div>
+</div>

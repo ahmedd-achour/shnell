@@ -1,0 +1,144 @@
+        :root {
+            --primary: #0d6efd;
+            --primary-hover: #084298;
+            --success: #198754;
+            --dark: #1f2937;
+            --text-secondary: #3a3c3f;
+            --light: #f8f9fa;
+        }
+
+        /* --- Global Utilities --- */
+        .bg-primary { background-color: var(--primary) !important; }
+        .text-primary { color: var(--primary) !important; }
+        .text-dark { color: var(--dark) !important; }
+
+        /* --- Feature Card Styling (Reusable for Services) --- */
+        .feature-card {
+            background: #86796a85;
+            border: 1px solid #e0e0e0;
+            border-radius: 12px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+            transition: all 0.3s ease;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            text-align: center;
+        }
+        .feature-card:hover {
+            box-shadow: 0 8px 18px rgba(0, 0, 0, 0.1);
+            transform: translateY(-8px);
+        }
+        .feature-icon, .step-icon {
+            color: var(--primary);
+            border: 3px solid var(--primary);
+            border-radius: 50%;
+            padding: 20px;
+            margin: 0 auto 1rem auto;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.5rem !important;
+        }
+
+        /* --- Cost & Savings Card Styling (New) --- */
+        .cost-card {
+            padding: 1.5rem;
+            border-radius: 12px;
+            text-align: center;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+            height: 100%;
+            transition: all 0.3s ease;
+        }
+        .cost-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 6px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .cost-card-primary {
+            background: linear-gradient(135deg, #e0f0ff 0%, #f0f9ff 100%);
+            color: var(--primary);
+        }
+
+        .cost-card-success {
+            background: linear-gradient(135deg, #e6ffed 0%, #f0fff4 100%);
+            color: var(--success);
+        }
+        .cost-card h4 {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+        .cost-card h2 {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 0.25rem;
+        }
+        .cost-card small {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            display: block;
+        }
+
+        /* --- Pricing Card Styling (New) --- */
+        .pricing-card {
+            background: #ffffff;
+            border: 1px solid #e0e0e0;
+            border-radius: 12px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+            padding: 2rem;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            text-align: center;
+        }
+        .pricing-card:hover {
+            box-shadow: 0 8px 18px rgba(0, 0, 0, 0.08);
+        }
+
+        .pricing-card__features {
+            list-style: none;
+            padding: 0;
+            margin-bottom: 2rem;
+            text-align: left;
+        }
+        .pricing-card__features li {
+            padding: 0.5rem 0 0.5rem 20px;
+            border-bottom: 1px dashed #eee;
+            color: var(--text-secondary);
+            position: relative;
+        }
+        .pricing-card__features li::before {
+            content: "\f00c";
+            font-family: 'Font Awesome 5 Free';
+            font-weight: 900;
+            color: var(--success);
+            position: absolute;
+            left: 0;
+        }
+        .pricing-card__price {
+            font-size: 3rem;
+            font-weight: 700;
+            color: var(--primary);
+            margin-bottom: 0.5rem;
+        }
+
+        /* Highlighted Card Modifier */
+        .card-highlight {
+            background: var(--primary);
+            color: #fff;
+            border: 3px solid var(--primary);
+            transform: scale(1.05);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+        }
+        .card-highlight * {
+            color: #fff !important;
+        }
+        .card-highlight .btn-light {
+            background: #fff;
+            color: var(--primary) !important;
+        }
+        .card-highlight .pricing-card__features li::before {
+            color: #fff;
+        }
+        .li{color: black;
+        }

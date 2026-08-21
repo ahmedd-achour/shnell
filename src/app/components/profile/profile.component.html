@@ -1,0 +1,114 @@
+<div class="profile-page-container p-4" *ngIf="profile$ | async as profile">
+  <!-- Top Profile Hero Header -->
+  <div class="card border-0 shadow-sm saas-card mb-4 p-4">
+    <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-4">
+      <div class="d-flex align-items-center gap-3">
+        <div class="avatar-hero-pill">
+          {{ profile.name ? (profile.name.charAt(0) | uppercase) : 'A' }}
+        </div>
+        <div>
+          <div class="d-flex align-items-center gap-2 mb-1">
+            <h2 class="font-heading text-white mb-0 fs-3">{{ profile.name }}</h2>
+            <span class="status-pill success text-uppercase fs-8">{{ profile.role || 'Admin' }}</span>
+          </div>
+          <p class="text-muted small mb-0"><i class="bi bi-envelope me-1"></i>{{ profile.email }}</p>
+        </div>
+      </div>
+
+      <div class="d-flex align-items-center gap-2">
+        <button class="btn btn-outline-danger rounded-pill px-4 btn-sm" (click)="onSignOut()">
+          <i class="bi bi-box-arrow-right me-1"></i> Déconnexion
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Quick Metrics KPI Row -->
+  <div class="row g-3 mb-4">
+    <div class="col-12 col-sm-6 col-xl-3">
+      <div class="card saas-card border-0 p-4 h-100">
+        <span class="text-uppercase fw-bold text-muted fs-8 tracking-wide">Solde Disponible</span>
+        <h2 class="display-6 fw-bold text-emerald my-1">{{ profile.balance || 0 }} TND</h2>
+        <small class="text-muted fs-8">Crédit de compte actif</small>
+      </div>
+    </div>
+    <div class="col-12 col-sm-6 col-xl-3">
+      <div class="card saas-card border-0 p-4 h-100">
+        <span class="text-uppercase fw-bold text-muted fs-8 tracking-wide">Rôle Système</span>
+        <h2 class="display-6 fw-bold text-brand my-1 text-uppercase">{{ profile.role }}</h2>
+        <small class="text-muted fs-8">Niveau de privilèges</small>
+      </div>
+    </div>
+    <div class="col-12 col-sm-6 col-xl-3">
+      <div class="card saas-card border-0 p-4 h-100">
+        <span class="text-uppercase fw-bold text-muted fs-8 tracking-wide">Statut Connexion</span>
+        <div class="d-flex align-items-center gap-2 my-2">
+          <span class="live-pulse-dot"></span>
+          <span class="fw-bold text-white fs-5">En Ligne</span>
+        </div>
+        <small class="text-muted fs-8">Session administrative active</small>
+      </div>
+    </div>
+    <div class="col-12 col-sm-6 col-xl-3">
+      <div class="card saas-card border-0 p-4 h-100">
+        <span class="text-uppercase fw-bold text-muted fs-8 tracking-wide">Téléphone</span>
+        <h2 class="fs-4 fw-bold text-white my-2">{{ profile.phone || 'Non renseigné' }}</h2>
+        <small class="text-muted fs-8">Contact d'urgence</small>
+      </div>
+    </div>
+  </div>
+
+  <!-- Account Details & Driver Management Grid -->
+  <div class="row g-4 mb-4">
+    <!-- User Dossier Information -->
+    <div class="col-12 col-lg-6">
+      <div class="card saas-card border-0 p-4 h-100">
+        <h4 class="font-heading text-white mb-4 d-flex align-items-center gap-2">
+          <i class="bi bi-person-badge text-brand"></i> Informations du Compte
+        </h4>
+        <div class="bg-dark p-3 rounded-3 border border-subtle mb-3 d-flex justify-content-between align-items-center">
+          <span class="text-muted fs-8">Nom Officiel:</span>
+          <span class="fw-bold text-white fs-8">{{ profile.name }}</span>
+        </div>
+        <div class="bg-dark p-3 rounded-3 border border-subtle mb-3 d-flex justify-content-between align-items-center">
+          <span class="text-muted fs-8">Adresse Email:</span>
+          <span class="fw-bold text-white fs-8">{{ profile.email }}</span>
+        </div>
+        <div class="bg-dark p-3 rounded-3 border border-subtle mb-3 d-flex justify-content-between align-items-center">
+          <span class="text-muted fs-8">Numéro de Téléphone:</span>
+          <span class="fw-bold text-white fs-8">{{ profile.phone || 'N/A' }}</span>
+        </div>
+        <div class="bg-dark p-3 rounded-3 border border-subtle d-flex justify-content-between align-items-center">
+          <span class="text-muted fs-8">Clé d'accès API (UID):</span>
+          <code class="text-brand fs-8">{{ user?.uid }}</code>
+        </div>
+      </div>
+    </div>
+
+    <!-- Quick Driver Assignment Card -->
+    <div class="col-12 col-lg-6">
+      <div class="card saas-card border-0 p-4 h-100">
+        <h4 class="font-heading text-white mb-4 d-flex align-items-center gap-2">
+          <i class="bi bi-person-plus-fill text-brand"></i> Enrôlement Rapide Chauffeur
+        </h4>
+        <p class="text-muted fs-8 mb-4">Ajoutez un nouveau chauffeur à votre flotte en saisissant son identifiant système (UID).</p>
+
+        <div class="mb-4">
+          <label class="form-label text-white fs-8 fw-semibold">Identifiant Chauffeur (UID)</label>
+
+          <div class="input-group">
+            <input #driverId type="text" class="form-control bg-dark border-subtle text-white" placeholder="Coller l’ID du conducteur...">
+            <button class="btn btn-saas-primary" (click)="addDriver(driverId.value); driverId.value=''">
+              <i class="bi bi-plus-lg me-1"></i> Ajouter
+            </button>
+          </div>
+        </div>
+
+        <div class="p-3 status-pill info d-flex align-items-center gap-2">
+          <i class="bi bi-info-circle"></i>
+          <span class="fs-8">Les chauffeurs ajoutés hériteront des règles de répartition logistique de votre compte.</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

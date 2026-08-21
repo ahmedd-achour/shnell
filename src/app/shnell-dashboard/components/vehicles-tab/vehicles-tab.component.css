@@ -1,0 +1,39 @@
+.vehicles-container {
+  padding-bottom: 2rem;
+}
+
+.icon-box {
+  width: 42px;
+  height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+}
+
+.asset-card-thumb {
+  position: relative;
+  background: var(--color-surface-subtle);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  transition: transform 0.2s ease, border-color 0.2s ease;
+}
+
+.asset-card-thumb:hover {
+  transform: scale(1.03);
+  border-color: var(--color-brand-primary) !important;
+}
+
+.asset-thumb-overlay {
+  background: rgba(15, 23, 42, 0.75);
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.asset-card-thumb:hover .asset-thumb-overlay {
+  opacity: 1;
+}
+
+.driver-banner {
+  background: var(--color-surface-subtle);
+}

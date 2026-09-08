@@ -41,23 +41,15 @@ export class DispatchOrderTabComponent implements OnInit, AfterViewInit, OnDestr
   pickupName: string = 'Avenue Habib Bourguiba, Tunis';
   pickupLat: number = 36.8065;
   pickupLng: number = 10.1815;
-  elevatorOnPickup: boolean = false;
-  longWalkOnPickup: boolean = false;
-  pickupFloor: number = 0;
 
   // Dropoff Specs
   dropoffName: string = 'Les Berges du Lac 2, Tunis';
   dropoffLat: number = 36.8350;
   dropoffLng: number = 10.2400;
-  elevatorOnDropoff: boolean = false;
-  longWalkOnDropoff: boolean = false;
-  dropoffFloor: number = 0;
 
   // Additional Flutter Model Specs
   price: number = 45;
   distance: number = 8.5;
-  moveServiceSize: string = 'Standard';
-  bulkyItems: boolean = false;
   isAcepted: boolean = true;
   scheduleAt: string | null = null; // datetime-local input string
 
@@ -109,8 +101,7 @@ export class DispatchOrderTabComponent implements OnInit, AfterViewInit, OnDestr
     'Disassembly Tools'
   ];
 
-  moveServiceSizes: string[] = ['Standard', 'Small (S)', 'Medium (M)', 'Large (L)', 'Full House (XL)'];
-  vehicleTypeList: string[] = ['camion', 'estafette', 'light', 'medium', 'heavy', 'isuzu', 'popular'];
+  vehicleTypeList: string[] = ['super_light', 'light', 'medium', 'medium_heavy', 'heavy', 'super_heavy', 'popular'];
 
   // Driver Search & UI state
   driverSearchQuery: string = '';
@@ -515,14 +506,6 @@ export class DispatchOrderTabComponent implements OnInit, AfterViewInit, OnDestr
         isAcepted: true, // Explicitly marked true for manual admin assignment
         scheduleAt: scheduleAtVal, // Non-null default (Timestamp.now()) if unscheduled
         category: this.category || 'pro',
-        bulkyItems: !!this.bulkyItems,
-        elevatorOnPickup: !!this.elevatorOnPickup,
-        longWalkOnPickup: !!this.longWalkOnPickup,
-        elevatorOnDropoff: !!this.elevatorOnDropoff,
-        longWalkOnDropoff: !!this.longWalkOnDropoff,
-        pickupFloor: Number(this.pickupFloor) || 0,
-        dropoffFloor: Number(this.dropoffFloor) || 0,
-        moveServiceSize: this.moveServiceSize || 'Standard',
         optionalAssets: optionalAssetsVal, // Non-null array default []
         budget: budgetVal,                 // Non-null number default 0
         notes: notesVal,                   // Non-null string default ""

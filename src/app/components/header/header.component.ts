@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, HostListener } from '@angular/core';
 
 interface NavItem {
   label: string;
@@ -12,13 +12,20 @@ interface NavItem {
 })
 export class HeaderComponent {
   isMenuOpen = false;
+  scrolled = false;
   private documentClickListener?: (event: MouseEvent) => void;
 
   navItems: NavItem[] = [
     { label: 'Accueil', path: '/home' },
     { label: 'À Propos', path: '/about' },
-    { label: 'Se Connecter', path: '/sign-in' },
+    { label: 'Services', path: '/service' },
+    { label: 'Contact', path: '/contact' },
   ];
+
+  @HostListener('window:scroll')
+  onScroll(): void {
+    this.scrolled = window.scrollY > 8;
+  }
 
   toggleMenu() {
     if (this.isMenuOpen) {

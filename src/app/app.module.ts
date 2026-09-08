@@ -19,23 +19,16 @@ import { AboutComponent } from './components/about/about.component';
 import { FooterComponent } from './components/footer/footer.component';
 import { ServiceComponent } from './components/service/service.component';
 import { ContactComponent } from './components/contact/contact.component';
-import { PriceComponent } from './components/price/price.component';
 import { PrivacyPolicyComponent } from './components/privacy-policy/privacy-policy.component';
 import { BlogComponent } from './components/blog/blog.component';
-import { SingleComponent } from './components/single/single.component';
 
 import { HeaderComponent } from './components/header/header.component';
 import { PartnerdashComponent } from './components/partnerdash/partnerdash.component';
-import { ParcelManagementComponent } from './components/parcel-management/parcel-management.component';
 import { SidebarComponent } from './components/sidebar/sidebar.component';
-import { StopsManagementComponent } from './components/stops-management/stops-management.component';
-import { AnalyticsComponent } from './components/analytics/analytics.component';
 import { ProfileComponent } from './components/profile/profile.component';
-import { DriverDetailsComponent } from './components/driver-details/driver-details.component';
 import { RetourspaymentsComponent } from './components/retourspayments/retourspayments.component';
 import { SignInComponent } from './components/auth/sign-in/sign-in.component';
 import { SignUpComponent } from './components/auth/sign-up/sign-up.component';
-import { ForgotPasswordComponent } from './components/auth/forgot-password/forgot-password.component';
 import { PublicLayoutComponent } from './public-layout/public-layout.component';
 import { getDatabase, provideDatabase } from '@angular/fire/database';
 import { getFunctions, provideFunctions } from '@angular/fire/functions';
@@ -45,6 +38,12 @@ import { ExpiredOrdersComponent } from './expired-orders/expired-orders.componen
 import { UpdateStopLocationComponent } from './update-stop-location/update-stop-location.component';
 import { NgModule } from '@angular/core';
 import { ShnellDashboardComponent } from './shnell-dashboard/shnell-dashboard.component';
+import { LottieComponent, provideLottieOptions } from 'ngx-lottie';
+import player from 'lottie-web';
+
+export function playerFactory() {
+  return player;
+}
 
 @NgModule({
   declarations:  [
@@ -57,21 +56,14 @@ import { ShnellDashboardComponent } from './shnell-dashboard/shnell-dashboard.co
     FooterComponent,
     ServiceComponent,
     ContactComponent,
-    PriceComponent,
     PrivacyPolicyComponent,
-    SingleComponent,
     BlogComponent,
     PartnerdashComponent,
     SidebarComponent,
-    ParcelManagementComponent,
-    StopsManagementComponent,
     ProfileComponent,
-    AnalyticsComponent,
     RetourspaymentsComponent,
-    DriverDetailsComponent,
     SignInComponent,
     SignUpComponent,
-    ForgotPasswordComponent,
     PublicLayoutComponent,
     AdminDriverManagementComponent,
     ExpiredOrdersComponent,
@@ -90,7 +82,8 @@ AuthModule,
     MatFormFieldModule,
     MatInputModule,
     MatProgressSpinnerModule,
-    ShnellDashboardComponent
+    ShnellDashboardComponent,
+    LottieComponent
   ],
     schemas: [],
 
@@ -113,7 +106,8 @@ AuthModule,
     provideFirestore(() => getFirestore()),
     provideDatabase(() => getDatabase()),
     provideFunctions(() => getFunctions()),
-    provideAnimationsAsync()
+    provideAnimationsAsync(),
+    provideLottieOptions({ player: playerFactory })
   ],
 
   bootstrap: [AppComponent]

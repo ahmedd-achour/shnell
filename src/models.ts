@@ -52,6 +52,7 @@ export interface VehicleSettings {
   shortDistMult: number;
   longDistRate: number;
   isActive?: boolean;
+  pricing?: any;
 }
 
 export interface GlobalConfig {
@@ -82,14 +83,6 @@ export interface Orders {
   isAcepted: boolean;
   scheduleAt?: Date | any | null;
   category: string;
-  elevatorOnPickup: boolean;
-  longWalkOnPickup: boolean;
-  elevatorOnDropoff: boolean;
-  longWalkOnDropoff: boolean;
-  pickupFloor: number;
-  dropoffFloor: number;
-  moveServiceSize: string;
-  bulkyItems: boolean;
   optionalAssets: string[] | null;
   budget: number | null;
   notes: string | null;
@@ -176,4 +169,17 @@ export interface MetricCard {
   accent: 'blue' | 'green' | 'amber' | 'purple' | 'rose' | 'emerald' | 'cyan' | 'indigo';
   icon?: string;
   change?: string;
+}
+
+export interface CallLog {
+  id?: string;
+  dealId?: string;
+  callStatus?: string;
+  callerName?: string;
+  callerId?: string;
+  receiverId?: string;
+  status?: string;
+  timestamp?: any;
+  type?: string;
+  participants?: string[];
 }

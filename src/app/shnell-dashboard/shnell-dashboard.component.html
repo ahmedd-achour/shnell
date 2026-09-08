@@ -9,12 +9,15 @@
   <main class="dashboard-content-area flex-grow-1 p-0" *ngIf="!loading">
     
     <!-- Header with Stats -->
-    <header class="dash-header mb-4 p-4 d-flex justify-content-between align-items-center">
-      <div>
-        <h2 class="mb-0 font-heading text-main fs-4 text-capitalize">{{ activeTab.replace('-', ' ') }}</h2>
-        <small class="text-muted d-block fs-8">{{ today | date:'fullDate' }}</small>
+    <header class="dash-header mb-4 p-4 d-flex justify-content-between align-items-center flex-wrap gap-3">
+      <div class="d-flex align-items-center gap-3">
+        <div class="dash-header-icon"><i class="bi" [ngClass]="activeTabIcon"></i></div>
+        <div>
+          <h2 class="mb-0 font-heading fs-4">{{ activeTabLabel }}</h2>
+          <small class="d-block fs-8">{{ today | date:'fullDate' }}</small>
+        </div>
       </div>
-      <div class="d-flex gap-3 align-items-center">
+      <div class="d-flex gap-3 align-items-center flex-wrap">
         <!-- Active Drivers Live Pill -->
         <div class="status-pill success px-3 py-2 d-flex align-items-center gap-2">
           <span class="pulse-ring"></span>
@@ -36,6 +39,7 @@
     </div>
 
     <!-- Dynamic Active Component View -->
+    <div class="dash-tab-viewport">
     <app-overview-tab
       *ngIf="activeTab === 'overview'"
       [users]="users"
@@ -64,12 +68,21 @@
       (inspectDriver)="onInspectDriver($event)">
     </app-vehicles-tab>
 
+    <app-verifications-tab
+      *ngIf="activeTab === 'verifications'"
+      [verifications]="verifications"
+      [users]="users">
+    </app-verifications-tab>
+
     <app-deals-tab
       *ngIf="activeTab === 'deals'"
       [orders]="orders"
       [deals]="deals"
       [commissions]="commissions"
-      [users]="users">
+      [users]="users"
+      [bids]="bids"
+      [callLogs]="callLogs"
+      [vehicles]="vehicles">
     </app-deals-tab>
 
     <app-live-map-tab
@@ -105,6 +118,7 @@
       (navigateTab)="setTab($any($event))"
       (inspectDriver)="onInspectDriver($event)">
     </app-dispatch-order-tab>
+    </div>
   </main>
 
   <!-- Live Cross-Tab Toast Alert -->

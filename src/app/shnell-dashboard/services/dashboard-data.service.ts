@@ -22,6 +22,7 @@ import {
   Deals,
   DropOffData,
   CountryServiceArea,
+    CallLog,
   VehicleSettings,
   GlobalConfig,
   Orders,
@@ -154,6 +155,11 @@ export class DashboardDataService {
     );
   }
 
+  getDriverVerifications(): Observable<any[]> {
+    const colRef = collection(this.firestore, 'drivers');
+    return collectionData(colRef, { idField: 'uid' });
+  }
+
   getOrders(): Observable<Orders[]> {
     const colRef = collection(this.firestore, 'orders');
     return collectionData(colRef, { idField: 'id' }).pipe(
@@ -183,6 +189,19 @@ export class DashboardDataService {
       startWith([]),
       catchError(err => {
         console.error('Error fetching deals:', err);
+        return of([]);
+      })
+    );
+  }
+
+  
+  getCallLogs(): Observable<CallLog[]> {
+    const colRef = collection(this.firestore, 'call_logs');
+    return collectionData(colRef, { idField: 'id' }).pipe(
+      map(list => list as CallLog[]),
+      startWith([]),
+      catchError(err => {
+        console.error('Error fetching call logs:', err);
         return of([]);
       })
     );
@@ -254,6 +273,19 @@ export class DashboardDataService {
     );
   }
 
+  getDriverCommissions(driverId: string): Observable<Commission[]> {
+    const colRef = collection(this.firestore, 'commissions');
+    const q = query(colRef, where('DriverId', '==', driverId));
+    return collectionData(q, { idField: 'id' }).pipe(
+      map(list => list as Commission[]),
+      startWith([]),
+      catchError(err => {
+        console.error('Error fetching driver commissions:', err);
+        return of([]);
+      })
+    );
+  }
+
   getStops(): Observable<DropOffData[]> {
     const colRef = collection(this.firestore, 'stops');
     return collectionData(colRef, { idField: 'id' }).pipe(
@@ -312,6 +344,36 @@ export class DashboardDataService {
     await deleteDoc(docRef);
   }
 
+  
+  async assignDriverToOrder(orderId: string, driverId: string, userId: string): Promise<void> {
+    try {
+      const orderRef = doc(this.firestore, 'orders', orderId);
+      await updateDoc(orderRef, { isAcepted: true });
+
+      const dealRef = doc(collection(this.firestore, 'deals'));
+      await setDoc(dealRef, {
+        idOrder: orderId,
+        idDriver: driverId,
+        idUser: userId,
+        status: 'accepted',
+        timestamp: serverTimestamp()
+      });
+      
+      const notifRef = doc(collection(this.firestore, 'notifications'));
+      await setDoc(notifRef, {
+        userId: driverId,
+        title: 'New Job Assigned',
+        body: 'Admin has manually assigned you a job.',
+        time: serverTimestamp(),
+        isRead: false,
+        type: 'assignment'
+      });
+    } catch (e) {
+      console.error('Failed to assign driver:', e);
+      throw e;
+    }
+  }
+
   async softDeleteOrder(orderId: string): Promise<void> {
     const docRef = doc(this.firestore, `orders/${orderId}`);
     await updateDoc(docRef, { isAcepted: true });
@@ -339,6 +401,8 @@ export class DashboardDataService {
     // Update the wallet collection (create if not exists)
     const walletDocRef = doc(this.firestore, `wallets/${userId}`);
     await setDoc(walletDocRef, { balance: newBalance }, { merge: true });
+
+    
 
     const commColRef = collection(this.firestore, 'commissions');
     await addDoc(commColRef, {

@@ -125,29 +125,18 @@
               <span class="text-muted fs-8">Vehicle Type:</span>
               <span class="fw-bold text-white fs-8">{{ vehicle.type | titlecase }}</span>
             </div>
-            <div class="d-flex justify-content-between mb-2" *ngIf="getDisplayRef(vehicle.carteGrise)">
-              <span class="text-muted fs-8">Carte Grise Ref:</span>
-              <span class="font-monospace text-light fs-8">{{ getDisplayRef(vehicle.carteGrise) }}</span>
-            </div>
-            <div class="d-flex justify-content-between mb-3" *ngIf="getDisplayRef(vehicle.cin)">
-              <span class="text-muted fs-8">CIN Ref:</span>
-              <span class="font-monospace text-light fs-8">{{ getDisplayRef(vehicle.cin) }}</span>
-            </div>
 
             <!-- Vehicle Asset Document Thumbnails -->
             <div class="row g-2 mb-3">
-              <div class="col-4" *ngIf="getCarteGriseAssetUrl(vehicle)">
+              <!-- Asset Selected -->
+              <div class="col-4">
                 <div class="border border-secondary rounded overflow-hidden p-1 text-center bg-black">
-                  <img [src]="getCarteGriseAssetUrl(vehicle)" class="img-fluid" style="height: 60px; object-fit: cover;" alt="Carte Grise Identification Document" (error)="handleImageError($event)" />
-                  <span class="d-block fs-8 text-muted mt-1">Carte Grise</span>
+                  <img [src]="getTruckTypeAsset(vehicle.type)" class="img-fluid" style="height: 60px; object-fit: contain;" alt="Asset Selected" (error)="handleImageError($event)" />
+                  <span class="d-block fs-8 text-muted mt-1 text-truncate">Selected Asset</span>
                 </div>
               </div>
-              <div class="col-4" *ngIf="getCinAssetUrl(vehicle)">
-                <div class="border border-secondary rounded overflow-hidden p-1 text-center bg-black">
-                  <img [src]="getCinAssetUrl(vehicle)" class="img-fluid" style="height: 60px; object-fit: cover;" alt="CIN Identity Document" (error)="handleImageError($event)" />
-                  <span class="d-block fs-8 text-muted mt-1">CIN Doc</span>
-                </div>
-              </div>
+              
+              <!-- Vehicle Photo -->
               <div class="col-4" *ngIf="getVehicleAssetUrl(vehicle)">
                 <div class="border border-secondary rounded overflow-hidden p-1 text-center bg-black">
                   <img [src]="getVehicleAssetUrl(vehicle)" class="img-fluid" style="height: 60px; object-fit: cover;" alt="Vehicle Asset Photograph" (error)="handleImageError($event)" />
@@ -173,6 +162,63 @@
           </div>
           <ng-template #noVehicle>
             <p class="text-muted small mb-0">No vehicle asset registered for this driver yet.</p>
+          </ng-template>
+        </div>
+      </div>
+
+      <!-- PERSONAL VERIFICATION DOCUMENTS CARD -->
+      <div class="card border-0 shadow-sm saas-card mt-4">
+        <div class="card-header bg-transparent border-subtle pt-3 pb-2">
+          <h5 class="mb-0 text-white fs-6"><i class="bi bi-person-vcard text-info me-2"></i>Personal Verification</h5>
+        </div>
+        <div class="card-body p-4">
+          <div *ngIf="selectedDriverVerification; else noVerification">
+            <div class="d-flex justify-content-between mb-3 align-items-center">
+              <span class="text-muted fs-8">Status:</span>
+              <span class="badge" [ngClass]="selectedDriverVerification.isVerified ? 'bg-success' : 'bg-warning'">
+                {{ selectedDriverVerification.isVerified ? 'Verified' : 'Pending' }}
+              </span>
+            </div>
+
+            <!-- Verification Asset Thumbnails -->
+            <div class="row g-2 mb-3">
+              <div class="col-4" *ngIf="selectedDriverVerification.cinFrontUrl">
+                <div class="border border-secondary rounded overflow-hidden p-1 text-center bg-black">
+                  <img [src]="selectedDriverVerification.cinFrontUrl" class="img-fluid" style="height: 60px; object-fit: cover;" alt="CIN Recto" />
+                  <span class="d-block fs-8 text-muted mt-1">CIN Recto</span>
+                </div>
+              </div>
+              <div class="col-4" *ngIf="selectedDriverVerification.cinBackUrl">
+                <div class="border border-secondary rounded overflow-hidden p-1 text-center bg-black">
+                  <img [src]="selectedDriverVerification.cinBackUrl" class="img-fluid" style="height: 60px; object-fit: cover;" alt="CIN Verso" />
+                  <span class="d-block fs-8 text-muted mt-1">CIN Verso</span>
+                </div>
+              </div>
+              <div class="col-4" *ngIf="selectedDriverVerification.drivingLicenseFrontUrl">
+                <div class="border border-secondary rounded overflow-hidden p-1 text-center bg-black">
+                  <img [src]="selectedDriverVerification.drivingLicenseFrontUrl" class="img-fluid" style="height: 60px; object-fit: cover;" alt="Permis Recto" />
+                  <span class="d-block fs-8 text-muted mt-1">Permis Recto</span>
+                </div>
+              </div>
+              <div class="col-4" *ngIf="selectedDriverVerification.drivingLicenseBackUrl">
+                <div class="border border-secondary rounded overflow-hidden p-1 text-center bg-black">
+                  <img [src]="selectedDriverVerification.drivingLicenseBackUrl" class="img-fluid" style="height: 60px; object-fit: cover;" alt="Permis Verso" />
+                  <span class="d-block fs-8 text-muted mt-1">Permis Verso</span>
+                </div>
+              </div>
+            </div>
+            
+            <button
+              class="btn btn-sm w-100 rounded-pill fw-bold"
+              [ngClass]="selectedDriverVerification.isVerified ? 'btn-outline-warning' : 'btn-success'"
+              [disabled]="isProcessing"
+              (click)="toggleDriverVerification()">
+              <i class="bi" [ngClass]="selectedDriverVerification.isVerified ? 'bi-x-circle me-1' : 'bi-check-circle me-1'"></i>
+              {{ selectedDriverVerification.isVerified ? 'Revoke Personal Verification' : 'Approve Personal Verification' }}
+            </button>
+          </div>
+          <ng-template #noVerification>
+            <p class="text-muted small mb-0">No personal verification documents submitted yet.</p>
           </ng-template>
         </div>
       </div>

@@ -4,6 +4,8 @@ import { FormsModule } from '@angular/forms';
 import { Vehicle, ShnellUser } from '../../models/dashboard.models';
 import { DashboardDataService } from '../../services/dashboard-data.service';
 import { CrossTabSyncService } from '../../../services/cross-tab-sync.service';
+import { Firestore, doc, getDoc, updateDoc } from '@angular/fire/firestore';
+import { confirmAction, toastSuccess, toastError } from '../../../shared/swal';
 
 @Pipe({
   name: 'assetUrl',
@@ -42,13 +44,14 @@ export class VehiclesTabComponent implements OnInit {
   searchQuery: string = '';
   processingId: string | null = null;
 
-  // Selected Vehicle for Dossier Complet Modal
   selectedVehicleDossier: (Vehicle & { driver?: ShnellUser }) | null = null;
-  activeAssetTab: 'carteGrise' | 'cin' | 'vehicle' = 'carteGrise';
+  selectedDriverVerification: any = null;
+  activeAssetTab: string | number = 'vehicle';
 
   constructor(
     private dashboardDataService: DashboardDataService,
-    private crossTabSyncService: CrossTabSyncService
+    private crossTabSyncService: CrossTabSyncService,
+    private firestore: Firestore
   ) {}
 
   ngOnInit(): void {
@@ -94,8 +97,6 @@ export class VehiclesTabComponent implements OnInit {
       const q = (this.searchQuery || '').toLowerCase().trim();
       const matchesQuery = !q ||
         (v.type && v.type.toLowerCase().includes(q)) ||
-        (v.cin && v.cin.toLowerCase().includes(q)) ||
-        (v.carteGrise && v.carteGrise.toLowerCase().includes(q)) ||
         (driverName && driverName.includes(q)) ||
         (v.idDriver && v.idDriver.toLowerCase().includes(q)) ||
         (v.id && v.id.toLowerCase().includes(q));
@@ -119,12 +120,12 @@ export class VehiclesTabComponent implements OnInit {
   isTruckType(type?: string): boolean {
     if (!type) return false;
     const t = type.toLowerCase();
-    return t.includes('camion') || t.includes('isuzu');
+    return t.includes('heavy') || t.includes('medium');
   }
 
   isEstafetteType(type?: string): boolean {
     if (!type) return false;
-    return type.toLowerCase().includes('estafette');
+    return type.toLowerCase().includes('light');
   }
 
   onInspectDriverClick(driverId: string): void {
@@ -132,13 +133,23 @@ export class VehiclesTabComponent implements OnInit {
   }
 
   openDossierComplet(vehicle: Vehicle): void {
-    this.openDossierCompletTab(vehicle, 'carteGrise');
+    this.openDossierCompletTab(vehicle, 'vehicle');
   }
 
-  openDossierCompletTab(vehicle: Vehicle, tab: 'carteGrise' | 'cin' | 'vehicle'): void {
+  async openDossierCompletTab(vehicle: Vehicle, tab: string | number) {
     const driver = this.users.find(u => u.uid === vehicle.idDriver || u.id === vehicle.idDriver);
     this.selectedVehicleDossier = { ...vehicle, driver };
     this.activeAssetTab = tab;
+    this.selectedDriverVerification = null;
+    
+    try {
+      const docSnap = await getDoc(doc(this.firestore, `drivers/${vehicle.idDriver}`));
+      if (docSnap.exists()) {
+        this.selectedDriverVerification = docSnap.data();
+      }
+    } catch (e) {
+      console.error('Failed to fetch driver verification', e);
+    }
   }
 
   closeDossierComplet(): void {
@@ -168,7 +179,8 @@ export class VehiclesTabComponent implements OnInit {
   getVehicleAssetUrl(v: Vehicle | null): string {
     if (!v) return 'https://images.unsplash.com/photo-1601584115197-04ecc0da31d7?w=400&auto=format&fit=crop&q=80';
     const candidate = [
-      v.vehiculeAsset,
+      (v as any).vehicleAssetUrl,
+      (v as any).vehiculeAsset,
       (v as any).vehicleAsset,
       (v as any).vehicleImage,
       (v as any).vehiculeImage,
@@ -179,16 +191,28 @@ export class VehiclesTabComponent implements OnInit {
 
     if (v.type) {
       const t = v.type.toLowerCase().trim();
-      if (t.includes('light_medium')) return 'assets/trucks/light_medium.png';
       if (t.includes('medium_heavy')) return 'assets/trucks/medium_heavy.png';
       if (t.includes('super_heavy')) return 'assets/trucks/super_heavy.png';
       if (t.includes('light') || t.includes('voiture') || t.includes('car')) return 'assets/trucks/light.png';
       if (t.includes('heavy')) return 'assets/trucks/heavy.png';
       if (t.includes('medium') || t.includes('camion') || t.includes('truck')) return 'assets/trucks/medium.png';
-      if (t.includes('popular') || t.includes('estafette')) return 'assets/trucks/popular.png';
-      if (t.includes('isuzu')) return 'assets/trucks/isuzu.png';
+      if (t.includes('popular') || t.includes('light')) return 'assets/trucks/popular.png';
+      if (t.includes('medium')) return 'assets/trucks/isuzu.png';
     }
 
+    return 'assets/trucks/medium.png';
+  }
+
+  getTruckTypeAsset(type?: string): string {
+    if (!type) return 'assets/trucks/medium.png';
+    const t = type.toLowerCase().trim();
+    if (t.includes('medium_heavy')) return 'assets/trucks/medium_heavy.png';
+    if (t.includes('super_heavy')) return 'assets/trucks/super_heavy.png';
+    if (t.includes('light') || t.includes('voiture') || t.includes('car')) return 'assets/trucks/light.png';
+    if (t.includes('heavy')) return 'assets/trucks/heavy.png';
+    if (t.includes('medium') || t.includes('camion') || t.includes('truck')) return 'assets/trucks/medium.png';
+    if (t.includes('popular') || t.includes('light')) return 'assets/trucks/popular.png';
+    if (t.includes('medium')) return 'assets/trucks/isuzu.png';
     return 'assets/trucks/medium.png';
   }
 
@@ -198,13 +222,10 @@ export class VehiclesTabComponent implements OnInit {
     const seen = new Set<string>();
 
     const mainAssets = [
-      (v.carteGriseAsset || v.carteGrise),
-      (v.cinAsset || v.cin),
-      v.vehiculeAsset,
       (v as any).vehicleAsset,
       (v as any).vehicleImage,
-      (v as any).carteGriseFront,
-      (v as any).carteIdentityFront
+      (v as any).vehiculeImage,
+      (v as any).photo
     ];
     mainAssets.forEach(a => {
       if (a && typeof a === 'string' && (a.startsWith('http') || a.startsWith('data:') || a.startsWith('assets/'))) {
@@ -215,24 +236,16 @@ export class VehiclesTabComponent implements OnInit {
     const rawAdditional = [
       ...(Array.isArray(v.allAssets) ? v.allAssets : []),
       ...(Array.isArray((v as any).optionalAssets) ? (v as any).optionalAssets : []),
-      (v as any).carteGriseBack,
-      (v as any).carteIdentityBack,
-      (v as any).vehicleAssetBack
+      ...(Array.isArray((v as any).additionalAssets) ? (v as any).additionalAssets : [])
     ];
-
-    let count = 1;
-    rawAdditional.forEach(asset => {
-      if (asset) {
-        const urlStr = typeof asset === 'string' ? asset : (asset.url || asset.path || '');
-        if (typeof urlStr === 'string') {
-          const trimmed = urlStr.trim();
-          if (
-            (trimmed.startsWith('http://') || trimmed.startsWith('https://') || trimmed.startsWith('data:') || trimmed.startsWith('assets/')) &&
-            !seen.has(trimmed)
-          ) {
-            seen.add(trimmed);
-            list.push({ url: trimmed, label: `Extra Asset #${count++}` });
-          }
+    
+    let counter = 1;
+    rawAdditional.forEach(a => {
+      if (a && typeof a === 'string' && (a.startsWith('http') || a.startsWith('data:') || a.startsWith('assets/'))) {
+        const trimmed = a.trim();
+        if (!seen.has(trimmed)) {
+          seen.add(trimmed);
+          list.push({ url: trimmed, label: `Extra Asset #${counter++}` });
         }
       }
     });
@@ -269,9 +282,28 @@ export class VehiclesTabComponent implements OnInit {
         this.selectedVehicleDossier.isAssetsApproved = newStatus;
       }
       this.crossTabSyncService.notifyVehicleApproved(vehicle.id, newStatus);
+      toastSuccess(newStatus ? 'Véhicule approuvé' : 'Approbation révoquée');
     } catch (err) {
       console.error('Error toggling vehicle approval:', err);
-      alert('Error updating vehicle status');
+      toastError('Erreur lors de la mise à jour du véhicule');
+    } finally {
+      this.processingId = null;
+    }
+  }
+
+  async toggleDriverVerification(driverId: string): Promise<void> {
+    if (!driverId || !this.selectedDriverVerification) return;
+    this.processingId = driverId;
+    try {
+      const currentStatus = this.selectedDriverVerification.isVerified === true;
+      const newStatus = !currentStatus;
+      const verifyRef = doc(this.firestore, `drivers/${driverId}`);
+      await updateDoc(verifyRef, { isVerified: newStatus });
+      this.selectedDriverVerification.isVerified = newStatus;
+      toastSuccess(newStatus ? 'Vérification approuvée' : 'Vérification révoquée');
+    } catch (e) {
+      console.error('Error toggling driver verification:', e);
+      toastError('Erreur lors de la mise à jour de la vérification');
     } finally {
       this.processingId = null;
     }
@@ -279,7 +311,12 @@ export class VehiclesTabComponent implements OnInit {
 
   async deleteVehicle(vehicle: Vehicle): Promise<void> {
     if (!vehicle.id) return;
-    if (!confirm(`Are you sure you want to remove vehicle ${vehicle.type} (${vehicle.id})?`)) return;
+    const ok = await confirmAction({
+      title: 'Supprimer ce véhicule ?',
+      text: `${vehicle.type || 'Véhicule'} (${vehicle.id}) sera définitivement retiré de la flotte.`,
+      danger: true,
+    });
+    if (!ok) return;
 
     this.processingId = vehicle.id;
     try {
@@ -288,9 +325,10 @@ export class VehiclesTabComponent implements OnInit {
       if (this.selectedVehicleDossier && this.selectedVehicleDossier.id === vehicle.id) {
         this.closeDossierComplet();
       }
+      toastSuccess('Véhicule supprimé');
     } catch (err) {
       console.error('Error deleting vehicle:', err);
-      alert('Error deleting vehicle');
+      toastError('Erreur lors de la suppression du véhicule');
     } finally {
       this.processingId = null;
     }

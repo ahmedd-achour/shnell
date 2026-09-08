@@ -1,6 +1,7 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { Firestore, collection, getDocs, deleteDoc, doc } from '@angular/fire/firestore';
 import * as XLSX from 'xlsx';
+import { confirmAction, toastSuccess, toastError } from '../shared/swal';
 
 export interface OrderWithDocId {
   docId: string; // Firestore document ID for deletion
@@ -208,7 +209,12 @@ export class ExpiredOrdersComponent implements OnInit {
   // --- DELETE & BULK DELETE ---
   async deleteOrder(order: OrderWithDocId): Promise<void> {
     if (!order.docId) return;
-    if (!confirm(`Delete expired order "${order.namePickUp}" and all its associated stops?`)) return;
+    const ok = await confirmAction({
+      title: 'Supprimer cette commande expirée ?',
+      text: `« ${order.namePickUp || order.docId} » et tous ses arrêts associés seront définitivement supprimés.`,
+      danger: true,
+    });
+    if (!ok) return;
 
     this.isLoading = true;
     try {
@@ -226,9 +232,10 @@ export class ExpiredOrdersComponent implements OnInit {
       if (this.selectedOrderModal?.docId === order.docId) {
         this.selectedOrderModal = null;
       }
+      toastSuccess('Commande supprimée');
     } catch (err) {
       console.error('Error deleting order:', err);
-      alert('Failed to delete order.');
+      toastError('Échec de la suppression de la commande');
     } finally {
       this.isLoading = false;
     }
@@ -237,7 +244,13 @@ export class ExpiredOrdersComponent implements OnInit {
   async bulkDeleteSelected(): Promise<void> {
     const count = this.selectedDocIds.size;
     if (count === 0) return;
-    if (!confirm(`Are you sure you want to permanently purge ${count} selected expired order(s)?`)) return;
+    const ok = await confirmAction({
+      title: `Purger ${count} commande(s) expirée(s) ?`,
+      text: 'Cette action est définitive et supprimera aussi les arrêts associés.',
+      confirmText: 'Purger',
+      danger: true,
+    });
+    if (!ok) return;
 
     this.isBulkDeleting = true;
     this.isLoading = true;
@@ -256,10 +269,10 @@ export class ExpiredOrdersComponent implements OnInit {
 
       this.expiredOrders = this.expiredOrders.filter(o => !this.selectedDocIds.has(o.docId));
       this.selectedDocIds.clear();
-      alert(`Successfully purged ${count} expired orders.`);
+      toastSuccess(`${count} commande(s) expirée(s) purgée(s)`);
     } catch (err) {
       console.error('Bulk deletion error:', err);
-      alert('Error performing bulk order purge.');
+      toastError('Erreur lors de la purge groupée');
     } finally {
       this.isBulkDeleting = false;
       this.isLoading = false;

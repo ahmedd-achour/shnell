@@ -5,7 +5,8 @@ import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 import { DashboardDataService } from '../../services/dashboard-data.service';
 import { CrossTabSyncService } from '../../../services/cross-tab-sync.service';
-import { ShnellUser, Vehicle, Bid, Deals } from '../../models/dashboard.models';
+import { ShnellUser, Vehicle, Bid, Deals, Commission } from '../../models/dashboard.models';
+import { toastSuccess, toastError } from '../../../shared/swal';
 
 @Component({
   selector: 'app-driver-profile-tab',
@@ -22,6 +23,7 @@ export class DriverProfileTabComponent implements OnInit, OnChanges, OnDestroy {
   driverVehicles: Vehicle[] = [];
   driverBids: Bid[] = [];
   driverDeals: Deals[] = [];
+  driverCommissions: Commission[] = [];
 
   loading: boolean = false;
   activeAssetModalUrl: string | null = null;
@@ -97,6 +99,17 @@ export class DriverProfileTabComponent implements OnInit, OnChanges, OnDestroy {
       .pipe(takeUntil(this.destroy$))
       .subscribe(deals => {
         this.driverDeals = deals;
+      });
+
+    this.dashboardDataService.getDriverCommissions(id)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(commissions => {
+        // Sort by time descending
+        this.driverCommissions = commissions.sort((a, b) => {
+          const tA = a.time?.seconds || 0;
+          const tB = b.time?.seconds || 0;
+          return tB - tA;
+        });
         this.loading = false;
       });
   }
@@ -141,9 +154,10 @@ export class DriverProfileTabComponent implements OnInit, OnChanges, OnDestroy {
         isBan: newBanState,
         isActive: !newBanState
       });
+      toastSuccess(newBanState ? 'Chauffeur banni' : 'Chauffeur débanni');
     } catch (e) {
       console.error('Error toggling ban state:', e);
-      alert('Failed to update driver ban status.');
+      toastError('Échec de la mise à jour du statut du chauffeur');
     } finally {
       this.isProcessing = false;
     }
@@ -178,9 +192,10 @@ export class DriverProfileTabComponent implements OnInit, OnChanges, OnDestroy {
       this.selectedDriver.balance = newBal;
 
       this.crossTabSyncService.notifyDriverUpdated(uid, { balance: newBal });
-      alert(`Successfully credited ${this.rechargeAmount} TND to ${this.selectedDriver.name}'s wallet!`);
+      toastSuccess(`${this.rechargeAmount} TND crédités sur le portefeuille de ${this.selectedDriver.name}`);
     } catch (e) {
       console.error('Error recharging balance:', e);
+      toastError('Erreur lors du crédit du portefeuille');
     } finally {
       this.isProcessing = false;
     }
@@ -263,14 +278,13 @@ export class DriverProfileTabComponent implements OnInit, OnChanges, OnDestroy {
 
     if (v.type) {
       const t = v.type.toLowerCase().trim();
-      if (t.includes('light_medium')) return 'assets/trucks/light_medium.png';
       if (t.includes('medium_heavy')) return 'assets/trucks/medium_heavy.png';
       if (t.includes('super_heavy')) return 'assets/trucks/super_heavy.png';
       if (t.includes('light') || t.includes('voiture') || t.includes('car')) return 'assets/trucks/light.png';
       if (t.includes('heavy')) return 'assets/trucks/heavy.png';
       if (t.includes('medium') || t.includes('camion') || t.includes('truck')) return 'assets/trucks/medium.png';
-      if (t.includes('popular') || t.includes('estafette')) return 'assets/trucks/popular.png';
-      if (t.includes('isuzu')) return 'assets/trucks/isuzu.png';
+      if (t.includes('popular') || t.includes('light')) return 'assets/trucks/popular.png';
+      if (t.includes('medium')) return 'assets/trucks/isuzu.png';
     }
 
     return 'assets/trucks/medium.png';

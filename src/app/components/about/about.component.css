@@ -1,4 +1,4 @@
-.xschnell-paragraph {
+.shnell-paragraph {
   background-color: #f9fafb; /* light gray background for contrast */
   border-left: 5px solid #5f4c0d; /* blue accent line */
   padding: 20px 25px;
@@ -11,11 +11,11 @@
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
 }
 
-.xschnell-paragraph p {
+.shnell-paragraph p {
   font-size: 16px;
 }
 
-.xschnell-paragraph strong {
+.shnell-paragraph strong {
   display: block;
   font-size: 18px;
   margin-bottom: 10px;

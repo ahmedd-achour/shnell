@@ -17,7 +17,7 @@ export class SettingsTabComponent implements OnInit, OnDestroy {
   configForm!: FormGroup;
   vehicleForms: Record<string, FormGroup> = {};
 
-  vehicleTypesList: string[] = ['isuzu', 'estafette', 'grand_camion', 'petit_camion'];
+  vehicleTypesList: string[] = ['super_light', 'light', 'medium', 'medium_heavy', 'heavy', 'super_heavy', 'popular'];
   vehicleSettingsData: Record<string, VehicleSettings> = {};
 
   countriesData: Record<string, CountryServiceArea> = {};
@@ -53,6 +53,8 @@ export class SettingsTabComponent implements OnInit, OnDestroy {
     this.configForm = this.fb.group({
       version_customer_app: ['1.0.0', Validators.required],
       version_driver_app: ['1.0.0', Validators.required],
+      currency_code: ['TND', Validators.required],
+      currency_symbol: ['DT', Validators.required],
       commission_percentage: [0.15, [Validators.required, Validators.min(0), Validators.max(1)]],
       stop_fee: [0.4, [Validators.required, Validators.min(0)]],
       update_link_customer_app: [''],
@@ -67,9 +69,11 @@ export class SettingsTabComponent implements OnInit, OnDestroy {
   private createVehicleFormGroup(data?: VehicleSettings): FormGroup {
     return this.fb.group({
       name: [data?.name || '', Validators.required],
+      category: [(data as any)?.category || ''],
       max_weight: [data?.maxWeight ?? 0, [Validators.required, Validators.min(0)]],
       volume: [data?.volume ?? 0, [Validators.required, Validators.min(0)]],
       base_price: [data?.basePrice ?? 0, [Validators.required, Validators.min(0)]],
+      price_per_km: [(data as any)?.price_per_km ?? 0, [Validators.required, Validators.min(0)]],
       short_dist_threshold: [data?.shortDistThreshold ?? 300, [Validators.required, Validators.min(0)]],
       short_dist_min: [data?.shortDistMin ?? 0, [Validators.required, Validators.min(0)]],
       short_dist_mult: [data?.shortDistMult ?? 0, [Validators.required, Validators.min(0)]],
@@ -110,13 +114,16 @@ export class SettingsTabComponent implements OnInit, OnDestroy {
               } else {
                 this.vehicleForms[key].patchValue({
                   name: v.name || key,
+                  category: (v as any).category || '',
                   max_weight: v.maxWeight ?? (v as any).max_weight ?? 0,
                   volume: v.volume ?? 0,
                   base_price: v.basePrice ?? (v as any).base_price ?? 0,
+                  price_per_km: (v as any).price_per_km ?? 0,
                   short_dist_threshold: v.shortDistThreshold ?? (v as any).short_dist_threshold ?? 300,
                   short_dist_min: v.shortDistMin ?? (v as any).short_dist_min ?? 0,
                   short_dist_mult: v.shortDistMult ?? (v as any).short_dist_mult ?? 0,
                   long_dist_rate: v.longDistRate ?? (v as any).long_dist_rate ?? 0,
+                  pricing_json: v.pricing ? JSON.stringify(v.pricing, null, 2) : '{}',
                   isActive: v.isActive ?? true
                 });
               }
@@ -179,9 +186,18 @@ export class SettingsTabComponent implements OnInit, OnDestroy {
         isActive: val.isActive
       };
 
+      let parsedPricing = {};
+      try {
+        parsedPricing = JSON.parse(val.pricing_json);
+      } catch (e) {
+        this.errorMessage = "Invalid JSON in Pricing for " + val.name;
+        this.savingVehicle = null;
+        return;
+      }
       const updatedPayload: Record<string, any> = {};
       updatedPayload[key] = {
         name: vehicleObj.name,
+        category: val.category,
         max_weight: vehicleObj.maxWeight,
         volume: vehicleObj.volume,
         base_price: vehicleObj.basePrice,
@@ -189,6 +205,8 @@ export class SettingsTabComponent implements OnInit, OnDestroy {
         short_dist_min: vehicleObj.shortDistMin,
         short_dist_mult: vehicleObj.shortDistMult,
         long_dist_rate: vehicleObj.longDistRate,
+        price_per_km: Number(val.price_per_km),
+        pricing: parsedPricing,
         isActive: vehicleObj.isActive
       };
 

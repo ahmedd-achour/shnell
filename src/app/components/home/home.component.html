@@ -1,239 +1,192 @@
-
-<section class="hero">
-
-  <!-- Background Video -->
-  <video #videoPlayer class="hero-video" autoplay muted loop playsinline>
+<!-- ===================== HERO ===================== -->
+<section class="hero" data-tone="dark">
+  <video #videoPlayer class="hero__video" autoplay muted loop playsinline preload="metadata" poster="assets/123.jpeg">
     <source src="assets/sample.mp4" type="video/mp4">
   </video>
+  <div class="hero__scrim"></div>
 
-  <!-- Overlay -->
-  <div class="hero-overlay"></div>
+  <div class="sh-container hero__grid">
+    <div class="hero__copy sh-fade-up">
+      <span class="sh-eyebrow">Transport &amp; livraison à la demande</span>
+      <h1>Le bon véhicule,<br>au bon moment.</h1>
+      <p class="hero__sub">
+        Transport, livraison ou déménagement — trouvez un transporteur vérifié en quelques
+        secondes, suivez-le en temps réel et payez en toute sécurité.
+      </p>
 
-  <!-- Content -->
-  <div class="container hero-content">
-
-    <h1>
-      SHNELL - Transport Marchandises
-    </h1>
-
-    <p class="subtitle">
-      Transport, livraison ou déménagement — trouvez le bon véhicule en quelques secondes,
-      suivez en temps réel et payez en toute sécurité.
-    </p>
-
-    <div class="app-section-centered">
-
-      <div class="app-badges">
-        <a href="https://play.google.com/store/apps/details?id=com.shnell.app" class="badge-item">
-          <img src="https://upload.wikimedia.org/wikipedia/commons/7/78/Google_Play_Store_badge_EN.svg" alt="Google Play Store">
+      <div class="hero__cta">
+        <a href="https://play.google.com/store/apps/details?id=com.shnell.app"
+           class="sh-btn sh-btn--primary sh-btn--lg" target="_blank" rel="noopener">
+          <i class="fa-brands fa-google-play"></i> Google Play
         </a>
+        <a routerLink="/sign-in" class="sh-btn sh-btn--ghost sh-btn--lg">Espace entreprise</a>
+      </div>
 
-        <div class="badge-item disabled">
-          <div class="app-badge">
-            <img src="https://upload.wikimedia.org/wikipedia/commons/3/3c/Download_on_the_App_Store_Badge.svg" alt="App Store">
+      <ul class="hero__trust">
+        <li><i class="fa-solid fa-shield-halved"></i> Transporteurs vérifiés</li>
+        <li><i class="fa-solid fa-location-crosshairs"></i> Suivi temps réel</li>
+        <li><i class="fa-solid fa-tag"></i> Prix transparent</li>
+      </ul>
+    </div>
+
+    <div class="hero__panel sh-fade-up">
+      <div class="trackcard">
+        <div class="trackcard__head">
+          <span class="sh-live-dot"></span>
+          <span>Course en direct</span>
+          <span class="trackcard__eta">ETA 12 min</span>
+        </div>
+        <svg class="trackcard__anim" viewBox="0 0 320 150" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <path class="route__base" d="M28 118 C 96 118, 120 40, 200 40 S 280 34, 296 30" />
+          <path class="route__draw" d="M28 118 C 96 118, 120 40, 200 40 S 280 34, 296 30" />
+          <circle class="route__ping" cx="28" cy="118" r="7" />
+          <circle class="route__origin" cx="28" cy="118" r="6" />
+          <g class="route__dest">
+            <circle cx="296" cy="30" r="9" />
+            <circle cx="296" cy="30" r="3" fill="#17140D" stroke="none" />
+          </g>
+        </svg>
+        <div class="trackcard__row">
+          <div class="trackcard__avatar"><i class="fa-solid fa-truck-fast"></i></div>
+          <div>
+            <strong>Karim B.</strong>
+            <span>Fourgon · 3,2 km</span>
           </div>
-          <span class="coming-soon-label">iOS bientôt disponible</span>
+          <div class="sh-pill sh-pill--success">En route</div>
         </div>
       </div>
-
-
-
     </div>
+  </div>
 
+  <a class="hero__scroll" href="#fleet" aria-label="Découvrir">
+    <i class="fa-solid fa-chevron-down"></i>
+  </a>
+</section>
+
+<!-- ===================== TRUST STRIP ===================== -->
+<section class="strip">
+  <div class="sh-container strip__inner">
+    <span>Déjà des centaines de livraisons locales réussies</span>
+    <div class="strip__stats">
+      <div><strong>6</strong><small>types de véhicules</small></div>
+      <div><strong>&lt; 5 min</strong><small>pour une réponse</small></div>
+      <div><strong>100%</strong><small>transporteurs contrôlés</small></div>
+    </div>
   </div>
 </section>
 
-<!-- ================= TRUST STRIP ================= -->
-<section style="text-align:center; padding:40px 20px; opacity:0.8;">
-  <p>Déjà utilisé pour des centaines de livraisons locales</p>
-</section>
-
-
-
-<!-- ================= FLEET ================= -->
-<section class="fleet-section">
-  <div class="container">
-
-    <header class="fleet-header">
-      <h1 style="color: #272204;">Un véhicule pour chaque besoin</h1>
-      <p>
-        Du petit colis au déménagement complet — choisissez la taille adaptée
-        et optimisez vos coûts instantanément.
-      </p>
+<!-- ===================== FLEET ===================== -->
+<section id="fleet" class="sh-section fleet">
+  <div class="sh-container">
+    <header class="sec-head">
+      <span class="sh-eyebrow">Notre flotte</span>
+      <h2>Un véhicule pour chaque besoin</h2>
+      <p>Du petit chargement au déménagement complet — choisissez la taille adaptée et obtenez un prix instantané.</p>
     </header>
 
-    <div class="fleet-grid">
-
-      <div class="fleet-card">
-        <h3>Utilitaire léger</h3>
-        <img src="assets/trucks/light.png">
-      </div>
-
-      <div class="fleet-card">
-        <h3>ISUZU</h3>
-        <img src="assets/trucks/light_medium.png">
-      </div>
-
-      <div class="fleet-card">
-        <h3>Fourgon</h3>
-        <img src="assets/trucks/medium_heavy.png">
-      </div>
-
-      <div class="fleet-card">
-        <h3>Camion</h3>
-        <img src="assets/trucks/heavy.png">
-      </div>
-
-      <div class="fleet-card">
-        <h3>Semi-remorque</h3>
-        <img src="assets/trucks/super_heavy.png">
-      </div>
-
-      <div class="fleet-card">
-        <h3>Estafette</h3>
-        <img src="assets/trucks/medium.png">
-      </div>
-
+    <div class="fleet__grid">
+      <article class="fleet__card"><img src="assets/trucks/light.png" alt="Utilitaire léger"><h3>Utilitaire léger</h3></article>
+      <article class="fleet__card"><img src="assets/trucks/light_medium.png" alt="ISUZU"><h3>ISUZU</h3></article>
+      <article class="fleet__card"><img src="assets/trucks/medium_heavy.png" alt="Fourgon"><h3>Fourgon</h3></article>
+      <article class="fleet__card"><img src="assets/trucks/heavy.png" alt="Camion"><h3>Camion</h3></article>
+      <article class="fleet__card"><img src="assets/trucks/super_heavy.png" alt="Semi-remorque"><h3>Semi-remorque</h3></article>
+      <article class="fleet__card"><img src="assets/trucks/medium.png" alt="Estafette"><h3>Estafette</h3></article>
     </div>
   </div>
 </section>
 
-<div class="video-section container">
-  <div class="video-responsive">
-    <iframe
-      src="https://www.youtube.com/embed/wYDgQP2r7dM"
-      title="YouTube video player"
-      frameborder="0"
-      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-      allowfullscreen>
-    </iframe>
-  </div>
-</div>
-
-
-<!-- ================= VALUE SECTION ================= -->
-<section class="experience-section">
-
-  <div class="section-header">
-    <span class="badge">Pourquoi nous choisir</span>
-
-    <h2 style="margin-top: 10px;color: #fffdfd;">
-      Une expérience conçue pour gagner du temps
-    </h2>
-
-    <p>
-      Chaque étape du transport a été simplifiée pour offrir une
-      expérience fluide, rapide et transparente.
-    </p>
-  </div>
-
-  <div class="journey">
-
-    <div class="journey-card">
-      <div class="number">01</div>
-
-      <img src="assets/asset1.png" alt="">
-
-      <h3>Réservation rapide</h3>
-
-      <p>
-        Créez votre demande en quelques secondes sans procédure complexe.
-      </p>
+<!-- ===================== VIDEO ===================== -->
+<section class="sh-section sh-section--tight">
+  <div class="sh-container">
+    <div class="videobox">
+      <iframe
+        src="https://www.youtube.com/embed/wYDgQP2r7dM"
+        title="Shnell en vidéo"
+        loading="lazy"
+        frameborder="0"
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+        allowfullscreen>
+      </iframe>
     </div>
-
-    <div class="journey-line"></div>
-
-    <div class="journey-card featured">
-      <div class="number">02</div>
-
-      <img src="assets/asset3.png" alt="">
-
-      <h3>Suivi en temps réel</h3>
-
-      <p>
-        Gardez le contrôle grâce au suivi du chauffeur et aux notifications.
-      </p>
-    </div>
-
-    <div class="journey-line"></div>
-
-    <div class="journey-card">
-      <div class="number">03</div>
-
-      <img src="assets/asset2.png" alt="">
-
-      <h3>Prix transparents</h3>
-
-      <p>
-        Aucun frais caché, vous connaissez le coût avant la validation.
-      </p>
-    </div>
-
   </div>
-
 </section>
 
-<!-- ================= STORY ================= -->
-<div class="shnell-section">
-  <div class="shnell-container">
+<!-- ===================== JOURNEY ===================== -->
+<section class="sh-section journey" data-tone="dark">
+  <div class="sh-container">
+    <header class="sec-head">
+      <span class="sh-eyebrow">Pourquoi nous choisir</span>
+      <h2>Une expérience conçue pour gagner du temps</h2>
+      <p>Chaque étape du transport a été simplifiée pour une expérience fluide, rapide et transparente.</p>
+    </header>
 
-    <div class="shnell-image-wrapper">
-      <div class="shnell-image-card">
-        <img src="assets/123.jpeg" alt="Shnell Service">
+    <div class="journey__grid">
+      <article class="journey__card">
+        <span class="journey__num">01</span>
+        <img src="assets/asset1.png" alt="">
+        <h3>Réservation rapide</h3>
+        <p>Créez votre demande en quelques secondes, sans procédure complexe.</p>
+      </article>
+      <article class="journey__card is-featured">
+        <span class="journey__num">02</span>
+        <img src="assets/asset3.png" alt="">
+        <h3>Suivi en temps réel</h3>
+        <p>Gardez le contrôle grâce au suivi du chauffeur et aux notifications.</p>
+      </article>
+      <article class="journey__card">
+        <span class="journey__num">03</span>
+        <img src="assets/asset2.png" alt="">
+        <h3>Prix transparents</h3>
+        <p>Aucun frais caché : vous connaissez le coût avant la validation.</p>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== STORY ===================== -->
+<section class="sh-section story">
+  <div class="sh-container story__grid">
+    <div class="story__media">
+      <img src="assets/123.jpeg" alt="Shnell">
+      <div class="story__badge">
+        <span class="sh-live-dot"></span>
+        <span>En direct</span>
       </div>
     </div>
-
-    <div class="shnell-content">
-      <span class="eyebrow">Notre Histoire</span>
+    <div class="story__body">
+      <span class="sh-eyebrow">Notre histoire</span>
       <h2>Pourquoi Shnell ?</h2>
-
-      <p class="tagline">
-        La logistique urbaine, enfin simple.
-      </p>
-
-      <div class="description-group">
-        <p>
-          Trouver un transporteur fiable ne devrait pas être compliqué.
-          Shnell connecte instantanément les utilisateurs avec des chauffeurs disponibles autour d’eux.
-        </p>
-
-        <p>
-          Prix calculé automatiquement, suivi en temps réel, réservation immédiate —
-          tout est conçu pour une expérience fluide.
-        </p>
-      </div>
-
-      <div class="shnell-actions">
-        <a href="/privacy-policy" class="btn-primary">Découvrir</a>
+      <p class="story__lead">La logistique urbaine, enfin simple.</p>
+      <p>Trouver un transporteur fiable ne devrait pas être compliqué. Shnell connecte instantanément
+        les utilisateurs avec des chauffeurs disponibles autour d’eux.</p>
+      <p>Prix calculé automatiquement, suivi en temps réel, réservation immédiate — tout est conçu
+        pour une expérience fluide.</p>
+      <div class="sh-cluster">
+        <a routerLink="/privacy-policy" class="sh-btn sh-btn--dark">Découvrir</a>
         <a href="https://play.google.com/store/apps/details?id=com.shnell.shnell_driver"
-           class="btn-secondary">
-           Devenir partenaire
-        </a>
+           class="sh-btn sh-btn--ghost" target="_blank" rel="noopener">Devenir partenaire</a>
       </div>
-
     </div>
   </div>
-</div>
+</section>
 
+<!-- ===================== FAQ ===================== -->
+<section class="sh-section faq">
+  <div class="faq__wrap">
+    <header class="sec-head">
+      <span class="sh-eyebrow">FAQ</span>
+      <h2>Questions fréquentes</h2>
+      <p>Tout ce que vous devez savoir avant de commander.</p>
+    </header>
 
-<section class="faq-section">
-  <div class="faq-container">
-
-    <h2>Questions fréquentes</h2>
-    <p class="faq-subtitle">Tout ce que vous devez savoir</p>
-
-    <div class="faq-item" *ngFor="let faq of faqs; let i = index">
-
-      <div class="faq-question" (click)="toggleFaq(i)">
-        {{faq.question}}
-        <span>{{ faq.open ? '−' : '+' }}</span>
+    <div class="faq__list">
+      <div class="faq__item" *ngFor="let faq of faqs; let i = index" [class.open]="faq.open">
+        <button class="faq__q" (click)="toggleFaq(i)" [attr.aria-expanded]="faq.open">
+          <span>{{ faq.question }}</span>
+          <i class="fa-solid" [class.fa-plus]="!faq.open" [class.fa-minus]="faq.open"></i>
+        </button>
+        <div class="faq__a" *ngIf="faq.open">{{ faq.answer }}</div>
       </div>
-
-      <div class="faq-answer" *ngIf="faq.open">
-        {{faq.answer}}
-      </div>
-
     </div>
-
   </div>
 </section>

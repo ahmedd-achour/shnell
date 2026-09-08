@@ -71,45 +71,27 @@
                   <small class="text-muted fs-8"><i class="bi bi-telephone me-1"></i>{{ getDriverContact(v.idDriver) || 'N/A' }}</small>
                 </div>
               </div>
-              <span class="badge bg-dark border border-secondary font-monospace fs-8 text-light" *ngIf="getDisplayRef(v.carteGrise)">Ref: {{ getDisplayRef(v.carteGrise) }}</span>
             </div>
 
             <!-- VERIFIED ASSET DOCUMENTS & ADDITIONAL ASSETS THUMBNAILS -->
             <div class="mb-3">
               <span class="text-muted small fw-bold d-block mb-2 text-uppercase fs-8">
-                <i class="bi bi-images me-1 text-primary"></i> Verified Assets & Documents ({{ 3 + getAdditionalAssets(v).length }})
+                <i class="bi bi-images me-1 text-primary"></i> Verified Assets & Documents ({{ 1 + getAdditionalAssets(v).length }})
               </span>
               <div class="row g-2">
-                <!-- Carte Grise Asset Thumbnail -->
+                <!-- Asset Selected Thumbnail -->
                 <div class="col-4">
-                  <div class="asset-card-thumb rounded-3 position-relative cursor-pointer overflow-hidden border border-subtle" (click)="openDossierCompletTab(v, 'carteGrise')">
+                  <div class="asset-card-thumb rounded-3 position-relative cursor-pointer overflow-hidden border border-subtle" (click)="openDossierCompletTab(v, 'asset_selected')">
                     <img
-                      [src]="(v.carteGriseAsset | assetUrl) || (v.carteGrise | assetUrl) || 'https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?w=300&auto=format&fit=crop&q=80'"
-                      alt="Carte Grise Identification Document"
+                      [src]="getTruckTypeAsset(v.type)"
+                      alt="Asset Selected"
                       class="img-cover w-100"
-                      style="height: 72px; object-fit: cover;"
-                      (error)="onAssetImageError($event, 'carteGrise')"
+                      style="height: 72px; object-fit: contain; background: var(--sh-card-2);"
+                      (error)="onAssetImageError($event, 'asset_selected')"
                     />
                     <div class="asset-thumb-overlay position-absolute inset-0 d-flex flex-column align-items-center justify-content-center text-center p-1">
-                      <i class="bi bi-search text-white fs-6 mb-1"></i>
-                      <span class="fs-8 fw-bold text-white text-uppercase" style="font-size: 0.65rem;">Carte Grise</span>
-                    </div>
-                  </div>
-                </div>
-
-                <!-- CIN Identity Asset Thumbnail -->
-                <div class="col-4">
-                  <div class="asset-card-thumb rounded-3 position-relative cursor-pointer overflow-hidden border border-subtle" (click)="openDossierCompletTab(v, 'cin')">
-                    <img
-                      [src]="(v.cinAsset | assetUrl) || (v.cin | assetUrl) || 'https://images.unsplash.com/photo-1589829545856-d10d557cf95f?w=300&auto=format&fit=crop&q=80'"
-                      alt="National Identity Document CIN"
-                      class="img-cover w-100"
-                      style="height: 72px; object-fit: cover;"
-                      (error)="onAssetImageError($event, 'cin')"
-                    />
-                    <div class="asset-thumb-overlay position-absolute inset-0 d-flex flex-column align-items-center justify-content-center text-center p-1">
-                      <i class="bi bi-person-vcard text-white fs-6 mb-1"></i>
-                      <span class="fs-8 fw-bold text-white text-uppercase" style="font-size: 0.65rem;">CIN Doc</span>
+                      <i class="bi bi-truck text-white fs-6 mb-1"></i>
+                      <span class="fs-8 fw-bold text-white text-uppercase" style="font-size: 0.65rem;">Asset Selected</span>
                     </div>
                   </div>
                 </div>
@@ -133,7 +115,7 @@
 
                 <!-- Additional Extra Assets Thumbnails -->
                 <div class="col-4" *ngFor="let extra of getAdditionalAssets(v)">
-                  <div class="asset-card-thumb rounded-3 position-relative cursor-pointer overflow-hidden border border-subtle" (click)="openDossierComplet(v)">
+                  <div class="asset-card-thumb rounded-3 position-relative cursor-pointer overflow-hidden border border-subtle" (click)="openDossierCompletTab(v, extra.url)">
                     <img
                       [src]="extra.url"
                       [alt]="extra.label"
@@ -211,19 +193,7 @@
 
       <!-- Vehicle Metadata -->
       <div class="row g-3 mb-4">
-        <div class="col-12 col-md-4">
-          <div class="bg-subtle p-3 rounded-3 border border-subtle">
-            <span class="text-muted small d-block">Carte Grise Ref:</span>
-            <strong class="font-monospace text-white fs-7">{{ getDisplayRef(selectedVehicleDossier.carteGrise, 'DOC VERIFIED') }}</strong>
-          </div>
-        </div>
-        <div class="col-12 col-md-4">
-          <div class="bg-subtle p-3 rounded-3 border border-subtle">
-            <span class="text-muted small d-block">CIN Ref:</span>
-            <strong class="font-monospace text-white fs-7">{{ getDisplayRef(selectedVehicleDossier.cin, 'DOC VERIFIED') }}</strong>
-          </div>
-        </div>
-        <div class="col-12 col-md-4">
+        <div class="col-12 col-md-12">
           <div class="bg-subtle p-3 rounded-3 border border-subtle">
             <span class="text-muted small d-block">Driver Contact:</span>
             <strong class="text-white fs-7">{{ selectedVehicleDossier.driver?.phone || selectedVehicleDossier.driver?.email || 'N/A' }}</strong>
@@ -240,17 +210,9 @@
           <li class="nav-item">
             <button
               class="nav-link btn-sm rounded-pill"
-              [class.active]="activeAssetTab === 'carteGrise'"
-              (click)="activeAssetTab = 'carteGrise'">
-              <i class="bi bi-card-heading me-1"></i> Carte Grise Document
-            </button>
-          </li>
-          <li class="nav-item">
-            <button
-              class="nav-link btn-sm rounded-pill"
-              [class.active]="activeAssetTab === 'cin'"
-              (click)="activeAssetTab = 'cin'">
-              <i class="bi bi-person-vcard me-1"></i> CIN Identity Document
+              [class.active]="activeAssetTab === 'asset_selected'"
+              (click)="activeAssetTab = 'asset_selected'">
+              <i class="bi bi-truck me-1"></i> Asset Selected
             </button>
           </li>
           <li class="nav-item">
@@ -261,32 +223,51 @@
               <i class="bi bi-camera me-1"></i> Vehicle Photo Asset
             </button>
           </li>
+          <li class="nav-item" *ngFor="let extra of getAdditionalAssets(selectedVehicleDossier)">
+            <button
+              class="nav-link btn-sm rounded-pill"
+              [class.active]="activeAssetTab === extra.url"
+              (click)="activeAssetTab = extra.url">
+              <i class="bi bi-file-earmark-image me-1"></i> {{ extra.label }}
+            </button>
+          </li>
+          <!-- Personal Verification Tabs -->
+          <ng-container *ngIf="selectedDriverVerification">
+            <li class="nav-item" *ngIf="selectedDriverVerification.cinFrontUrl">
+              <button class="nav-link btn-sm rounded-pill" [class.active]="activeAssetTab === 'cinFront'" (click)="activeAssetTab = 'cinFront'">
+                <i class="bi bi-person-vcard me-1"></i> CIN Recto
+              </button>
+            </li>
+            <li class="nav-item" *ngIf="selectedDriverVerification.cinBackUrl">
+              <button class="nav-link btn-sm rounded-pill" [class.active]="activeAssetTab === 'cinBack'" (click)="activeAssetTab = 'cinBack'">
+                <i class="bi bi-person-vcard me-1"></i> CIN Verso
+              </button>
+            </li>
+            <li class="nav-item" *ngIf="selectedDriverVerification.drivingLicenseFrontUrl">
+              <button class="nav-link btn-sm rounded-pill" [class.active]="activeAssetTab === 'permitFront'" (click)="activeAssetTab = 'permitFront'">
+                <i class="bi bi-card-heading me-1"></i> Permis Recto
+              </button>
+            </li>
+            <li class="nav-item" *ngIf="selectedDriverVerification.drivingLicenseBackUrl">
+              <button class="nav-link btn-sm rounded-pill" [class.active]="activeAssetTab === 'permitBack'" (click)="activeAssetTab = 'permitBack'">
+                <i class="bi bi-card-heading me-1"></i> Permis Verso
+              </button>
+            </li>
+          </ng-container>
         </ul>
 
         <!-- Asset View Frame -->
         <div class="asset-preview-frame bg-subtle p-3 rounded-4 border border-subtle text-center" style="min-height: 280px; display:flex; align-items:center; justify-content:center;">
-          <!-- Carte Grise Asset -->
-          <div *ngIf="activeAssetTab === 'carteGrise'" class="w-100">
+          <!-- Asset Selected -->
+          <div *ngIf="activeAssetTab === 'asset_selected'" class="w-100">
             <img
-              [src]="(selectedVehicleDossier.carteGriseAsset | assetUrl) || (selectedVehicleDossier.carteGrise | assetUrl) || 'https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?w=600&auto=format&fit=crop&q=80'"
-              alt="Carte Grise Asset"
+              [src]="getTruckTypeAsset(selectedVehicleDossier.type)"
+              alt="Asset Selected"
               class="img-fluid rounded-3 shadow border border-subtle"
-              style="max-height: 340px; object-fit: contain;"
-              onerror="this.onerror=null; this.src='https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?w=600&auto=format&fit=crop&q=80';"
+              style="max-height: 340px; object-fit: contain; background: var(--sh-card-2);"
+              (error)="onAssetImageError($event, 'asset_selected')"
             />
-            <div class="mt-2 text-muted small">Carte Grise Identification Document</div>
-          </div>
-
-          <!-- CIN Asset -->
-          <div *ngIf="activeAssetTab === 'cin'" class="w-100">
-            <img
-              [src]="(selectedVehicleDossier.cinAsset | assetUrl) || (selectedVehicleDossier.cin | assetUrl) || 'https://images.unsplash.com/photo-1589829545856-d10d557cf95f?w=600&auto=format&fit=crop&q=80'"
-              alt="CIN Document Asset"
-              class="img-fluid rounded-3 shadow border border-subtle"
-              style="max-height: 340px; object-fit: contain;"
-              onerror="this.onerror=null; this.src='https://images.unsplash.com/photo-1589829545856-d10d557cf95f?w=600&auto=format&fit=crop&q=80';"
-            />
-            <div class="mt-2 text-muted small">National Identity Document (CIN)</div>
+            <div class="mt-2 text-muted small">Asset Selected from App ({{ selectedVehicleDossier.type }})</div>
           </div>
 
           <!-- Vehicle Photo Asset -->
@@ -300,6 +281,40 @@
             />
             <div class="mt-2 text-muted small">Vehicle Inspection Photograph</div>
           </div>
+          
+          <!-- Additional Assets -->
+          <ng-container *ngFor="let extra of getAdditionalAssets(selectedVehicleDossier)">
+            <div *ngIf="activeAssetTab === extra.url" class="w-100">
+              <img
+                [src]="extra.url"
+                [alt]="extra.label"
+                class="img-fluid rounded-3 shadow border border-subtle"
+                style="max-height: 340px; object-fit: contain;"
+                (error)="onAssetImageError($event, 'extra')"
+              />
+              <div class="mt-2 text-muted small">{{ extra.label }}</div>
+            </div>
+          </ng-container>
+
+          <!-- Personal Verification Assets -->
+          <ng-container *ngIf="selectedDriverVerification">
+            <div *ngIf="activeAssetTab === 'cinFront'" class="w-100">
+              <img [src]="selectedDriverVerification.cinFrontUrl" alt="CIN Recto" class="img-fluid rounded-3 shadow border border-subtle" style="max-height: 340px; object-fit: contain;" (error)="onAssetImageError($event, 'cinFront')" />
+              <div class="mt-2 text-muted small">CIN Recto</div>
+            </div>
+            <div *ngIf="activeAssetTab === 'cinBack'" class="w-100">
+              <img [src]="selectedDriverVerification.cinBackUrl" alt="CIN Verso" class="img-fluid rounded-3 shadow border border-subtle" style="max-height: 340px; object-fit: contain;" (error)="onAssetImageError($event, 'cinBack')" />
+              <div class="mt-2 text-muted small">CIN Verso</div>
+            </div>
+            <div *ngIf="activeAssetTab === 'permitFront'" class="w-100">
+              <img [src]="selectedDriverVerification.drivingLicenseFrontUrl" alt="Permis Recto" class="img-fluid rounded-3 shadow border border-subtle" style="max-height: 340px; object-fit: contain;" (error)="onAssetImageError($event, 'permitFront')" />
+              <div class="mt-2 text-muted small">Permis Recto</div>
+            </div>
+            <div *ngIf="activeAssetTab === 'permitBack'" class="w-100">
+              <img [src]="selectedDriverVerification.drivingLicenseBackUrl" alt="Permis Verso" class="img-fluid rounded-3 shadow border border-subtle" style="max-height: 340px; object-fit: contain;" (error)="onAssetImageError($event, 'permitBack')" />
+              <div class="mt-2 text-muted small">Permis Verso</div>
+            </div>
+          </ng-container>
         </div>
       </div>
 
@@ -312,11 +327,21 @@
         <div class="d-flex gap-2">
           <button class="btn btn-outline-secondary rounded-pill px-4" (click)="closeDossierComplet()">Close</button>
           <button
+            *ngIf="selectedDriverVerification"
+            class="btn rounded-pill px-4"
+            [ngClass]="selectedDriverVerification.isVerified ? 'btn-outline-warning' : 'btn-success'"
+            [disabled]="processingId === selectedVehicleDossier.idDriver"
+            (click)="toggleDriverVerification(selectedVehicleDossier.idDriver)">
+            <i class="bi" [ngClass]="selectedDriverVerification.isVerified ? 'bi-x-circle me-1' : 'bi-check-circle me-1'"></i>
+            {{ selectedDriverVerification.isVerified ? 'Revoke Personal Verification' : 'Approve Personal Verification' }}
+          </button>
+          <button
             class="btn rounded-pill px-4"
             [ngClass]="selectedVehicleDossier.isAdminApproved ? 'btn-outline-warning' : 'btn-saas-primary'"
+            [disabled]="processingId === selectedVehicleDossier.id"
             (click)="toggleApproval(selectedVehicleDossier)">
             <i class="bi" [ngClass]="selectedVehicleDossier.isAdminApproved ? 'bi-x-circle me-1' : 'bi-check-circle me-1'"></i>
-            {{ selectedVehicleDossier.isAdminApproved ? 'Revoke Approval' : 'Approve Dossier' }}
+            {{ selectedVehicleDossier.isAdminApproved ? 'Revoke Fleet Approval' : 'Approve Fleet Dossier' }}
           </button>
         </div>
       </div>

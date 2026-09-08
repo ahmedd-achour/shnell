@@ -37,15 +37,14 @@
             ],
             "styles": [
               "@angular/material/prebuilt-themes/indigo-pink.css",
-              "src/styles.css",
-               "src/css/sb-admin-2.min.css",
+              "src/css/sb-admin-2.min.css",
               "src/vendor/fontawesome-free/css/all.min.css",
-               "src/styles.css",
               "src/css/style.css",
               "src/lib/owlcarousel/assets/owl.theme.default.min.css",
               "src/lib/owlcarousel/assets/owl.theme.green.min.css",
-                "node_modules/mapbox-gl/dist/mapbox-gl.css",
-                "node_modules/maplibre-gl/dist/maplibre-gl.css"
+              "node_modules/mapbox-gl/dist/mapbox-gl.css",
+              "node_modules/maplibre-gl/dist/maplibre-gl.css",
+              "src/styles.css"
             ],
             "scripts": [
               "src/vendor/jquery/jquery.min.js",
@@ -120,15 +119,14 @@
             ],
             "styles": [
               "@angular/material/prebuilt-themes/indigo-pink.css",
-              "src/styles.css",
-               "src/styles.css",
-               "src/css/sb-admin-2.min.css",
+              "src/css/sb-admin-2.min.css",
               "src/vendor/fontawesome-free/css/all.min.css",
               "src/css/style.css",
               "src/lib/owlcarousel/assets/owl.theme.default.min.css",
               "src/lib/owlcarousel/assets/owl.theme.green.min.css",
-                "node_modules/mapbox-gl/dist/mapbox-gl.css",
-                "node_modules/maplibre-gl/dist/maplibre-gl.css"
+              "node_modules/mapbox-gl/dist/mapbox-gl.css",
+              "node_modules/maplibre-gl/dist/maplibre-gl.css",
+              "src/styles.css"
             ],
             "scripts": [
                       "src/vendor/jquery/jquery.min.js",

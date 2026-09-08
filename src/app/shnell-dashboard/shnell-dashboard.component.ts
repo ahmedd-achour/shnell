@@ -6,7 +6,7 @@ import { Subject, combineLatest } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 import { DashboardDataService } from './services/dashboard-data.service';
 import { CrossTabSyncService, CrossTabEvent } from '../services/cross-tab-sync.service';
-import { ShnellUser, Vehicle, Orders, Deals, Commission, DriverRTDBLocation, Bid } from './models/dashboard.models';
+import { ShnellUser, Vehicle, Orders, Deals, Commission, DriverRTDBLocation, Bid , CallLog } from './models/dashboard.models';
 
 import { OverviewTabComponent } from './components/overview-tab/overview-tab.component';
 import { UsersTabComponent } from './components/users-tab/users-tab.component';
@@ -18,7 +18,9 @@ import { DriverProfileTabComponent } from './components/driver-profile-tab/drive
 import { SettingsTabComponent } from './components/settings-tab/settings-tab.component';
 import { DispatchOrderTabComponent } from './components/dispatch-order-tab/dispatch-order-tab.component';
 
-export type DashboardTab = 'overview' | 'users' | 'vehicles' | 'deals' | 'live-map' | 'driver-profile' | 'settings' | 'notifications' | 'dispatch-order';
+import { VerificationsTabComponent } from './components/verifications-tab/verifications-tab.component';
+
+export type DashboardTab = 'overview' | 'users' | 'vehicles' | 'verifications' | 'deals' | 'live-map' | 'driver-profile' | 'settings' | 'notifications' | 'dispatch-order';
 
 @Component({
   selector: 'app-shnell-dashboard',
@@ -29,6 +31,7 @@ export type DashboardTab = 'overview' | 'users' | 'vehicles' | 'deals' | 'live-m
     OverviewTabComponent,
     UsersTabComponent,
     VehiclesTabComponent,
+    VerificationsTabComponent,
     DealsTabComponent,
     LiveMapTabComponent,
     NotificationsTabComponent,
@@ -46,21 +49,43 @@ export class ShnellDashboardComponent implements OnInit, OnDestroy {
   loading: boolean = true;
   error: string | null = null;
   today: Date = new Date();
-  isDarkMode: boolean = true;
+  isDarkMode: boolean = false;
 
   users: ShnellUser[] = [];
   vehicles: Vehicle[] = [];
   orders: Orders[] = [];
+  verifications: any[] = [];
   deals: Deals[] = [];
   commissions: Commission[] = [];
   driverLocations: DriverRTDBLocation[] = [];
   bids: Bid[] = [];
+  callLogs: CallLog[] = [];
 
   selectedUserForNotification: ShnellUser | null = null;
   selectedDriverIdForInspection: string | null = null;
 
   liveToastMessage: string | null = null;
   toastTimeout: any = null;
+
+  private readonly tabMeta: Record<string, { label: string; icon: string }> = {
+    'overview':       { label: 'Overview & Analytics',  icon: 'bi-grid-1x2-fill' },
+    'users':          { label: 'Users & Drivers',       icon: 'bi-people-fill' },
+    'verifications':  { label: 'Driver Verifications',  icon: 'bi-person-vcard' },
+    'vehicles':       { label: 'Fleet Applications',    icon: 'bi-truck' },
+    'deals':          { label: 'Orders & Deals',        icon: 'bi-receipt' },
+    'live-map':       { label: 'Realtime Map',          icon: 'bi-geo-alt-fill' },
+    'driver-profile': { label: 'Driver Profile',        icon: 'bi-person-badge-fill' },
+    'settings':       { label: 'App Config',            icon: 'bi-gear-wide-connected' },
+    'notifications':  { label: 'FCM Notifications',     icon: 'bi-bell-fill' },
+    'dispatch-order': { label: 'Assign Order',          icon: 'bi-send-plus-fill' },
+  };
+
+  get activeTabLabel(): string {
+    return this.tabMeta[this.activeTab]?.label ?? this.activeTab.replace('-', ' ');
+  }
+  get activeTabIcon(): string {
+    return this.tabMeta[this.activeTab]?.icon ?? 'bi-grid-1x2-fill';
+  }
 
   constructor(
     private dashboardDataService: DashboardDataService,
@@ -77,7 +102,7 @@ export class ShnellDashboardComponent implements OnInit, OnDestroy {
 
   private checkQueryParams(): void {
     this.route.queryParams.pipe(takeUntil(this.destroy$)).subscribe(params => {
-      if (params['tab'] && ['overview', 'users', 'vehicles', 'deals', 'live-map', 'driver-profile', 'settings', 'notifications', 'dispatch-order'].includes(params['tab'])) {
+      if (params['tab'] && ['overview', 'users', 'vehicles', 'verifications', 'deals', 'live-map', 'driver-profile', 'settings', 'notifications', 'dispatch-order'].includes(params['tab'])) {
         this.activeTab = params['tab'] as DashboardTab;
       }
       if (params['id']) {
@@ -105,22 +130,26 @@ export class ShnellDashboardComponent implements OnInit, OnDestroy {
     combineLatest([
       this.dashboardDataService.getUsers(),
       this.dashboardDataService.getVehicles(),
+      this.dashboardDataService.getDriverVerifications(),
       this.dashboardDataService.getOrders(),
       this.dashboardDataService.getDeals(),
       this.dashboardDataService.getCommissions(),
       this.dashboardDataService.getDriverRTDBLocations(),
-      this.dashboardDataService.getBids()
+      this.dashboardDataService.getBids(),
+      this.dashboardDataService.getCallLogs()
     ])
       .pipe(takeUntil(this.destroy$))
       .subscribe({
-        next: ([users, vehicles, orders, deals, commissions, locations, bids]) => {
+        next: ([users, vehicles, verifications, orders, deals, commissions, locations, bids, callLogs]) => {
           this.users = users;
           this.vehicles = vehicles;
+          this.verifications = verifications;
           this.orders = orders;
           this.deals = deals;
           this.commissions = commissions;
           this.driverLocations = locations;
           this.bids = bids;
+          this.callLogs = callLogs;
           this.loading = false;
         },
         error: (err) => {

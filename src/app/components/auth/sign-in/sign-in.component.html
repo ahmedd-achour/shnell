@@ -1,83 +1,61 @@
-<!-- Header -->
-<div class="jumbotron jumbotron-fluid mb-5">
-    <div class="container text-center py-5">
-        <h1 class="text-white display-3">Connexion</h1>
-        <div class="d-inline-flex align-items-center text-white">
-            <p class="m-0"><a class="text-white" href="">Accueil</a></p>
-            <i class="fa fa-circle px-3"></i>
-            <p class="m-0">Connexion</p>
-        </div>
+<div class="auth">
+  <!-- Brand panel -->
+  <aside class="auth__brand" data-tone="dark">
+    <a routerLink="/home" class="auth__logo">
+      <img src="img/shnell.png" alt="Shnell" /><span>Shnell</span>
+    </a>
+
+    <div class="auth__pitch">
+      <span class="sh-eyebrow">Espace entreprise</span>
+      <h2>Pilotez vos livraisons en un seul endroit.</h2>
+      <ul>
+        <li><i class="fa-solid fa-location-crosshairs"></i> Suivi des chauffeurs en temps réel</li>
+        <li><i class="fa-solid fa-boxes-stacked"></i> Gestion des courses &amp; des stops</li>
+        <li><i class="fa-solid fa-chart-line"></i> Analyses &amp; paiements consolidés</li>
+      </ul>
     </div>
-</div>
 
-<div class="auth-split d-flex flex-column flex-md-row" role="main" aria-label="Page d'authentification">
-  <!-- Gauche : Image Logistique -->
-  <div class="auth-image flex-fill d-flex align-items-center justify-content-center">
-    <img src="img/shnell.png" alt="Illustration Logistique" class="img-fluid" />
-  </div>
+    <p class="auth__foot">&copy; 2025 Shnell — Tous droits réservés.</p>
+  </aside>
 
-  <!-- Droite : Formulaire de connexion -->
-  <div class="auth-form flex-fill d-flex align-items-center justify-content-center">
-    <div class=" text-center shadow-lg rounded-4 p-4 p-md-5 w-100" >
+  <!-- Form -->
+  <main class="auth__main">
+    <div class="auth__card">
+      <h1>Bienvenue sur Shnell</h1>
+      <p class="auth__lead">Connectez-vous pour gérer vos livraisons.</p>
 
-      <h1 class="mb-2 fw-bold">Bienvenue sur Shnell</h1>
-      <p class="mb-4 text-muted">Connectez-vous ou créez un compte pour commencer à gérer vos livraisons facilement.</p>
+      <form [formGroup]="authForm" (ngSubmit)="onSubmit()" class="auth__form" novalidate>
+        <label class="auth__field">
+          <span>Email</span>
+          <input type="email" formControlName="email" autocomplete="email" placeholder="vous@entreprise.com" />
+        </label>
 
-      <form [formGroup]="authForm" (ngSubmit)="onSubmit()" class="mb-3">
-        <mat-form-field appearance="outline" class="w-100 mb-3">
-          <mat-label>Email</mat-label>
-          <input matInput formControlName="email" aria-label="Email ou Nom d'utilisateur" />
-        </mat-form-field>
+        <label class="auth__field">
+          <span>Mot de passe</span>
+          <div class="auth__pw">
+            <input
+              [type]="hidePassword ? 'password' : 'text'"
+              formControlName="password"
+              autocomplete="current-password"
+              placeholder="••••••••" />
+            <button type="button" class="auth__pwtoggle" (click)="hidePassword = !hidePassword"
+                    [attr.aria-label]="hidePassword ? 'Afficher le mot de passe' : 'Masquer le mot de passe'">
+              <i class="fa-solid" [class.fa-eye]="hidePassword" [class.fa-eye-slash]="!hidePassword"></i>
+            </button>
+          </div>
+        </label>
 
-
-
-<mat-form-field class="w-100 mb-3 password-field">
-  <mat-label>Mot de passe</mat-label>
-
-  <!-- Password input -->
-  <input
-    matInput
-    [type]="hidePassword ? 'password' : 'text'"
-    formControlName="password"
-    autocomplete="current-password"
-    aria-label="Mot de passe"
-  />
-
-  <!-- Eye icon (as suffix, inline in the same row) -->
-
-</mat-form-field>
-
-
-
-
-
-
-        <!-- Message d'erreur -->
-        <div *ngIf="errorMessage" class="alert alert-danger d-flex align-items-center rounded-3 py-2 px-3 mb-3" role="alert">
-          Err
-          <span>{{ errorMessage }}</span>
+        <div *ngIf="errorMessage" class="auth__error" role="alert">
+          <i class="fa-solid fa-circle-exclamation"></i><span>{{ errorMessage }}</span>
         </div>
 
-        <!-- Spinner de progression -->
-        <div *ngIf="isSubmissionInProgress" class="d-flex justify-content-center mb-3">
-          <mat-spinner diameter="24" aria-label="Connexion en cours"></mat-spinner>
-          <span class="ms-2 align-self-center">Connexion en cours...</span>
-        </div>
-
-        <button
-          type="submit"
-          mat-raised-button
-          color="primary"
-          class="w-100 mb-3 auth-button"
-          aria-label="Se connecter"
-        >
-          Se connecter
+        <button type="submit" class="sh-btn sh-btn--primary sh-btn--block sh-btn--lg" [disabled]="isSubmissionInProgress">
+          <ng-container *ngIf="!isSubmissionInProgress">Se connecter</ng-container>
+          <ng-container *ngIf="isSubmissionInProgress">
+            <span class="auth__loader"><i></i><i></i><i></i></span> Connexion…
+          </ng-container>
         </button>
       </form>
-
-      <a routerLink="/forgot-password" class="text-decoration-none small d-block mt-2">
-        Mot de passe oublié ?
-      </a>
     </div>
-  </div>
+  </main>
 </div>

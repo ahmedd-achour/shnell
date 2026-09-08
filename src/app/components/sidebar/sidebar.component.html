@@ -13,7 +13,7 @@
         </div>
       </div>
       <button class="btn-toggle-icon d-none d-lg-flex" (click)="toggleSidebar()" [title]="sidebarCollapsed ? 'Expand Sidebar' : 'Collapse Sidebar'">
-        <i class="bi" [ngClass]="sidebarCollapsed ? 'bi-chevron-right' : 'bi-chevron-left'"></i>-
+        <i class="bi" [ngClass]="sidebarCollapsed ? 'bi-chevron-right' : 'bi-chevron-left'"></i>
       </button>
     </div>
 
@@ -23,25 +23,29 @@
     </div>
 
     <!-- Navigation Menu -->
-    <div class="sidebar-nav py-3">
-      <div class="nav-section-title px-3 pb-2 text-uppercase fs-8 fw-semibold text-muted" *ngIf="!sidebarCollapsed">
-        Platform Navigation
-      </div>
-
-      <ul class="nav flex-column gap-1 px-2">
-        <li class="nav-item" *ngFor="let item of navItems">
-          <a class="nav-link d-flex align-items-center gap-3 rounded-3"
-             [class.active]="isActive(item)"
-             (click)="navigate(item)">
-            <div class="nav-icon-container">
-              <i class="bi" [ngClass]="item.icon"></i>
-            </div>
-            <span class="nav-label" *ngIf="!sidebarCollapsed">{{ item.label }}</span>
-            <span class="active-indicator" *ngIf="isActive(item)"></span>
-          </a>
-        </li>
+    <nav class="sidebar-nav py-2">
+      <ul class="nav flex-column px-2">
+        <ng-container *ngFor="let item of navItems; let i = index">
+          <li class="nav-section-title px-2"
+              *ngIf="item.group && item.group !== navItems[i - 1]?.group">
+            <span *ngIf="!sidebarCollapsed">{{ item.group }}</span>
+            <span *ngIf="sidebarCollapsed" class="section-rule"></span>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link d-flex align-items-center gap-3"
+               [class.active]="isActive(item)"
+               [title]="sidebarCollapsed ? item.label : null"
+               (click)="navigate(item)">
+              <span class="active-indicator"></span>
+              <span class="nav-icon-container">
+                <i class="bi" [ngClass]="item.icon"></i>
+              </span>
+              <span class="nav-label" *ngIf="!sidebarCollapsed">{{ item.label }}</span>
+            </a>
+          </li>
+        </ng-container>
       </ul>
-    </div>
+    </nav>
 
     <!-- Bottom User Profile Footer -->
     <div class="sidebar-footer p-3 border-top border-subtle mt-auto" *ngIf="user">
@@ -68,7 +72,7 @@
     <header class="main-topbar d-flex align-items-center justify-content-between px-4 py-3 border-bottom border-subtle">
       <div class="d-flex align-items-center gap-3">
         <button class="btn btn-sm btn-icon-glass d-lg-none" (click)="toggleSidebar()">
-          <i class="bi bi-list fs-5"></i>-
+          <i class="bi bi-list fs-5"></i>
         </button>
 
         <div class="topbar-search d-none d-md-flex align-items-center">
@@ -93,7 +97,7 @@
 
         <!-- Current User Chip -->
         <div class="user-chip-bar d-flex align-items-center gap-2 px-3 py-1 rounded-pill" *ngIf="user">
-          <i class="bi bi-shield-check text-indigo"></i>
+          <i class="bi bi-shield-check text-brand"></i>
           <span class="fs-8 fw-semibold">{{ user.email }}</span>
         </div>
       </div>

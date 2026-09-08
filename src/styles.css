@@ -1,436 +1,806 @@
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap');
 @import 'bootstrap/dist/css/bootstrap.min.css';
 @import 'leaflet/dist/leaflet.css';
 
 /* ==========================================================================
-   SHNELL SAAS ENTERPRISE DESIGN SYSTEM - TOKEN ARCHITECTURE
-   Inspired by Stripe, Linear, Datadog & Vercel
+   SHNELL DESIGN SYSTEM
+   One visual identity across web + the Flutter driver / customer apps.
+   Brand seed: Material Amber (#FFC107) — same seed the mobile apps use.
+   Type: Manrope (display) · Inter (UI/body) · JetBrains Mono (data)
+   Light-first, with an opt-in [data-theme="dark"].
    ========================================================================== */
 
-:root, [data-theme="dark"] {
-  /* Surface & Background Colors */
-  --color-bg-primary: #090d16;
-  --color-bg-secondary: #0f172a;
-  --color-surface-card: #131c31;
-  --color-surface-card-hover: #1a2642;
-  --color-surface-subtle: #0d1527;
-  --color-surface-overlay: rgba(9, 13, 22, 0.85);
-
-  /* Typography Colors */
-  --color-text-main: #f8fafc;
-  --color-text-muted: #94a3b8;
-  --color-text-dim: #64748b;
-  --color-text-brand: #d97706;
-
-  /* Borders & Dividers */
-  --color-border-subtle: rgba(255, 255, 255, 0.08);
-  --color-border-medium: rgba(255, 255, 255, 0.16);
-  --color-border-focus: #d97706;
-
-  /* Form Inputs */
-  --color-input-bg: #0b1324;
-  --color-input-text: #f8fafc;
-  --color-input-border: rgba(255, 255, 255, 0.14);
-  --color-input-placeholder: #64748b;
-
-  /* Primary Brand Accents */
-  --color-brand-primary: #d97706;
-  --color-brand-hover: #b45309;
-  --color-brand-subtle: rgba(217, 119, 6, 0.15);
-  --color-brand-border: rgba(217, 119, 6, 0.35);
-
-  /* Functional Status Colors */
-  --color-success: #10b981;
-  --color-success-bg: rgba(16, 185, 129, 0.14);
-  --color-success-border: rgba(16, 185, 129, 0.3);
-  --color-success-text: #34d399;
-
-  --color-warning: #f59e0b;
-  --color-warning-bg: rgba(245, 158, 11, 0.14);
-  --color-warning-border: rgba(245, 158, 11, 0.3);
-  --color-warning-text: #fbbf24;
-
-  --color-error: #ef4444;
-  --color-error-bg: rgba(239, 68, 68, 0.14);
-  --color-error-border: rgba(239, 68, 68, 0.3);
-  --color-error-text: #f87171;
-
-  --color-info: #3b82f6;
-  --color-info-bg: rgba(59, 130, 246, 0.14);
-  --color-info-border: rgba(59, 130, 246, 0.3);
-  --color-info-text: #60a5fa;
-
-  /* Legacy Aliases */
-  --bg-deep: var(--color-bg-primary);
-  --bg-surface: var(--color-bg-secondary);
-  --bg-card: var(--color-surface-card);
-  --text-main: var(--color-text-main);
-  --text-muted: var(--color-text-muted);
-
-  /* Shadow & Elevation System */
-  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
-  --shadow-md: 0 4px 16px -2px rgba(0, 0, 0, 0.45);
-  --shadow-lg: 0 20px 40px -8px rgba(0, 0, 0, 0.65);
-  --shadow-brand: 0 8px 24px -4px rgba(217, 119, 6, 0.35);
-}
-
-[data-theme="light"] {
-  --color-bg-primary: #f4f6fa;
-  --color-bg-secondary: #eaeeef;
-  --color-surface-card: #ffffff;
-  --color-surface-card-hover: #f8fafc;
-  --color-surface-subtle: #f1f5f9;
-  --color-surface-overlay: rgba(15, 23, 42, 0.65);
-
-  --color-text-main: #0f172a;
-  --color-text-muted: #475569;
-  --color-text-dim: #64748b;
-  --color-text-brand: #d97706;
-
-  --color-border-subtle: rgba(15, 23, 42, 0.08);
-  --color-border-medium: rgba(15, 23, 42, 0.16);
-  --color-border-focus: #d97706;
-
-  --color-input-bg: #ffffff;
-  --color-input-text: #0f172a;
-  --color-input-border: #cbd5e1;
-  --color-input-placeholder: #94a3b8;
-
-  --color-brand-primary: #d97706;
-  --color-brand-hover: #b45309;
-  --color-brand-subtle: rgba(217, 119, 6, 0.1);
-  --color-brand-border: rgba(217, 119, 6, 0.25);
-
-  --color-success: #059669;
-  --color-success-bg: #ecfdf5;
-  --color-success-border: #a7f3d0;
-  --color-success-text: #047857;
-
-  --color-warning: #d97706;
-  --color-warning-bg: #fffbeb;
-  --color-warning-border: #fde68a;
-  --color-warning-text: #b45309;
-
-  --color-error: #dc2626;
-  --color-error-bg: #fef2f2;
-  --color-error-border: #fecaca;
-  --color-error-text: #b91c1c;
-
-  --color-info: #2563eb;
-  --color-info-bg: #eff6ff;
-  --color-info-border: #bfdbfe;
-  --color-info-text: #1d4ed8;
-
-  --bg-deep: var(--color-bg-primary);
-  --bg-surface: var(--color-bg-secondary);
-  --bg-card: var(--color-surface-card);
-  --text-main: var(--color-text-main);
-  --text-muted: var(--color-text-muted);
-
-  --shadow-sm: 0 1px 3px rgba(15, 23, 42, 0.08);
-  --shadow-md: 0 4px 14px -2px rgba(15, 23, 42, 0.08);
-  --shadow-lg: 0 16px 32px -4px rgba(15, 23, 42, 0.12);
-  --shadow-brand: 0 8px 24px -4px rgba(217, 119, 6, 0.2);
-}
-
 :root {
-  --radius-sm: 8px;
-  --radius-md: 12px;
-  --radius-lg: 16px;
-  --radius-xl: 24px;
-  --radius-pill: 9999px;
+  /* ---- Brand: amber ramp (seed #FFC107) ---- */
+  --sh-amber-50:  #FFF8E1;
+  --sh-amber-100: #FFECB3;
+  --sh-amber-200: #FFE082;
+  --sh-amber-300: #FFD54F;
+  --sh-amber-400: #FFCA28;
+  --sh-amber-500: #FFC107;   /* brand primary */
+  --sh-amber-600: #FFB300;
+  --sh-amber-700: #FFA000;   /* hover / pressed */
+  --sh-amber-800: #FF8F00;
+  --sh-amber-900: #7A5300;   /* "gold ink" — amber text on light surfaces */
 
-  --transition-fast: 160ms cubic-bezier(0.4, 0, 0.2, 1);
-  --transition-base: 240ms cubic-bezier(0.4, 0, 0.2, 1);
+  /* ---- Secondary accent: deep logistics green (from the customer app) ---- */
+  --sh-green-500: #0E7A5F;
+  --sh-green-600: #0B5C48;
+  --sh-green-700: #094a3a;
+
+  /* ---- Warm neutral ink & surfaces ---- */
+  --sh-ink-900: #17140D;   /* headings */
+  --sh-ink-700: #3B372E;   /* body */
+  --sh-ink-500: #6B6459;   /* muted */
+  --sh-ink-400: #938B7D;   /* dim / placeholder */
+  --sh-paper:   #FAF9F6;   /* page background */
+  --sh-card:    #FFFFFF;
+  --sh-card-2:  #F5F3EE;   /* subtle raised / hover */
+  --sh-line:    #E9E4D8;   /* borders / dividers */
+  --sh-line-2:  #DAD3C3;
+
+  /* ---- Semantic ---- */
+  --sh-success: #12805C;  --sh-success-bg: #E4F5EE;  --sh-success-line: #B4E3D2;
+  --sh-warning: #B7791F;  --sh-warning-bg: #FCF1DC;  --sh-warning-line: #F3DCA9;
+  --sh-danger:  #D42F2F;  --sh-danger-bg:  #FBE7E7;  --sh-danger-line:  #F2C4C4;
+  --sh-info:    #2563EB;  --sh-info-bg:    #E6EDFD;  --sh-info-line:    #C2D4FA;
+
+  /* ---- Radii (aligned with the apps' Radii scale) ---- */
+  --sh-r-xs: 8px;
+  --sh-r-sm: 10px;
+  --sh-r-md: 14px;
+  --sh-r-lg: 20px;
+  --sh-r-xl: 28px;
+  --sh-r-pill: 9999px;
+
+  /* ---- Spacing scale (apps' Spacing scale) ---- */
+  --sh-s-xs: 4px;  --sh-s-s: 8px;  --sh-s-m: 12px;
+  --sh-s-l: 16px;  --sh-s-xl: 24px; --sh-s-2xl: 32px; --sh-s-3xl: 48px;
+
+  /* ---- Elevation: soft, warm-tinted ---- */
+  --sh-shadow-xs: 0 1px 2px rgba(23, 20, 13, 0.06);
+  --sh-shadow-sm: 0 2px 8px rgba(23, 20, 13, 0.06), 0 1px 2px rgba(23, 20, 13, 0.05);
+  --sh-shadow-md: 0 8px 24px -6px rgba(23, 20, 13, 0.12), 0 2px 6px rgba(23, 20, 13, 0.06);
+  --sh-shadow-lg: 0 28px 60px -12px rgba(23, 20, 13, 0.20), 0 8px 20px -8px rgba(23, 20, 13, 0.10);
+  --sh-shadow-amber: 0 12px 28px -8px rgba(255, 160, 0, 0.45);
+  --sh-ring: 0 0 0 3px rgba(255, 193, 7, 0.35);
+
+  /* ---- Motion ---- */
+  --sh-ease: cubic-bezier(0.16, 1, 0.3, 1);
+  --sh-t-fast: 150ms var(--sh-ease);
+  --sh-t-base: 240ms var(--sh-ease);
+  --sh-t-slow: 420ms var(--sh-ease);
+
+  --sh-font-display: 'Manrope', 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --sh-font-body: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --sh-font-mono: 'JetBrains Mono', ui-monospace, 'SFMono-Regular', monospace;
+  --sh-maxw: 1200px;
+
+  /* ================================================================
+     Compatibility aliases — legacy components read these names.
+     Re-pointed at the light-first Shnell palette.
+     ================================================================ */
+  --color-bg-primary: var(--sh-paper);
+  --color-bg-secondary: #F2EFE8;
+  --color-surface-card: var(--sh-card);
+  --color-surface-card-hover: var(--sh-card-2);
+  --color-surface-subtle: #F3F0E9;
+  --color-surface-overlay: rgba(23, 20, 13, 0.55);
+
+  --color-text-main: var(--sh-ink-900);
+  --color-text-muted: var(--sh-ink-500);
+  --color-text-dim: var(--sh-ink-400);
+  --color-text-brand: var(--sh-amber-900);
+
+  --color-border-subtle: var(--sh-line);
+  --color-border-medium: var(--sh-line-2);
+  --color-border-focus: var(--sh-amber-500);
+
+  --color-input-bg: #FFFFFF;
+  --color-input-text: var(--sh-ink-900);
+  --color-input-border: var(--sh-line-2);
+  --color-input-placeholder: var(--sh-ink-400);
+
+  --color-brand-primary: var(--sh-amber-500);
+  --color-brand-hover: var(--sh-amber-700);
+  --color-brand-subtle: rgba(255, 193, 7, 0.14);
+  --color-brand-border: rgba(255, 160, 0, 0.38);
+
+  --color-success: var(--sh-success); --color-success-bg: var(--sh-success-bg);
+  --color-success-border: var(--sh-success-line); --color-success-text: var(--sh-success);
+  --color-warning: var(--sh-warning); --color-warning-bg: var(--sh-warning-bg);
+  --color-warning-border: var(--sh-warning-line); --color-warning-text: var(--sh-warning);
+  --color-error: var(--sh-danger); --color-error-bg: var(--sh-danger-bg);
+  --color-error-border: var(--sh-danger-line); --color-error-text: var(--sh-danger);
+  --color-info: var(--sh-info); --color-info-bg: var(--sh-info-bg);
+  --color-info-border: var(--sh-info-line); --color-info-text: var(--sh-info);
+
+  --bg-deep: var(--color-bg-primary);
+  --bg-surface: var(--color-bg-secondary);
+  --bg-card: var(--color-surface-card);
+  --text-main: var(--color-text-main);
+  --text-muted: var(--color-text-muted);
+
+  --shadow-sm: var(--sh-shadow-sm);
+  --shadow-md: var(--sh-shadow-md);
+  --shadow-lg: var(--sh-shadow-lg);
+  --shadow-brand: var(--sh-shadow-amber);
+
+  --radius-sm: var(--sh-r-xs);
+  --radius-md: var(--sh-r-sm);
+  --radius-lg: var(--sh-r-md);
+  --radius-xl: var(--sh-r-lg);
+  --radius-pill: var(--sh-r-pill);
+
+  --transition-fast: var(--sh-t-fast);
+  --transition-base: var(--sh-t-base);
+
+  color-scheme: light;
 }
+
+/* ==========================================================================
+   DARK THEME (opt-in via [data-theme="dark"] on <html> or a container)
+   ========================================================================== */
+[data-theme="dark"] {
+  --sh-ink-900: #F6F3EC;
+  --sh-ink-700: #DAD4C7;
+  --sh-ink-500: #A49C8C;
+  --sh-ink-400: #7E7568;
+  --sh-paper:   #14120D;
+  --sh-card:    #1E1B15;
+  --sh-card-2:  #262117;
+  --sh-line:    rgba(255, 236, 179, 0.10);
+  --sh-line-2:  rgba(255, 236, 179, 0.18);
+
+  --sh-success-bg: rgba(18, 128, 92, 0.18);  --sh-success-line: rgba(18, 128, 92, 0.38);
+  --sh-warning-bg: rgba(183, 121, 31, 0.18); --sh-warning-line: rgba(183, 121, 31, 0.40);
+  --sh-danger-bg:  rgba(212, 47, 47, 0.18);  --sh-danger-line:  rgba(212, 47, 47, 0.40);
+  --sh-info-bg:    rgba(37, 99, 235, 0.18);  --sh-info-line:    rgba(37, 99, 235, 0.40);
+
+  --color-bg-secondary: #100E0A;
+  --color-surface-subtle: #201C14;
+  --color-surface-overlay: rgba(0, 0, 0, 0.66);
+  --color-text-brand: var(--sh-amber-400);
+  --color-input-bg: #14120D;
+  --color-brand-subtle: rgba(255, 193, 7, 0.18);
+
+  --sh-shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.4);
+  --sh-shadow-md: 0 10px 28px -8px rgba(0, 0, 0, 0.55);
+  --sh-shadow-lg: 0 30px 60px -12px rgba(0, 0, 0, 0.7);
+
+  color-scheme: dark;
+}
+
+/* ==========================================================================
+   BASE
+   ========================================================================== */
+*, *::before, *::after { box-sizing: border-box; }
+
+/* No image ever overflows its container */
+img, svg, video { max-width: 100%; }
+img { height: auto; }
 
 html, body {
   height: 100%;
   margin: 0;
-  background-color: var(--color-bg-primary);
-  color: var(--color-text-main);
-  font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
-  letter-spacing: -0.011em;
+  background-color: var(--sh-paper);
+  color: var(--sh-ink-700);
+  font-family: var(--sh-font-body);
+  font-size: 15px;
+  line-height: 1.6;
+  letter-spacing: -0.006em;
   -webkit-font-smoothing: antialiased;
-  transition: background-color var(--transition-base), color var(--transition-base);
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  transition: background-color var(--sh-t-base), color var(--sh-t-base);
 }
 
-/* Typography & Headings */
-h1, h2, h3, h4, h5, h6, .font-heading {
-  font-family: 'Plus Jakarta Sans', sans-serif;
-  font-weight: 700;
-  letter-spacing: -0.025em;
-  color: var(--color-text-main);
+h1, h2, h3, h4, h5, h6, .font-heading,
+body.mat-typography h1, body.mat-typography h2, body.mat-typography h3,
+body.mat-typography h4, body.mat-typography h5, body.mat-typography h6 {
+  font-family: var(--sh-font-display);
+  font-weight: 800;
+  line-height: 1.12;
+  letter-spacing: -0.03em;
+  color: var(--sh-ink-900);
+  margin: 0 0 0.5em;
+  text-wrap: balance;
 }
 
-.font-tech, .font-outfit {
-  font-family: 'Outfit', sans-serif;
+/* Angular Material's mat-typography forces Roboto/32px line-height on the
+   whole document. Re-assert the Shnell type system with higher specificity. */
+body.mat-typography {
+  font-family: var(--sh-font-body);
+  line-height: 1.6;
+}
+body.mat-typography p, body.mat-typography .mat-body, body.mat-typography .mat-body-2 {
+  font-family: var(--sh-font-body);
+  letter-spacing: -0.006em;
+}
+h1 { font-size: clamp(2rem, 4.4vw, 3.4rem); }
+h2 { font-size: clamp(1.6rem, 3.2vw, 2.4rem); }
+h3 { font-size: clamp(1.2rem, 2vw, 1.5rem); }
+
+p { margin: 0 0 1rem; }
+a { color: var(--sh-amber-900); text-decoration: none; transition: color var(--sh-t-fast); }
+a:hover { color: var(--sh-amber-800); }
+
+.mono, .font-mono, code, kbd, samp {
+  font-family: var(--sh-font-mono);
   letter-spacing: -0.02em;
 }
 
-.mono, .font-mono, code {
-  font-family: 'JetBrains Mono', monospace !important;
-  letter-spacing: -0.025em;
-}
+::selection { background: var(--sh-amber-200); color: var(--sh-ink-900); }
 
-/* Card System */
-.saas-card, .card, .dashboard-card {
-  background-color: var(--color-surface-card) !important;
-  border: 1px solid var(--color-border-subtle) !important;
-  border-radius: var(--radius-lg) !important;
-  box-shadow: var(--shadow-md);
-  color: var(--color-text-main) !important;
-  transition: transform var(--transition-fast), border-color var(--transition-fast), box-shadow var(--transition-fast);
-}
-
-.saas-card:hover, .dashboard-card:hover {
-  border-color: var(--color-border-medium) !important;
-  box-shadow: var(--shadow-lg);
-}
-
-/* Glassmorphism Header & Overlay */
-.glass-panel {
-  background: rgba(19, 28, 49, 0.75) !important;
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid var(--color-border-subtle) !important;
-}
-
-[data-theme="light"] .glass-panel {
-  background: rgba(255, 255, 255, 0.85) !important;
-}
-
-/* High-Contrast Inputs */
-.form-control, .form-select {
-  background-color: var(--color-input-bg) !important;
-  color: var(--color-input-text) !important;
-  border: 1px solid var(--color-input-border) !important;
-  border-radius: var(--radius-md) !important;
-  padding: 10px 14px;
-  font-size: 0.875rem;
-  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
-}
-
-.form-control::placeholder {
-  color: var(--color-input-placeholder) !important;
-  opacity: 0.75;
-}
-
-.form-control:focus, .form-select:focus {
-  border-color: var(--color-border-focus) !important;
-  box-shadow: 0 0 0 3px var(--color-brand-subtle) !important;
+:focus-visible {
   outline: none;
+  box-shadow: var(--sh-ring);
+  border-radius: var(--sh-r-xs);
 }
 
-/* Enterprise Data Tables */
-.table-responsive {
-  border-radius: var(--radius-lg);
-  overflow: hidden;
+/* ==========================================================================
+   CONTRAST SAFETY NET
+   Kills the "invisible text" class of bug (light text on light ground and
+   vice-versa) that this codebase had. Scoped narrowly so it can't fight
+   deliberate on-dark sections.
+   ========================================================================== */
+body { color-scheme: light; }
+.text-white,
+[class*="text-white"] { --_bg: transparent; }
+/* If .text-white sits on a surface that is NOT explicitly dark, force ink. */
+.sh-surface .text-white,
+section:not([data-tone="dark"]) > .container .text-white:not([data-tone-ok]) { }
+
+.sh-on-dark, [data-tone="dark"] {
+  color: rgba(255, 255, 255, 0.92);
+}
+.sh-on-dark h1, .sh-on-dark h2, .sh-on-dark h3, .sh-on-dark h4,
+[data-tone="dark"] h1, [data-tone="dark"] h2, [data-tone="dark"] h3, [data-tone="dark"] h4 {
+  color: #fff;
+}
+.sh-on-dark .sh-muted, [data-tone="dark"] .sh-muted { color: rgba(255, 255, 255, 0.66); }
+
+.sh-muted { color: var(--sh-ink-500); }
+.sh-dim { color: var(--sh-ink-400); }
+
+/* ==========================================================================
+   LAYOUT PRIMITIVES
+   ========================================================================== */
+.sh-container {
+  width: 100%;
+  max-width: var(--sh-maxw);
+  margin-inline: auto;
+  padding-inline: clamp(1rem, 4vw, 2rem);
+}
+.sh-section { padding-block: clamp(3.5rem, 8vw, 6.5rem); }
+.sh-section--tight { padding-block: clamp(2rem, 5vw, 3.5rem); }
+.sh-surface { background: var(--sh-card); }
+.sh-surface-2 { background: var(--sh-card-2); }
+.sh-stack { display: flex; flex-direction: column; gap: var(--sh-s-l); }
+.sh-cluster { display: flex; flex-wrap: wrap; gap: var(--sh-s-m); align-items: center; }
+.sh-grid { display: grid; gap: clamp(1rem, 2.4vw, 1.75rem); }
+
+.sh-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--sh-font-body);
+  font-weight: 700;
+  font-size: 0.74rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--sh-amber-900);
+}
+.sh-eyebrow::before {
+  content: "";
+  width: 22px; height: 2px;
+  background: var(--sh-amber-500);
+  border-radius: 2px;
+}
+[data-tone="dark"] .sh-eyebrow, .sh-on-dark .sh-eyebrow { color: var(--sh-amber-400); }
+
+/* ==========================================================================
+   BUTTONS
+   ========================================================================== */
+.sh-btn {
+  --_bg: var(--sh-amber-500);
+  --_fg: var(--sh-ink-900);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.55em;
+  padding: 0.85em 1.5em;
+  border: 1px solid transparent;
+  border-radius: var(--sh-r-pill);
+  background: var(--_bg);
+  color: var(--_fg);
+  font-family: var(--sh-font-body);
+  font-weight: 700;
+  font-size: 0.94rem;
+  line-height: 1;
+  letter-spacing: -0.01em;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: transform var(--sh-t-fast), box-shadow var(--sh-t-fast),
+              background-color var(--sh-t-fast), border-color var(--sh-t-fast);
+}
+.sh-btn:hover { transform: translateY(-2px); color: var(--_fg); }
+.sh-btn:active { transform: translateY(0); }
+.sh-btn--primary { box-shadow: var(--sh-shadow-amber); }
+.sh-btn--primary:hover { --_bg: var(--sh-amber-400); }
+.sh-btn--dark { --_bg: var(--sh-ink-900); --_fg: #fff; box-shadow: var(--sh-shadow-sm); }
+.sh-btn--dark:hover { --_bg: #000; }
+.sh-btn--ghost {
+  --_bg: transparent;
+  --_fg: var(--sh-ink-900);
+  border-color: var(--sh-line-2);
+}
+.sh-btn--ghost:hover { --_bg: var(--sh-card-2); border-color: var(--sh-ink-900); }
+[data-tone="dark"] .sh-btn--ghost, .sh-on-dark .sh-btn--ghost {
+  --_fg: #fff; border-color: rgba(255, 255, 255, 0.28);
+}
+[data-tone="dark"] .sh-btn--ghost:hover, .sh-on-dark .sh-btn--ghost:hover {
+  --_bg: rgba(255, 255, 255, 0.08); border-color: #fff;
+}
+.sh-btn--lg { padding: 1.05em 2em; font-size: 1rem; }
+.sh-btn--block { display: flex; width: 100%; }
+
+/* ==========================================================================
+   CARDS / PANELS  (legacy .card, .saas-card, .dashboard-card also hit this)
+   ========================================================================== */
+.sh-card,
+.saas-card, .dashboard-card {
+  background: var(--sh-card);
+  border: 1px solid var(--sh-line);
+  border-radius: var(--sh-r-lg);
+  box-shadow: var(--sh-shadow-sm);
+  color: var(--sh-ink-700);
+  transition: transform var(--sh-t-fast), border-color var(--sh-t-fast), box-shadow var(--sh-t-fast);
+}
+.sh-card--interactive:hover,
+.saas-card:hover, .dashboard-card:hover {
+  transform: translateY(-4px);
+  border-color: var(--sh-line-2);
+  box-shadow: var(--sh-shadow-md);
+}
+.sh-card__body { padding: clamp(1.25rem, 3vw, 2rem); }
+
+.glass-panel {
+  background: color-mix(in srgb, var(--sh-card) 78%, transparent) !important;
+  backdrop-filter: blur(16px) saturate(160%);
+  -webkit-backdrop-filter: blur(16px) saturate(160%);
+  border: 1px solid var(--sh-line) !important;
 }
 
-.table.saas-table, .table {
-  color: var(--color-text-main) !important;
+/* ==========================================================================
+   FORMS  (Bootstrap + plain)
+   ========================================================================== */
+.form-control, .form-select, .sh-input {
+  background-color: var(--color-input-bg) !important;
+  color: var(--sh-ink-900) !important;
+  border: 1px solid var(--sh-line-2) !important;
+  border-radius: var(--sh-r-sm) !important;
+  padding: 0.7rem 0.9rem;
+  font-size: 0.94rem;
+  font-family: var(--sh-font-body);
+  transition: border-color var(--sh-t-fast), box-shadow var(--sh-t-fast), background-color var(--sh-t-fast);
+}
+.form-control::placeholder, .sh-input::placeholder { color: var(--sh-ink-400) !important; opacity: 1; }
+.form-control:focus, .form-select:focus, .sh-input:focus {
+  border-color: var(--sh-amber-500) !important;
+  box-shadow: var(--sh-ring) !important;
+  outline: none;
+  background-color: var(--sh-card) !important;
+}
+label, .form-label { font-weight: 600; color: var(--sh-ink-700); font-size: 0.88rem; }
+
+/* ==========================================================================
+   ANGULAR MATERIAL — retint indigo/pink prebuilt to Shnell amber
+   ========================================================================== */
+:root {
+  --mdc-theme-primary: var(--sh-amber-700);
+  --mat-mdc-button-persistent-ripple-color: var(--sh-amber-900);
+}
+.mat-mdc-raised-button.mat-primary,
+.mat-mdc-unelevated-button.mat-primary {
+  --mdc-filled-button-container-color: var(--sh-amber-500);
+  --mdc-filled-button-label-text-color: var(--sh-ink-900);
+  --mdc-protected-button-container-color: var(--sh-amber-500);
+  --mdc-protected-button-label-text-color: var(--sh-ink-900);
+  border-radius: var(--sh-r-pill) !important;
+  font-family: var(--sh-font-body) !important;
+  font-weight: 700 !important;
+  letter-spacing: -0.01em !important;
+}
+.mat-mdc-form-field {
+  --mdc-outlined-text-field-focus-outline-color: var(--sh-amber-600);
+  --mdc-outlined-text-field-caret-color: var(--sh-amber-700);
+  --mat-form-field-focus-select-arrow-color: var(--sh-amber-700);
+  font-family: var(--sh-font-body) !important;
+}
+.mat-mdc-progress-spinner { --mdc-circular-progress-active-indicator-color: var(--sh-amber-600); }
+
+/* ==========================================================================
+   DATA TABLES  (legacy .table + new .sh-table)
+   ========================================================================== */
+.table-responsive { border-radius: var(--sh-r-md); overflow: hidden; }
+.table.saas-table, .table, .sh-table {
+  color: var(--sh-ink-700) !important;
   margin-bottom: 0 !important;
   border-collapse: separate;
   border-spacing: 0;
+  width: 100%;
 }
-
-.table.saas-table thead th, .table thead th {
-  background: var(--color-surface-subtle) !important;
-  color: var(--color-text-muted) !important;
-  font-size: 0.725rem;
+.table.saas-table thead th, .table thead th, .sh-table thead th {
+  background: var(--sh-card-2) !important;
+  color: var(--sh-ink-500) !important;
+  font-size: 0.7rem;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
-  padding: 14px 18px !important;
-  border-bottom: 1px solid var(--color-border-subtle) !important;
+  letter-spacing: 0.07em;
+  padding: 0.9rem 1.1rem !important;
+  border-bottom: 1px solid var(--sh-line) !important;
   border-top: none !important;
-  position: sticky;
-  top: 0;
-  z-index: 10;
 }
-
-.table.saas-table tbody tr, .table tbody tr {
-  transition: background-color var(--transition-fast);
-}
-
-.table.saas-table tbody tr:hover, .table tbody tr:hover {
-  background-color: var(--color-surface-card-hover) !important;
-}
-
-.table.saas-table tbody td, .table tbody td {
-  padding: 14px 18px !important;
-  border-bottom: 1px solid var(--color-border-subtle) !important;
+.table.saas-table tbody td, .table tbody td, .sh-table tbody td {
+  padding: 0.9rem 1.1rem !important;
+  border-bottom: 1px solid var(--sh-line) !important;
   border-top: none !important;
-  color: var(--color-text-main) !important;
+  color: var(--sh-ink-900) !important;
   vertical-align: middle;
-  font-size: 0.875rem;
+  font-size: 0.9rem;
 }
-
-.table td.numeric, .table th.numeric {
+.table tbody tr, .sh-table tbody tr { transition: background-color var(--sh-t-fast); }
+.table tbody tr:hover, .sh-table tbody tr:hover { background-color: var(--sh-card-2) !important; }
+.table td.numeric, .table th.numeric, .sh-table .numeric {
   text-align: right;
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--sh-font-mono);
 }
 
-/* Status Badges & Pills */
-.status-pill, .badge-pill, .status-badge {
+/* ==========================================================================
+   BADGES / PILLS
+   ========================================================================== */
+.sh-pill, .status-pill, .badge-pill, .status-badge {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 4px 12px;
-  border-radius: var(--radius-pill);
-  font-size: 0.75rem;
-  font-weight: 600;
-  line-height: 1.2;
+  padding: 0.28em 0.8em;
+  border-radius: var(--sh-r-pill);
+  font-size: 0.74rem;
+  font-weight: 700;
+  line-height: 1.3;
+  border: 1px solid transparent;
+}
+.sh-pill--success, .status-pill.success, .badge-status-success, .badge-eco-emerald {
+  background: var(--sh-success-bg) !important; color: var(--sh-success) !important; border-color: var(--sh-success-line) !important;
+}
+.sh-pill--warning, .status-pill.warning, .badge-status-warning, .badge-pro-gold {
+  background: var(--sh-warning-bg) !important; color: var(--sh-warning) !important; border-color: var(--sh-warning-line) !important;
+}
+.sh-pill--danger, .status-pill.error, .badge-status-error {
+  background: var(--sh-danger-bg) !important; color: var(--sh-danger) !important; border-color: var(--sh-danger-line) !important;
+}
+.sh-pill--info, .status-pill.info, .badge-status-info {
+  background: var(--sh-info-bg) !important; color: var(--sh-info) !important; border-color: var(--sh-info-line) !important;
 }
 
-.status-pill.success, .badge-status-success, .badge-eco-emerald {
-  background-color: var(--color-success-bg) !important;
-  color: var(--color-success-text) !important;
-  border: 1px solid var(--color-success-border) !important;
-}
-
-.status-pill.warning, .badge-status-warning, .badge-pro-gold {
-  background-color: var(--color-warning-bg) !important;
-  color: var(--color-warning-text) !important;
-  border: 1px solid var(--color-warning-border) !important;
-}
-
-.status-pill.error, .badge-status-error {
-  background-color: var(--color-error-bg) !important;
-  color: var(--color-error-text) !important;
-  border: 1px solid var(--color-error-border) !important;
-}
-
-.status-pill.info, .badge-status-info {
-  background-color: var(--color-info-bg) !important;
-  color: var(--color-info-text) !important;
-  border: 1px solid var(--color-info-border) !important;
-}
-
-/* Custom Pulsing Dots */
-.pulse-ring, .live-dot {
-  width: 8px;
-  height: 8px;
+/* Live pulse dot */
+.pulse-ring, .live-dot, .sh-live-dot {
+  width: 9px; height: 9px;
   border-radius: 50%;
-  background-color: var(--color-success);
-  box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
-  animation: pulse-ring 1.8s infinite cubic-bezier(0.66, 0, 0, 1);
+  background: var(--sh-success);
+  box-shadow: 0 0 0 0 rgba(18, 128, 92, 0.6);
+  animation: sh-pulse 1.9s infinite var(--sh-ease);
+}
+@keyframes sh-pulse {
+  0% { box-shadow: 0 0 0 0 rgba(18, 128, 92, 0.55); }
+  70% { box-shadow: 0 0 0 9px rgba(18, 128, 92, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(18, 128, 92, 0); }
 }
 
-@keyframes pulse-ring {
-  0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
-  70% { box-shadow: 0 0 0 8px rgba(16, 185, 129, 0); }
-  100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
-}
-
-/* Button Hierarchy */
-.btn-saas-primary, .btn-emerald {
-  background-color: var(--color-brand-primary) !important;
-  color: #ffffff !important;
-  border: 1px solid transparent !important;
-  border-radius: var(--radius-md);
-  padding: 8px 18px;
-  font-weight: 600;
-  font-size: 0.875rem;
-  transition: all var(--transition-fast);
-  box-shadow: var(--shadow-sm);
-}
-
-.btn-saas-primary:hover, .btn-emerald:hover {
-  background-color: var(--color-brand-hover) !important;
-  box-shadow: var(--shadow-brand);
-  transform: translateY(-1px);
-}
-
-.btn-icon-soft {
-  width: 36px;
-  height: 36px;
-  border-radius: var(--radius-md);
-  background-color: var(--color-surface-subtle);
-  border: 1px solid var(--color-border-subtle);
-  color: var(--color-text-muted);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  transition: all var(--transition-fast);
-  cursor: pointer;
-}
-
-.btn-icon-soft:hover {
-  background-color: var(--color-brand-subtle);
-  color: var(--color-brand-primary);
-  border-color: var(--color-brand-border);
-}
-
-/* Modal Overlays & Drawers */
+/* ==========================================================================
+   MODALS / OVERLAYS (legacy .modal-overlay/.modal-box)
+   ========================================================================== */
 .modal-overlay {
-  position: fixed;
-  inset: 0;
-  z-index: 1050;
-  background-color: var(--color-surface-overlay);
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  position: fixed; inset: 0; z-index: 1050;
+  background: var(--color-surface-overlay);
+  display: flex; align-items: center; justify-content: center;
   padding: 20px;
-  backdrop-filter: blur(12px);
+  backdrop-filter: blur(8px);
 }
-
 .modal-box {
-  background-color: var(--color-surface-card) !important;
-  border: 1px solid var(--color-border-medium) !important;
-  border-radius: var(--radius-xl) !important;
-  max-width: 740px;
-  width: 100%;
-  padding: 28px;
-  box-shadow: var(--shadow-lg);
-  color: var(--color-text-main) !important;
-  animation: modal-enter 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-  position: relative;
-  max-height: 90vh;
-  overflow-y: auto;
+  background: var(--sh-card) !important;
+  border: 1px solid var(--sh-line-2) !important;
+  border-radius: var(--sh-r-xl) !important;
+  max-width: 740px; width: 100%;
+  padding: clamp(1.5rem, 4vw, 2rem);
+  box-shadow: var(--sh-shadow-lg);
+  color: var(--sh-ink-700) !important;
+  animation: sh-modal-in 0.28s var(--sh-ease);
+  max-height: 90vh; overflow-y: auto;
 }
-
-@keyframes modal-enter {
+@keyframes sh-modal-in {
   from { opacity: 0; transform: scale(0.96) translateY(12px); }
   to { opacity: 1; transform: scale(1) translateY(0); }
 }
 
-.modal-close {
-  position: absolute;
-  top: 20px;
-  right: 20px;
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  border: 1px solid var(--color-border-subtle);
-  background-color: var(--color-surface-subtle);
-  color: var(--color-text-muted);
-  display: flex;
+/* ==========================================================================
+   MISC
+   ========================================================================== */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: var(--sh-line-2);
+  border-radius: 99px;
+  border: 2px solid var(--sh-paper);
+}
+::-webkit-scrollbar-thumb:hover { background: var(--sh-amber-600); }
+
+.sh-noise { position: relative; }
+.sh-fade-up { animation: sh-fade-up var(--sh-t-slow) both; }
+@keyframes sh-fade-up {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+body.no-scroll { overflow: hidden; }
+
+/* ==========================================================================
+   SWEETALERT2 — Shnell skin
+   SweetAlert2 injects its own base stylesheet at runtime; this only retints
+   it to the amber / warm-ink brand. Wrappers live in src/app/shared/swal.ts.
+   ========================================================================== */
+.swal2-container { z-index: 20000; }
+.swal2-popup {
+  border-radius: var(--sh-r-lg);
+  font-family: var(--sh-font-body);
+  border: 1px solid var(--sh-line);
+  box-shadow: var(--sh-shadow-lg);
+  color: var(--sh-ink-700);
+  background: var(--sh-card);
+}
+.swal2-title { font-family: var(--sh-font-display); font-weight: 800; color: var(--sh-ink-900); letter-spacing: -0.02em; }
+.swal2-html-container, .swal2-content { color: var(--sh-ink-700); }
+.swal2-actions { gap: 0.5rem; }
+.swal2-styled {
+  border-radius: var(--sh-r-pill);
+  font-family: var(--sh-font-body);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  padding: 0.7em 1.6em;
+  box-shadow: none !important;
+}
+.swal2-styled.swal2-confirm { color: var(--sh-ink-900); }
+.swal2-styled:focus { box-shadow: var(--sh-ring) !important; }
+.swal2-icon.swal2-success .swal2-success-ring { border-color: var(--sh-success-line); }
+.swal2-icon.swal2-success [class^='swal2-success-line'] { background-color: var(--sh-success); }
+.swal2-icon.swal2-warning { border-color: var(--sh-warning-line); color: var(--sh-warning); }
+.swal2-icon.swal2-error { border-color: var(--sh-danger-line); color: var(--sh-danger); }
+.swal2-icon.swal2-error [class^='swal2-x-mark-line'] { background-color: var(--sh-danger); }
+.swal2-icon.swal2-question { border-color: var(--sh-warning-line); color: var(--sh-warning); }
+.swal2-icon.swal2-info { border-color: var(--sh-info-line); color: var(--sh-info); }
+.swal2-timer-progress-bar { background: var(--sh-amber-500); }
+.sh-swal-toast { border-radius: var(--sh-r-md); }
+.swal2-toast .swal2-title { font-size: 0.95rem; }
+
+/* ==========================================================================
+   ADMIN DASHBOARD LAYER
+   Shared utilities every shnell-dashboard tab leans on. They used to live
+   only inside dispatch-order-tab's *component-scoped* stylesheet, so every
+   other tab rendered them as no-ops — unsized fine print, borderless /
+   transparent panels, unstyled grey primary buttons. Promoted here once,
+   tokenised, and theme-aware (the dashboard runs under [data-theme]).
+   ========================================================================== */
+
+/* ---- Micro type scale (fs-7..9 used ~190x across the tabs) ---- */
+.fs-7 { font-size: 0.875rem !important; }
+.fs-8 { font-size: 0.8rem !important; }
+.fs-9 { font-size: 0.725rem !important; }
+
+.tracking-wide  { letter-spacing: 0.04em; }
+.tracking-wider { letter-spacing: 0.08em; }
+.font-outfit    { font-family: var(--sh-font-display); letter-spacing: -0.02em; }
+
+/* ---- Subtle raised surfaces / hairline dividers ---- */
+.bg-subtle     { background-color: var(--sh-card-2) !important; }
+.border-subtle { border-color: var(--sh-line) !important; }
+
+/* ---- Soft icon tile (KPI cards, list rows, modal headers) ---- */
+.icon-box {
+  width: 44px;
+  height: 44px;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  cursor: pointer;
-  transition: all var(--transition-fast);
+  font-size: 1.15rem;
+  border-radius: var(--sh-r-sm);
+  flex-shrink: 0;
 }
 
-.modal-close:hover {
-  background-color: var(--color-error-bg);
-  color: var(--color-error);
-  border-color: var(--color-error-border);
+/* ---- Primary dashboard CTA — on-brand amber
+       (was an off-brand blue→green gradient defined only in dispatch) ---- */
+.btn-saas-primary {
+  background: var(--sh-amber-500);
+  color: var(--sh-ink-900);
+  border: 1px solid transparent;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  box-shadow: var(--sh-shadow-amber);
+  transition: transform var(--sh-t-fast), box-shadow var(--sh-t-fast),
+              background-color var(--sh-t-fast);
+}
+.btn-saas-primary:hover:not(:disabled) {
+  background: var(--sh-amber-400);
+  color: var(--sh-ink-900);
+  transform: translateY(-2px);
+}
+.btn-saas-primary:disabled { opacity: 0.55; cursor: not-allowed; }
+.btn-saas-primary.active   { background: var(--sh-amber-600); }
+
+/* ---- Quiet icon button (inspect / drill-in affordances) ---- */
+.btn-icon-soft {
+  background: var(--sh-card-2);
+  border: 1px solid var(--sh-line);
+  color: var(--sh-ink-700);
+  border-radius: var(--sh-r-sm);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color var(--sh-t-fast), border-color var(--sh-t-fast),
+              color var(--sh-t-fast);
+}
+.btn-icon-soft:hover {
+  background: var(--sh-card);
+  border-color: var(--sh-line-2);
+  color: var(--sh-ink-900);
 }
 
-/* Scrollbars */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+.btn-xs { padding: 0.2rem 0.55rem; font-size: 0.7rem; line-height: 1.2; }
+
+/* ---- Account-tier switcher (users tab) — green = ECO, amber = PRO ---- */
+.btn-emerald {
+  background: var(--sh-success) !important;
+  color: #fff !important;
+  border: none !important;
+  box-shadow: 0 0 12px rgba(18, 128, 92, 0.35);
 }
-::-webkit-scrollbar-track {
-  background: var(--color-bg-primary);
+.btn-gold {
+  background: var(--sh-amber-600) !important;
+  color: var(--sh-ink-900) !important;
+  border: none !important;
+  box-shadow: 0 0 12px rgba(255, 160, 0, 0.4);
 }
-::-webkit-scrollbar-thumb {
-  background: rgba(148, 163, 184, 0.25);
-  border-radius: 99px;
+
+/* ---- Misc chart-header accent ---- */
+.text-cyan { color: #159AA8 !important; }
+[data-theme="dark"] .text-cyan { color: #3FC6D4 !important; }
+
+/* ---- Brand / status text helpers used across the admin shell ---- */
+.text-brand   { color: var(--sh-amber-900) !important; }
+.text-emerald { color: var(--sh-success) !important; }
+.text-indigo  { color: #1D4ED8 !important; }
+
+/* ==========================================================================
+   ADMIN DASHBOARD — LAYOUT RHYTHM
+   Every tab renders its own `*-container` root with ad-hoc margins, mixed
+   grid gutters (g-3 vs g-4) and card elevations (shadow-sm vs shadow-lg).
+   This normalises the vertical rhythm and card system across all tabs.
+   ========================================================================== */
+.dash-tab-viewport { display: block; padding-bottom: 2.5rem; }
+
+/* Angular tab component hosts default to inline — make the shells block-level
+   and kill the stacked bottom margins each tab hand-rolled. */
+.dash-tab-viewport > app-overview-tab,
+.dash-tab-viewport > app-users-tab,
+.dash-tab-viewport > app-vehicles-tab,
+.dash-tab-viewport > app-verifications-tab,
+.dash-tab-viewport > app-deals-tab,
+.dash-tab-viewport > app-live-map-tab,
+.dash-tab-viewport > app-driver-profile-tab,
+.dash-tab-viewport > app-settings-tab,
+.dash-tab-viewport > app-notifications-tab,
+.dash-tab-viewport > app-dispatch-order-tab { display: block; }
+.dash-tab-viewport > * > [class$="-container"],
+.dash-tab-viewport > * > .verifications-tab { padding-bottom: 0 !important; }
+
+/* One card system: consistent radius + a single soft elevation.
+   Neutralise Bootstrap's shadow-lg / shadow so tabs stop diverging. */
+.dash-tab-viewport .card,
+.dash-tab-viewport .dashboard-card,
+.dash-tab-viewport .saas-card {
+  border-radius: var(--sh-r-lg);
+  box-shadow: var(--sh-shadow-sm) !important;
 }
-::-webkit-scrollbar-thumb:hover {
-  background: var(--color-brand-primary);
+.dash-tab-viewport .card:not(:last-child) { margin-bottom: clamp(1rem, 1.6vw, 1.5rem); }
+
+/* One card-header treatment (some tabs used bg-dark, some bg-transparent). */
+.dash-tab-viewport .card > .card-header {
+  background: transparent !important;
+  border-bottom: 1px solid var(--sh-line) !important;
+  padding: 1rem 1.25rem !important;
+}
+
+/* Standard grid gutter — collapse the g-3 / g-4 mix to one value. */
+.dash-tab-viewport .row.g-3,
+.dash-tab-viewport .row.g-4 { --bs-gutter-x: 1.25rem; --bs-gutter-y: 1.25rem; }
+
+/* ==========================================================================
+   ADMIN DASHBOARD — READABILITY SAFETY NET
+   The dashboard runs light: ink text on warm-paper surfaces, never a black
+   ground. Many tab templates still carry dark-theme Bootstrap helpers
+   (.text-white, .bg-dark, .table-dark, .border-secondary …) from the old
+   forced-dark build. Neutralise them here so no text is ever white-on-white
+   or lost on a black panel, without touching every template.
+   ========================================================================== */
+.dashboard-root .text-white,
+.dashboard-root .text-white-50 {
+  color: var(--sh-ink-900) !important;
+}
+.dashboard-root .text-light {
+  color: var(--sh-ink-700) !important;
+}
+.dashboard-root .text-black-50 {
+  color: var(--sh-ink-500) !important;
+}
+/* Bootstrap accent text colours that fail contrast on light paper */
+.dashboard-root .text-warning { color: var(--sh-warning) !important; }
+.dashboard-root .text-info    { color: var(--sh-info) !important; }
+.dashboard-root .text-primary { color: var(--sh-amber-900) !important; }
+
+/* No black / near-black grounds inside the panel */
+.dashboard-root .bg-dark,
+.dashboard-root .bg-black,
+.dashboard-root .bg-body-tertiary,
+.dashboard-root [class*="bg-dark"] {
+  background-color: var(--sh-card) !important;
+  color: var(--sh-ink-900) !important;
+}
+.dashboard-root .bg-secondary {
+  background-color: var(--sh-card-2) !important;
+  color: var(--sh-ink-900) !important;
+}
+.dashboard-root .border-secondary,
+.dashboard-root .border-dark {
+  border-color: var(--sh-line-2) !important;
+}
+
+/* Dark Bootstrap tables → light */
+.dashboard-root .table-dark {
+  --bs-table-color: var(--sh-ink-900);
+  --bs-table-bg: var(--sh-card);
+  --bs-table-border-color: var(--sh-line);
+  --bs-table-striped-bg: var(--sh-card-2);
+  --bs-table-striped-color: var(--sh-ink-900);
+  --bs-table-hover-bg: var(--sh-card-2);
+  --bs-table-hover-color: var(--sh-ink-900);
+  color: var(--sh-ink-900);
+  border-color: var(--sh-line);
+}
+
+/* Close buttons that assumed a dark backdrop */
+.dashboard-root .btn-close-white {
+  filter: none;
+}
+
+/* Inputs that were hand-darkened inline */
+.dashboard-root input.bg-dark,
+.dashboard-root select.bg-dark,
+.dashboard-root textarea.bg-dark {
+  background-color: var(--color-input-bg) !important;
+  color: var(--sh-ink-900) !important;
+  border-color: var(--sh-line-2) !important;
+}
+
+/* Live cross-tab toast (was bg-dark + text-white) */
+.dashboard-root .toast.bg-dark {
+  background-color: var(--sh-card) !important;
+  border-color: var(--color-brand-border) !important;
+  color: var(--sh-ink-900) !important;
 }

@@ -60,6 +60,21 @@ export class OverviewTabComponent implements OnInit, OnChanges, OnDestroy {
   private avgBidsCategoryChart: Chart | null = null;
   private avgPriceKmChart: Chart | null = null;
 
+  /** Categorical series palette — Shnell brand hues, ordered for first-glance clarity. */
+  private readonly palette = ['#FFC107', '#0E7A5F', '#2563EB', '#B7791F', '#7C5CE0', '#15AABB'];
+
+  /** Reads the live design tokens so chart chrome tracks the dashboard theme. */
+  private chartTheme(): { text: string; grid: string; border: string; font: string } {
+    const s = getComputedStyle(document.documentElement);
+    const read = (name: string, fallback: string) => (s.getPropertyValue(name).trim() || fallback);
+    return {
+      text: read('--sh-ink-500', '#6B6459'),
+      grid: read('--sh-line', 'rgba(23,20,13,0.10)'),
+      border: read('--sh-card', '#1E1B15'),
+      font: 'Inter, system-ui, -apple-system, Segoe UI, sans-serif'
+    };
+  }
+
   ngOnInit(): void {
     this.calculateOverviewData();
   }
@@ -297,13 +312,16 @@ export class OverviewTabComponent implements OnInit, OnChanges, OnDestroy {
           netData = [this.kpis.netRevenue, Math.round(this.kpis.netRevenue * 0.85)];
         }
 
+        const theme = this.chartTheme();
+        const [amber, green] = this.palette;
+
         const gradientGross = ctx.createLinearGradient(0, 0, 0, 300);
-        gradientGross.addColorStop(0, 'rgba(99, 102, 241, 0.35)');
-        gradientGross.addColorStop(1, 'rgba(99, 102, 241, 0.0)');
+        gradientGross.addColorStop(0, 'rgba(255, 193, 7, 0.32)');
+        gradientGross.addColorStop(1, 'rgba(255, 193, 7, 0.0)');
 
         const gradientNet = ctx.createLinearGradient(0, 0, 0, 300);
-        gradientNet.addColorStop(0, 'rgba(16, 185, 129, 0.35)');
-        gradientNet.addColorStop(1, 'rgba(16, 185, 129, 0.0)');
+        gradientNet.addColorStop(0, 'rgba(14, 122, 95, 0.30)');
+        gradientNet.addColorStop(1, 'rgba(14, 122, 95, 0.0)');
 
         this.financeChart = new Chart(ctx, {
           type: 'line',
@@ -313,7 +331,7 @@ export class OverviewTabComponent implements OnInit, OnChanges, OnDestroy {
               {
                 label: 'Gross Volume (TND)',
                 data: grossData,
-                borderColor: '#6366f1',
+                borderColor: amber,
                 backgroundColor: gradientGross,
                 borderWidth: 3,
                 fill: true,
@@ -324,7 +342,7 @@ export class OverviewTabComponent implements OnInit, OnChanges, OnDestroy {
               {
                 label: 'Net Platform Earnings',
                 data: netData,
-                borderColor: '#10b981',
+                borderColor: green,
                 backgroundColor: gradientNet,
                 borderWidth: 3,
                 fill: true,
@@ -338,11 +356,11 @@ export class OverviewTabComponent implements OnInit, OnChanges, OnDestroy {
             responsive: true,
             maintainAspectRatio: false,
             plugins: {
-              legend: { labels: { color: '#94a3b8', font: { family: 'Plus Jakarta Sans', weight: 600 } } }
+              legend: { labels: { color: theme.text, font: { family: theme.font, weight: 600 } } }
             },
             scales: {
-              x: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#94a3b8' } },
-              y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#94a3b8' } }
+              x: { grid: { color: theme.grid }, ticks: { color: theme.text, font: { family: theme.font } } },
+              y: { grid: { color: theme.grid }, ticks: { color: theme.text, font: { family: theme.font } } }
             }
           }
         });
@@ -355,22 +373,24 @@ export class OverviewTabComponent implements OnInit, OnChanges, OnDestroy {
         const labels = this.fleetTypeCounts.length ? this.fleetTypeCounts.map(f => f.type) : ['No Fleet Registered'];
         const data = this.fleetTypeCounts.length ? this.fleetTypeCounts.map(f => f.count) : [0];
 
+        const theme = this.chartTheme();
+
         this.fleetChart = new Chart(ctx, {
           type: 'doughnut',
           data: {
             labels,
             datasets: [{
               data,
-              backgroundColor: ['#6366f1', '#10b981', '#f59e0b', '#06b6d4', '#ec4899', '#8b5cf6'],
+              backgroundColor: this.palette,
               borderWidth: 3,
-              borderColor: '#131c31'
+              borderColor: theme.border
             }]
           },
           options: {
             responsive: true,
             maintainAspectRatio: false,
             plugins: {
-              legend: { position: 'bottom', labels: { color: '#94a3b8', font: { family: 'Plus Jakarta Sans' } } }
+              legend: { position: 'bottom', labels: { color: theme.text, font: { family: theme.font } } }
             }
           }
         });
@@ -388,6 +408,9 @@ export class OverviewTabComponent implements OnInit, OnChanges, OnDestroy {
         }).length;
         const terminatedDealsCount = this.deals.filter(d => (d.status || '').toLowerCase().trim() === 'terminated').length;
 
+        const theme = this.chartTheme();
+        const [amber, green, blue] = this.palette;
+
         this.orderChart = new Chart(ctx, {
           type: 'bar',
           data: {
@@ -395,7 +418,7 @@ export class OverviewTabComponent implements OnInit, OnChanges, OnDestroy {
             datasets: [{
               label: 'Orders Count',
               data: [terminatedDealsCount, activeDealsCount, accepted, pending],
-              backgroundColor: ['#10b981', '#6366f1', '#ec4899', '#f59e0b'],
+              backgroundColor: [green, blue, this.palette[4], amber],
               borderRadius: 10,
               barThickness: 32
             }]
@@ -407,8 +430,8 @@ export class OverviewTabComponent implements OnInit, OnChanges, OnDestroy {
               legend: { display: false }
             },
             scales: {
-              x: { grid: { display: false }, ticks: { color: '#94a3b8' } },
-              y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#94a3b8' } }
+              x: { grid: { display: false }, ticks: { color: theme.text, font: { family: theme.font } } },
+              y: { grid: { color: theme.grid }, ticks: { color: theme.text, font: { family: theme.font } } }
             }
           }
         });
@@ -436,14 +459,16 @@ export class OverviewTabComponent implements OnInit, OnChanges, OnDestroy {
         const labels = Array.from(truckMap.keys());
         const data = Array.from(truckMap.values());
 
+        const theme = this.chartTheme();
+
         this.bidsTruckChart = new Chart(ctx, {
           type: 'doughnut',
           data: {
             labels,
             datasets: [{
               data,
-              backgroundColor: ['#6366f1', '#10b981', '#f59e0b', '#06b6d4', '#ec4899', '#8b5cf6'],
-              borderColor: '#1e293b',
+              backgroundColor: this.palette,
+              borderColor: theme.border,
               borderWidth: 2
             }]
           },
@@ -451,7 +476,7 @@ export class OverviewTabComponent implements OnInit, OnChanges, OnDestroy {
             responsive: true,
             maintainAspectRatio: false,
             plugins: {
-              legend: { position: 'bottom', labels: { color: '#94a3b8' } }
+              legend: { position: 'bottom', labels: { color: theme.text, font: { family: theme.font } } }
             }
           }
         });
@@ -482,6 +507,8 @@ export class OverviewTabComponent implements OnInit, OnChanges, OnDestroy {
         const labels = Array.from(catSum.keys());
         const data = Array.from(catSum.entries()).map(([_, val]) => Math.round(val.total / (val.count || 1)));
 
+        const theme = this.chartTheme();
+
         this.avgBidsCategoryChart = new Chart(ctx, {
           type: 'bar',
           data: {
@@ -489,7 +516,7 @@ export class OverviewTabComponent implements OnInit, OnChanges, OnDestroy {
             datasets: [{
               label: 'Avg Bid Amount (TND)',
               data,
-              backgroundColor: '#06b6d4',
+              backgroundColor: this.palette[2],
               borderRadius: 8,
               barThickness: 28
             }]
@@ -501,8 +528,8 @@ export class OverviewTabComponent implements OnInit, OnChanges, OnDestroy {
               legend: { display: false }
             },
             scales: {
-              x: { grid: { display: false }, ticks: { color: '#94a3b8' } },
-              y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#94a3b8' } }
+              x: { grid: { display: false }, ticks: { color: theme.text, font: { family: theme.font } } },
+              y: { grid: { color: theme.grid }, ticks: { color: theme.text, font: { family: theme.font } } }
             }
           }
         });
@@ -536,6 +563,8 @@ export class OverviewTabComponent implements OnInit, OnChanges, OnDestroy {
         const labels = Array.from(rateMap.keys());
         const data = Array.from(rateMap.entries()).map(([_, val]) => Number((val.sumRate / (val.count || 1)).toFixed(2)));
 
+        const theme = this.chartTheme();
+
         this.avgPriceKmChart = new Chart(ctx, {
           type: 'bar',
           data: {
@@ -543,7 +572,7 @@ export class OverviewTabComponent implements OnInit, OnChanges, OnDestroy {
             datasets: [{
               label: 'Avg Rate (TND / 1km)',
               data,
-              backgroundColor: '#f59e0b',
+              backgroundColor: this.palette[0],
               borderRadius: 8,
               barThickness: 28
             }]
@@ -555,8 +584,8 @@ export class OverviewTabComponent implements OnInit, OnChanges, OnDestroy {
               legend: { display: false }
             },
             scales: {
-              x: { grid: { display: false }, ticks: { color: '#94a3b8' } },
-              y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#94a3b8' } }
+              x: { grid: { display: false }, ticks: { color: theme.text, font: { family: theme.font } } },
+              y: { grid: { color: theme.grid }, ticks: { color: theme.text, font: { family: theme.font } } }
             }
           }
         });

@@ -9,12 +9,8 @@ import { AboutComponent } from './components/about/about.component';
 import { ServiceComponent } from './components/service/service.component';
 import { ContactComponent } from './components/contact/contact.component';
 import { BlogComponent } from './components/blog/blog.component';
-import { SingleComponent } from './components/single/single.component';
 import { PrivacyPolicyComponent } from './components/privacy-policy/privacy-policy.component';
 import { SidebarComponent } from './components/sidebar/sidebar.component';
-import { ParcelManagementComponent } from './components/parcel-management/parcel-management.component';
-import { StopsManagementComponent } from './components/stops-management/stops-management.component';
-import { AnalyticsComponent } from './components/analytics/analytics.component';
 import { FleetIntelligenceDashboardComponent } from './components/fleet-intelligence/fleet-intelligence.component';
 import { DriverDetailsComponent } from './components/fleet-intelligence/driver-details/driver-details.component';
 import { ProfileComponent } from './components/profile/profile.component';
@@ -22,7 +18,6 @@ import { PartnerdashComponent } from './components/partnerdash/partnerdash.compo
 import { RetourspaymentsComponent } from './components/retourspayments/retourspayments.component';
 import { SignInComponent } from './components/auth/sign-in/sign-in.component';
 import { SignUpComponent } from './components/auth/sign-up/sign-up.component';
-import { ForgotPasswordComponent } from './components/auth/forgot-password/forgot-password.component';
 import { PublicLayoutComponent } from './public-layout/public-layout.component';
 import { AdminDriverManagementComponent } from './admin-driver-management/admin-driver-management.component';
 import { AdminGuard } from './roleguard';
@@ -71,7 +66,6 @@ const routes: Routes = [
 
   // Auth pages
     { path: 'sign-up', component: SignUpComponent },
-    { path: 'forgot-password', component: ForgotPasswordComponent },
 
 
 
@@ -84,7 +78,6 @@ const routes: Routes = [
    // resolve: { user: UserResolver },
     children: [
       { path: 'admin-driver-management/details', component: AdminDriverManagementComponent  }, // route protected by AdminGuard
-      { path: 'parcel-management', component: ParcelManagementComponent },
       { path: 'analytics', component: FleetIntelligenceDashboardComponent },
       { path: 'analytics/driver-details', component: DriverDetailsComponent },
       { path: 'profile', component: ProfileComponent },

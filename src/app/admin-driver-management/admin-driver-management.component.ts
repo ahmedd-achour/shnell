@@ -13,9 +13,10 @@ import { getDoc,
   setDoc
 } from '@angular/fire/firestore';
 
-import { getDoc, ActivatedRoute, Router, NavigationEnd } from '@angular/router';
-import { getDoc, Observable, of, Subject } from 'rxjs';
-import { getDoc,
+import { ActivatedRoute, Router, NavigationEnd } from '@angular/router';
+import { Observable, of, Subject } from 'rxjs';
+import { confirmAction, notify, toastSuccess, toastError } from '../shared/swal';
+import { 
   catchError,
   switchMap,
   takeUntil,
@@ -36,6 +37,7 @@ export class AdminDriverManagementComponent implements OnInit, OnDestroy {
   bids$!: Observable<any[]>;
   deals$!: Observable<any[]>;
   avgRating$!: Observable<{ avg: number; count: number }>;
+  verification$!: Observable<any>;
 
   driverId: string | null = null;
   rechargeAmount: number | null = null;
@@ -160,6 +162,15 @@ export class AdminDriverManagementComponent implements OnInit, OnDestroy {
         };
       })
     );
+
+    const verifyRef = doc(this.firestore, `drivers/${uid}`);
+    this.verification$ = docData(verifyRef).pipe(
+      takeUntil(this.destroy$),
+      catchError(err => {
+        console.error('Verification fetch error:', err);
+        return of(null);
+      })
+    );
   }
 
   async setDriverAccType(driverId: string, accType: string) {
@@ -168,9 +179,10 @@ export class AdminDriverManagementComponent implements OnInit, OnDestroy {
     try {
       const userRef = doc(this.firestore, `users/${driverId}`);
       await updateDoc(userRef, { accType });
+      toastSuccess('Type d\'abonnement mis à jour');
     } catch (err) {
       console.error('Account type update failed:', err);
-      alert('Erreur mise  jour type abonnement');
+      toastError('Erreur lors de la mise à jour du type d\'abonnement');
     } finally {
       this.isUpdating = false;
     }
@@ -183,10 +195,10 @@ export class AdminDriverManagementComponent implements OnInit, OnDestroy {
       const userRef = doc(this.firestore, `users/${driver.id}`);
       const newStatus = !driver.isBan;
       await updateDoc(userRef, { isBan: newStatus });
-      alert(`Chauffeur ${newStatus ? 'Banni' : 'Débanni'} avec succès.`);
+      toastSuccess(`Chauffeur ${newStatus ? 'banni' : 'débanni'} avec succès`);
     } catch (err) {
       console.error('Ban status update failed:', err);
-      alert('Erreur lors de la mise à jour du statut.');
+      toastError('Erreur lors de la mise à jour du statut');
     } finally {
       this.isUpdating = false;
     }
@@ -206,7 +218,7 @@ export class AdminDriverManagementComponent implements OnInit, OnDestroy {
       await updateDoc(vRef, { isAdminApproved: approved });
     } catch (err) {
       console.error('Vehicle admin approval update failed:', err);
-      alert('Échec mise à jour statut admin du véhicule');
+      toastError('Échec de la mise à jour du statut admin du véhicule');
     } finally {
       this.isUpdating = false;
     }
@@ -221,7 +233,7 @@ export class AdminDriverManagementComponent implements OnInit, OnDestroy {
       await updateDoc(vRef, { isAssetsApproved: approved });
     } catch (err) {
       console.error('Vehicle assets approval update failed:', err);
-      alert('Échec mise à jour validation des documents');
+      toastError('Échec de la mise à jour de la validation des documents');
     } finally {
       this.isUpdating = false;
     }
@@ -239,22 +251,27 @@ export class AdminDriverManagementComponent implements OnInit, OnDestroy {
       });
     } catch (err) {
       console.error('Vehicle approval update failed:', err);
-      alert('Échec mise à jour véhicule');
+      toastError('Échec de la mise à jour du véhicule');
     } finally {
       this.isUpdating = false;
     }
   }
 
   async deleteThisVehicle(vehicle: any) {
-    if (!confirm('Êtes-vous sûr de vouloir supprimer ce véhicule ?')) return;
+    const ok = await confirmAction({
+      title: 'Supprimer ce véhicule ?',
+      text: 'Cette action est définitive.',
+      danger: true,
+    });
+    if (!ok) return;
 
     this.isUpdating = true;
     try {
       await deleteDoc(doc(this.firestore, 'vehicles', vehicle.id));
-      alert('Véhicule supprimé avec succès');
+      toastSuccess('Véhicule supprimé avec succès');
     } catch (err: any) {
       console.error(err);
-      alert(err.message || 'Erreur suppression');
+      toastError(err.message || 'Erreur lors de la suppression');
     } finally {
       this.isUpdating = false;
     }
@@ -262,7 +279,7 @@ export class AdminDriverManagementComponent implements OnInit, OnDestroy {
 
   async addFunds(driver: any) {
     if (!this.rechargeAmount || this.rechargeAmount <= 0) {
-      alert('Montant invalide');
+      notify('warning', 'Montant invalide', 'Saisissez un montant supérieur à 0.');
       return;
     }
 
@@ -290,12 +307,12 @@ export class AdminDriverManagementComponent implements OnInit, OnDestroy {
         typeOfTransaction: 'recharge'
       });
 
-      alert(`Solde mis à jour : +${amount} TND`);
+      toastSuccess(`Solde mis à jour : +${amount} TND`);
       this.rechargeAmount = null;
 
     } catch (err) {
       console.error('Recharge failed:', err);
-      alert('Erreur recharge');
+      toastError('Erreur lors de la recharge');
     } finally {
       this.isUpdating = false;
     }
@@ -321,15 +338,7 @@ export class AdminDriverManagementComponent implements OnInit, OnDestroy {
     const img = event.target as HTMLImageElement;
     if ((img as any)._failed) return;
     (img as any)._failed = true;
-
-    const alt = (img.alt || '').toLowerCase();
-    if (alt.includes('carte') || alt.includes('grise')) {
-      img.src = 'https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?w=400&auto=format&fit=crop&q=80';
-    } else if (alt.includes('cin') || alt.includes('identity') || alt.includes('id')) {
-      img.src = 'https://images.unsplash.com/photo-1589829545856-d10d557cf95f?w=400&auto=format&fit=crop&q=80';
-    } else {
-      img.src = 'https://images.unsplash.com/photo-1601584115197-04ecc0da31d7?w=400&auto=format&fit=crop&q=80';
-    }
+    img.src = 'assets/placeholder.png'; // Removed hardcoded Unsplash URLs
   }
 
   ngOnDestroy(): void {

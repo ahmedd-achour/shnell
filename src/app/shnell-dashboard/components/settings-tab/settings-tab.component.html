@@ -33,12 +33,22 @@
                 <label class="form-label text-light small fw-semibold">Driver App Version</label>
                 <input type="text" class="form-control bg-dark text-white border-secondary" formControlName="version_driver_app" placeholder="e.g. 1.0.4" />
               </div>
+              
+              <div class="col-12 col-md-6">
+                <label class="form-label text-light small fw-semibold">Currency Code (e.g. USD, EUR, TND)</label>
+                <input type="text" class="form-control bg-dark text-white border-secondary" formControlName="currency_code" placeholder="TND" />
+              </div>
+              <div class="col-12 col-md-6">
+                <label class="form-label text-light small fw-semibold">Currency Symbol (e.g. $, €, DT)</label>
+                <input type="text" class="form-control bg-dark text-white border-secondary" formControlName="currency_symbol" placeholder="DT" />
+              </div>
+
               <div class="col-12 col-md-6">
                 <label class="form-label text-light small fw-semibold">Commission Percentage (0.15 = 15%)</label>
                 <input type="number" step="0.01" class="form-control bg-dark text-white border-secondary" formControlName="commission_percentage" />
               </div>
               <div class="col-12 col-md-6">
-                <label class="form-label text-light small fw-semibold">Stop Fee (TND)</label>
+                <label class="form-label text-light small fw-semibold">Stop Fee</label>
                 <input type="number" step="0.1" class="form-control bg-dark text-white border-secondary" formControlName="stop_fee" />
               </div>
               <div class="col-12">
@@ -136,8 +146,16 @@
                       <input type="text" class="form-control form-control-sm bg-black text-white border-secondary" formControlName="name" />
                     </div>
                     <div class="mb-2">
-                      <label class="form-label text-muted small mb-1">Base Price (TND)</label>
+                      <label class="form-label text-muted small mb-1">Category (van/truck etc.)</label>
+                      <input type="text" class="form-control form-control-sm bg-black text-white border-secondary" formControlName="category" />
+                    </div>
+                    <div class="mb-2">
+                      <label class="form-label text-muted small mb-1">Base Price</label>
                       <input type="number" step="0.1" class="form-control form-control-sm bg-black text-white border-secondary" formControlName="base_price" />
+                    </div>
+                    <div class="mb-2">
+                      <label class="form-label text-muted small mb-1">Price per Km</label>
+                      <input type="number" step="0.1" class="form-control form-control-sm bg-black text-white border-secondary" formControlName="price_per_km" />
                     </div>
                     <div class="mb-2">
                       <label class="form-label text-muted small mb-1">Max Weight (kg)</label>
@@ -162,6 +180,10 @@
                     <div class="mb-3">
                       <label class="form-label text-muted small mb-1">Long Dist Rate</label>
                       <input type="number" step="0.1" class="form-control form-control-sm bg-black text-white border-secondary" formControlName="long_dist_rate" />
+                    </div>
+                    <div class="mb-3">
+                      <label class="form-label text-warning small mb-1">Country Pricing (JSON)</label>
+                      <textarea class="form-control form-control-sm bg-black text-warning border-secondary font-monospace" formControlName="pricing_json" rows="8"></textarea>
                     </div>
 
                     <button type="submit" class="btn btn-sm btn-outline-warning w-100" [disabled]="savingVehicle === key">

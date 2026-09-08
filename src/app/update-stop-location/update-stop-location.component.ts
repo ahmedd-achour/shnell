@@ -3,6 +3,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { Firestore, doc, docData, updateDoc } from '@angular/fire/firestore';
 import { Observable, of } from 'rxjs';
 import { catchError } from 'rxjs/operators';
+import { toastSuccess } from '../shared/swal';
 
 @Component({
   selector: 'app-update-stop-location',
@@ -87,7 +88,7 @@ async setCurrentLocation() {
           }
 
           await updateDoc(stopRef, updateData);
-          alert('Emplacement mis à jour avec succès !');
+          toastSuccess('Emplacement mis à jour avec succès');
           await this.router.navigate(['/', this.stopID]);
         } catch (err) {
           console.error(err);

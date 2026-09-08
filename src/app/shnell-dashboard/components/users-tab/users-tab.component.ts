@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ShnellUser, DriverRTDBLocation } from '../../models/dashboard.models';
 import { DashboardDataService } from '../../services/dashboard-data.service';
+import { confirmAction, toastSuccess, toastError } from '../../../shared/swal';
 
 @Component({
   selector: 'app-users-tab',
@@ -94,10 +95,11 @@ export class UsersTabComponent implements OnInit {
 
       this.rechargeUserTarget.balance = updatedBalance;
       this.rechargeSuccessMsg = `Successfully deposited ${this.rechargeAmountInput} TND. Event recorded in commissions log.`;
+      toastSuccess(`${this.rechargeAmountInput} TND déposés`);
       setTimeout(() => this.closeRechargeModal(), 1800);
     } catch (err) {
       console.error('Failed to recharge balance:', err);
-      alert('Error depositing funds to user balance.');
+      toastError('Erreur lors du dépôt de fonds');
     } finally {
       this.isProcessingRecharge = false;
     }
@@ -108,17 +110,25 @@ export class UsersTabComponent implements OnInit {
     if (!userId) return;
 
     const currentBan = user.isBan || user.isBanned || false;
-    const actionLabel = currentBan ? 'unban' : 'ban';
-    if (!confirm(`Are you sure you want to ${actionLabel} ${user.name}?`)) return;
+    const ok = await confirmAction({
+      title: currentBan ? `Débannir ${user.name} ?` : `Bannir ${user.name} ?`,
+      text: currentBan
+        ? 'Ce compte pourra de nouveau se connecter et utiliser la plateforme.'
+        : 'Ce compte sera immédiatement bloqué.',
+      confirmText: currentBan ? 'Débannir' : 'Bannir',
+      danger: !currentBan,
+    });
+    if (!ok) return;
 
     this.processingBanId = userId;
     try {
       const newBanState = await this.dashboardDataService.toggleUserBan(userId, currentBan);
       user.isBan = newBanState;
       user.isBanned = newBanState;
+      toastSuccess(newBanState ? 'Compte banni' : 'Compte débanni');
     } catch (err) {
       console.error('Failed to toggle ban state:', err);
-      alert('Error updating user ban state.');
+      toastError('Erreur lors de la mise à jour du statut');
     } finally {
       this.processingBanId = null;
     }
@@ -133,9 +143,10 @@ export class UsersTabComponent implements OnInit {
     try {
       await this.dashboardDataService.updateUserAccType(userId, newType);
       user.accType = newType as any;
+      toastSuccess(`Palier mis à jour : ${String(newType).toUpperCase()}`);
     } catch (err) {
       console.error('Failed to update account type:', err);
-      alert('Error updating user tier level.');
+      toastError('Erreur lors de la mise à jour du palier');
     } finally {
       this.updatingAccTypeId = null;
     }

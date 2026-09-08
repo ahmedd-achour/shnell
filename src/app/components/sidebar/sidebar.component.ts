@@ -12,7 +12,7 @@ import { Unsubscribe } from 'firebase/firestore'; // Import for proper cleanup
 })
 export class SidebarComponent implements OnInit {
   user: ShnellUser | null = null;
-  navItems: { label: string, path: string, icon: string, queryParams?: any }[] = [];
+  navItems: { label: string, path: string, icon: string, queryParams?: any, group?: string }[] = [];
   sidebarCollapsed = false;
   unauthorizedMessage: string | null = null;
   private authSubscription?: Unsubscribe; // For cleanup
@@ -54,17 +54,21 @@ export class SidebarComponent implements OnInit {
           this.unauthorizedMessage = null;
         } else if (this.user.role === 'admin') {
           this.navItems = [
-            { label: 'Overview & Analytics', path: 'home-admin', queryParams: { tab: 'overview' }, icon: 'bi-grid-1x2-fill' },
-            { label: 'Users & Drivers', path: 'home-admin', queryParams: { tab: 'users' }, icon: 'bi-people-fill' },
-            { label: 'Fleet Applications', path: 'home-admin', queryParams: { tab: 'vehicles' }, icon: 'bi-truck' },
-            { label: 'Orders & Deals', path: 'home-admin', queryParams: { tab: 'deals' }, icon: 'bi-receipt' },
-            { label: 'Realtime Map', path: 'home-admin', queryParams: { tab: 'live-map' }, icon: 'bi-geo-alt-fill' },
-            { label: 'Driver Profile', path: 'home-admin', queryParams: { tab: 'driver-profile' }, icon: 'bi-person-badge-fill' },
-            { label: 'App Config', path: 'home-admin', queryParams: { tab: 'settings' }, icon: 'bi-gear-wide-connected' },
-            { label: 'FCM Notifications', path: 'home-admin', queryParams: { tab: 'notifications' }, icon: 'bi-bell-fill' },
-            { label: 'Assign Order', path: 'home-admin', queryParams: { tab: 'dispatch-order' }, icon: 'bi-send-plus-fill' },
-            { label: 'Expired orders', path: 'expired-orders', icon: 'bi-clock-history' },
-            { label: 'Profil', path: 'profile', icon: 'bi-person' }
+            { group: 'Monitor', label: 'Overview & Analytics', path: 'home-admin', queryParams: { tab: 'overview' }, icon: 'bi-grid-1x2-fill' },
+            { group: 'Monitor', label: 'Realtime Map', path: 'home-admin', queryParams: { tab: 'live-map' }, icon: 'bi-geo-alt-fill' },
+            { group: 'Monitor', label: 'Orders & Deals', path: 'home-admin', queryParams: { tab: 'deals' }, icon: 'bi-receipt' },
+
+            { group: 'Fleet & Drivers', label: 'Users & Drivers', path: 'home-admin', queryParams: { tab: 'users' }, icon: 'bi-people-fill' },
+            { group: 'Fleet & Drivers', label: 'Driver Verifications', path: 'home-admin', queryParams: { tab: 'verifications' }, icon: 'bi-person-vcard' },
+            { group: 'Fleet & Drivers', label: 'Fleet Applications', path: 'home-admin', queryParams: { tab: 'vehicles' }, icon: 'bi-truck' },
+            { group: 'Fleet & Drivers', label: 'Driver Profile', path: 'home-admin', queryParams: { tab: 'driver-profile' }, icon: 'bi-person-badge-fill' },
+
+            { group: 'Operations', label: 'Assign Order', path: 'home-admin', queryParams: { tab: 'dispatch-order' }, icon: 'bi-send-plus-fill' },
+            { group: 'Operations', label: 'Expired Orders', path: 'expired-orders', icon: 'bi-clock-history' },
+
+            { group: 'System', label: 'App Config', path: 'home-admin', queryParams: { tab: 'settings' }, icon: 'bi-gear-wide-connected' },
+            { group: 'System', label: 'FCM Notifications', path: 'home-admin', queryParams: { tab: 'notifications' }, icon: 'bi-bell-fill' },
+            { group: 'System', label: 'Profile', path: 'profile', icon: 'bi-person' }
           ] as any;
           this.unauthorizedMessage = null;
         } else {

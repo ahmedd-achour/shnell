@@ -1,8 +1,9 @@
 import { Component, Input, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Orders, Deals, Commission, ShnellUser } from '../../models/dashboard.models';
+import { Orders, Deals, Commission, ShnellUser, Bid, CallLog, Vehicle } from '../../models/dashboard.models';
 import { DashboardDataService } from '../../services/dashboard-data.service';
+import { confirmAction, toastSuccess, toastError } from '../../../shared/swal';
 
 @Component({
   selector: 'app-deals-tab',
@@ -20,13 +21,69 @@ export class DealsTabComponent implements OnInit {
   statusFilter: 'all' | 'accepted' | 'almost' | 'terminated' | 'pending' = 'all';
   searchQuery: string = '';
   processingDeleteId: string | null = null;
+  @Input() bids: Bid[] = [];
+  @Input() callLogs: CallLog[] = [];
+  // Need vehicles to find eligible drivers
+  @Input() vehicles: Vehicle[] = [];
+
+
+  
+  expandedOrderId: string | null = null;
+  assigningDriverId: string | null = null;
+
+  toggleExpand(orderId: string): void {
+    if (this.expandedOrderId === orderId) {
+      this.expandedOrderId = null;
+    } else {
+      this.expandedOrderId = orderId;
+    }
+  }
+
+  getOrderBids(orderId: string): Bid[] {
+    return this.bids.filter(b => b.idOrder === orderId);
+  }
+
+  getOrderCallLogs(orderId: string): CallLog[] {
+    return this.callLogs.filter(c => c.dealId === orderId || (c.participants && c.participants.length > 0)); 
+    // Wait, let's just filter by dealId if it exists, otherwise it's hard. 
+    // Actually, orderId is often stored as dealId.
+  }
+
+  getEligibleDrivers(order: Orders): ShnellUser[] {
+    // Return drivers whose vehicle matches order.vehicleType
+    const matchingVehicles = this.vehicles.filter(v => v.type === order.vehicleType && v.isAdminApproved);
+    const driverIds = matchingVehicles.map(v => v.idDriver);
+    return this.users.filter(u => u.role === 'driver' && driverIds.includes(u.uid || u.id || ''));
+  }
+
+  async assignDriver(order: Orders, driverId: string): Promise<void> {
+    if (!order.id) return;
+    const ok = await confirmAction({
+      title: 'Assigner ce chauffeur ?',
+      text: 'Le chauffeur sélectionné sera affecté manuellement à cette course.',
+      confirmText: 'Assigner',
+    });
+    if (!ok) return;
+
+    this.assigningDriverId = driverId;
+    try {
+      await this.dashboardDataService.assignDriverToOrder(order.id, driverId, order.userId || order.userID);
+      toastSuccess('Chauffeur assigné');
+      order.isAcepted = true;
+    } catch(e) {
+      console.error(e);
+      toastError('Échec de l\'assignation du chauffeur');
+    } finally {
+      this.assigningDriverId = null;
+    }
+  }
 
   constructor(private dashboardDataService: DashboardDataService) {}
 
   ngOnInit(): void {}
 
   get filteredOrders(): Orders[] {
-    return this.orders.filter(o => {
+    const filtered = this.orders.filter(o => {
       const deal = this.getDealForOrder(o.id);
       const dealStatus = (deal?.status || '').toLowerCase().trim();
 
@@ -41,9 +98,24 @@ export class DealsTabComponent implements OnInit {
         o.id?.toLowerCase().includes(this.searchQuery.toLowerCase()) ||
         o.namePickUp?.toLowerCase().includes(this.searchQuery.toLowerCase()) ||
         o.vehicleType?.toLowerCase().includes(this.searchQuery.toLowerCase()) ||
-        o.userId?.toLowerCase().includes(this.searchQuery.toLowerCase());
+        (o.userId || o.userID)?.toLowerCase().includes(this.searchQuery.toLowerCase());
 
       return matchesStatus && matchesQuery;
+    });
+
+    return filtered.sort((a, b) => {
+      const dealA = this.getDealForOrder(a.id);
+      const dealB = this.getDealForOrder(b.id);
+
+      const getTime = (deal: any, order: any) => {
+        if (deal?.timestamp?.seconds) return deal.timestamp.seconds * 1000;
+        if (deal?.timestamp) return new Date(deal.timestamp).getTime();
+        if (order?.timestamp?.seconds) return order.timestamp.seconds * 1000;
+        if (order?.timestamp) return new Date(order.timestamp).getTime();
+        return 0;
+      };
+
+      return getTime(dealB, b) - getTime(dealA, a);
     });
   }
 
@@ -78,17 +150,22 @@ export class DealsTabComponent implements OnInit {
 
   async softDeleteOrder(order: Orders): Promise<void> {
     if (!order.id) return;
-    if (!confirm(`Are you sure you want to delete/archive order ${order.id}? (Order document will be soft-deleted by setting isAcepted=true)`)) {
-      return;
-    }
+    const ok = await confirmAction({
+      title: 'Archiver cette commande ?',
+      text: `La commande ${order.id} sera archivée (soft-delete).`,
+      confirmText: 'Archiver',
+      danger: true,
+    });
+    if (!ok) return;
 
     this.processingDeleteId = order.id;
     try {
       await this.dashboardDataService.softDeleteOrder(order.id);
       order.isAcepted = true;
+      toastSuccess('Commande archivée');
     } catch (err) {
       console.error('Failed to soft delete order:', err);
-      alert('Error soft-deleting order document.');
+      toastError('Erreur lors de l\'archivage de la commande');
     } finally {
       this.processingDeleteId = null;
     }

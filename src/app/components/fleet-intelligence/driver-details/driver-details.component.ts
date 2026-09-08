@@ -4,8 +4,8 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { FleetIntelligenceService, DriverStatus } from '../../../services/fleet-intelligence.service';
 import { CrossTabSyncService } from '../../../services/cross-tab-sync.service';
-import { Subscription } from 'rxjs';
-import { Firestore, doc, docData, collection, query, where, collectionData, updateDoc, addDoc, serverTimestamp } from '@angular/fire/firestore';
+import { Subscription, Observable } from 'rxjs';
+import { Firestore, doc, docData, collection, query, where, collectionData, updateDoc, setDoc, addDoc, serverTimestamp } from '@angular/fire/firestore';
 import { ShnellUser } from '../../../../Models/shnellUsers.models';
 import { Vehicle } from '../../../../Models/vehicle';
 
@@ -33,6 +33,11 @@ export class DriverDetailsComponent implements OnInit, OnDestroy {
 
   // State Update Controls
   isProcessing: boolean = false;
+  bids$!: Observable<any[]>;
+  deals$!: Observable<any[]>;
+  avgRating$!: Observable<{ avg: number; count: number }>;
+  verification$!: Observable<any>;
+  selectedDriverVerification: any = null;
   rechargeAmount: number = 20;
 
   // Notification Modal/Form
@@ -106,6 +111,14 @@ export class DriverDetailsComponent implements OnInit, OnDestroy {
         }
       })
     );
+
+    // Personal Verification
+    const verifyRef = doc(this.firestore, `drivers/${id}`);
+    this.subscription.add(
+      docData(verifyRef).subscribe(data => {
+        this.selectedDriverVerification = data || null;
+      })
+    );
   }
 
   // CROSS-TAB LINKED UPDATE METHODS
@@ -151,7 +164,7 @@ export class DriverDetailsComponent implements OnInit, OnDestroy {
     }
   }
 
-  async rechargeBalance(): Promise<void> {
+    async rechargeBalance(): Promise<void> {
     if (!this.driver || !this.driverId || !this.rechargeAmount || this.rechargeAmount <= 0) return;
     this.isProcessing = true;
     try {
@@ -159,11 +172,15 @@ export class DriverDetailsComponent implements OnInit, OnDestroy {
       const userRef = doc(this.firestore, `users/${this.driverId}`);
       await updateDoc(userRef, { balance: newBal });
 
+      const walletDocRef = doc(this.firestore, `wallets/${this.driverId}`);
+      await setDoc(walletDocRef, { balance: newBal }, { merge: true });
+
       const commColRef = collection(this.firestore, 'commissions');
       await addDoc(commColRef, {
         userId: this.driverId,
         DriverId: this.driverId,
         commissionDeducted: this.rechargeAmount,
+        percentageFees: 0,
         DealAmount: this.rechargeAmount,
         time: serverTimestamp(),
         typeOfTransaction: 'recharge'
@@ -209,6 +226,22 @@ export class DriverDetailsComponent implements OnInit, OnDestroy {
     }
   }
 
+  async toggleDriverVerification(): Promise<void> {
+    if (!this.driver || !this.driver.uid || !this.selectedDriverVerification) return;
+    this.isProcessing = true;
+    try {
+      const currentStatus = this.selectedDriverVerification.isVerified === true;
+      const newStatus = !currentStatus;
+      const verifyRef = doc(this.firestore, `drivers/${this.driver.uid}`);
+      await updateDoc(verifyRef, { isVerified: newStatus });
+      this.selectedDriverVerification.isVerified = newStatus;
+    } catch (e) {
+      console.error('Error updating driver verification status:', e);
+    } finally {
+      this.isProcessing = false;
+    }
+  }
+
   getValidUrl(val: any): string | null {
     if (!val || typeof val !== 'string') return null;
     const trimmed = val.trim();
@@ -223,30 +256,11 @@ export class DriverDetailsComponent implements OnInit, OnDestroy {
     return null;
   }
 
-  getCarteGriseAssetUrl(v: Vehicle | null): string {
-    if (!v) return 'https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?w=400&auto=format&fit=crop&q=80';
-    return (
-      this.getValidUrl(v.carteGriseAsset) ||
-      this.getValidUrl(v.carteGrise) ||
-      this.getValidUrl((v as any).carteGriseFront) ||
-      'https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?w=400&auto=format&fit=crop&q=80'
-    );
-  }
-
-  getCinAssetUrl(v: Vehicle | null): string {
-    if (!v) return 'https://images.unsplash.com/photo-1589829545856-d10d557cf95f?w=400&auto=format&fit=crop&q=80';
-    return (
-      this.getValidUrl(v.cinAsset) ||
-      this.getValidUrl(v.cin) ||
-      this.getValidUrl((v as any).carteIdentityFront) ||
-      'https://images.unsplash.com/photo-1589829545856-d10d557cf95f?w=400&auto=format&fit=crop&q=80'
-    );
-  }
-
   getVehicleAssetUrl(v: Vehicle | null): string {
     if (!v) return 'https://images.unsplash.com/photo-1601584115197-04ecc0da31d7?w=400&auto=format&fit=crop&q=80';
     const candidate = [
-      v.vehiculeAsset,
+      (v as any).vehicleAssetUrl,
+      (v as any).vehiculeAsset,
       (v as any).vehicleAsset,
       (v as any).vehicleImage,
       (v as any).vehiculeImage,
@@ -257,16 +271,28 @@ export class DriverDetailsComponent implements OnInit, OnDestroy {
 
     if (v.type) {
       const t = v.type.toLowerCase().trim();
-      if (t.includes('light_medium')) return 'assets/trucks/light_medium.png';
       if (t.includes('medium_heavy')) return 'assets/trucks/medium_heavy.png';
       if (t.includes('super_heavy')) return 'assets/trucks/super_heavy.png';
       if (t.includes('light') || t.includes('voiture') || t.includes('car')) return 'assets/trucks/light.png';
       if (t.includes('heavy')) return 'assets/trucks/heavy.png';
       if (t.includes('medium') || t.includes('camion') || t.includes('truck')) return 'assets/trucks/medium.png';
-      if (t.includes('popular') || t.includes('estafette')) return 'assets/trucks/popular.png';
-      if (t.includes('isuzu')) return 'assets/trucks/isuzu.png';
+      if (t.includes('popular') || t.includes('light')) return 'assets/trucks/popular.png';
+      if (t.includes('medium')) return 'assets/trucks/isuzu.png';
     }
 
+    return 'assets/trucks/medium.png';
+  }
+
+  getTruckTypeAsset(type?: string): string {
+    if (!type) return 'assets/trucks/medium.png';
+    const t = type.toLowerCase().trim();
+    if (t.includes('medium_heavy')) return 'assets/trucks/medium_heavy.png';
+    if (t.includes('super_heavy')) return 'assets/trucks/super_heavy.png';
+    if (t.includes('light') || t.includes('voiture') || t.includes('car')) return 'assets/trucks/light.png';
+    if (t.includes('heavy')) return 'assets/trucks/heavy.png';
+    if (t.includes('medium') || t.includes('camion') || t.includes('truck')) return 'assets/trucks/medium.png';
+    if (t.includes('popular') || t.includes('light')) return 'assets/trucks/popular.png';
+    if (t.includes('medium')) return 'assets/trucks/isuzu.png';
     return 'assets/trucks/medium.png';
   }
 
@@ -292,11 +318,6 @@ export class DriverDetailsComponent implements OnInit, OnDestroy {
     const seen = new Set<string>();
 
     const mainAssets = [
-      this.getValidUrl(v.carteGriseAsset),
-      this.getValidUrl(v.carteGrise),
-      this.getValidUrl(v.cinAsset),
-      this.getValidUrl(v.cin),
-      this.getValidUrl(v.vehiculeAsset),
       this.getValidUrl((v as any).vehicleAsset),
       this.getValidUrl((v as any).vehicleImage),
       this.getValidUrl((v as any).carteGriseFront),

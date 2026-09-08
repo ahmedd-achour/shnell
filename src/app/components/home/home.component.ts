@@ -11,16 +11,6 @@ import { DropOffDataModel } from '../../../Models/dropoffdata.model';
 })
 export class HomeComponent {
 
-  colisCount: number = 50; // default
-  pricePerStop: number = 0.2;
-
-  get dailyCost(): number {
-    return this.colisCount * this.pricePerStop;
-  }
-
-  get monthlyCost(): number {
-    return this.dailyCost * 26; // average working days per month
-  }
   @ViewChild('videoPlayer') videoPlayer!: ElementRef<HTMLVideoElement>;
 
   ngAfterViewInit() {

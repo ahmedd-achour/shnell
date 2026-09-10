@@ -67,6 +67,57 @@
 
   <!-- Step 2: Dropoffs & Available Stops -->
   <div *ngIf="currentStep === 2">
+
+    <!-- Insights + visual query -->
+    <div class="card border-0 shadow-sm saas-card mb-4">
+      <div class="card-body p-3 p-md-4">
+        <div class="pd-kpis mb-3">
+          <div class="pd-kpi"><span class="pd-kpi__n">{{ availableStops.length }}</span><span class="pd-kpi__l">Total dispo</span></div>
+          <div class="pd-kpi"><span class="pd-kpi__n">{{ getFilteredAvailable().length }}</span><span class="pd-kpi__l">Filtrés</span></div>
+          <div class="pd-kpi"><span class="pd-kpi__n">{{ selectedStopIds.size }}</span><span class="pd-kpi__l">Sélectionnés</span></div>
+          <div class="pd-kpi"><span class="pd-kpi__n">{{ dropOffs.length }}</span><span class="pd-kpi__l">Dans la tournée</span></div>
+          <div class="pd-kpi"><span class="pd-kpi__n">{{ availableValue | number:'1.0-0' }}</span><span class="pd-kpi__l">Valeur filtrée</span></div>
+          <div class="pd-kpi"><span class="pd-kpi__n">{{ selectedValue | number:'1.0-0' }}</span><span class="pd-kpi__l">Valeur sélect.</span></div>
+        </div>
+
+        <!-- visual query row -->
+        <div class="pd-query mb-3">
+          <span class="pd-query__lead"><i class="bi bi-funnel-fill"></i> Requête</span>
+          <select class="form-select form-select-sm w-auto" [(ngModel)]="filterGov" (change)="updateFilters()">
+            <option value="">Gouvernorat : tous</option>
+            <option *ngFor="let gov of governorates" [value]="gov">{{ gov }}</option>
+          </select>
+          <select class="form-select form-select-sm w-auto" [(ngModel)]="filterProduct" (change)="updateFilters()">
+            <option value="">Produit : tous</option>
+            <option *ngFor="let prod of uniqueProducts" [value]="prod">{{ prod }}</option>
+          </select>
+          <div class="input-group input-group-sm w-auto">
+            <span class="input-group-text">Prix</span>
+            <input type="number" class="form-control" style="max-width:80px" placeholder="min" [(ngModel)]="filterPriceMin" (input)="updateFilters()">
+            <input type="number" class="form-control" style="max-width:80px" placeholder="max" [(ngModel)]="filterPriceMax" (input)="updateFilters()">
+          </div>
+          <span class="pd-flex"></span>
+          <button class="btn btn-sm btn-outline-secondary rounded-3" (click)="selectAll(true)">
+            <i class="bi bi-check2-square me-1"></i> Tout filtré
+          </button>
+          <button class="btn btn-sm btn-outline-secondary rounded-3" (click)="selectAll(false)" [disabled]="selectedStopIds.size === 0">
+            Vider
+          </button>
+        </div>
+
+        <div class="pd-charts">
+          <div class="pd-chartbox">
+            <span class="pd-chartbox__t">Arrêts par gouvernorat</span>
+            <div class="pd-chartbox__c"><canvas #govChartEl></canvas></div>
+          </div>
+          <div class="pd-chartbox">
+            <span class="pd-chartbox__t">Répartition produits</span>
+            <div class="pd-chartbox__c"><canvas #prodChartEl></canvas></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Available Stops Selection Table -->
     <div class="card border-0 shadow-sm saas-card mb-4">
       <div class="card-header bg-transparent border-bottom border-subtle p-4 d-flex justify-content-between align-items-center flex-wrap gap-3">
@@ -160,10 +211,22 @@
             <input type="text" class="form-control bg-dark border-subtle text-white" [(ngModel)]="newDropOffName" placeholder="Nom du client" />
           </div>
           <div class="col-md-3">
-            <input type="text" class="form-control bg-dark border-subtle text-white" [(ngModel)]="newDropOffPhone" placeholder="Téléphone" />
+            <input type="text" class="form-control bg-dark border-subtle text-white" [(ngModel)]="newDropOffPhone" placeholder="Téléphone (requis) *" />
+          </div>
+          <div class="col-md-3">
+            <input type="text" class="form-control bg-dark border-subtle text-white" [(ngModel)]="newDropOffPhone2" placeholder="2e téléphone (optionnel)" />
+          </div>
+          <div class="col-md-3">
+            <input type="number" min="0" step="0.1" class="form-control bg-dark border-subtle text-white" [(ngModel)]="newDropOffParcelPrice" placeholder="Frais de vente du colis (TND)" />
           </div>
           <div class="col-md-4">
             <input type="text" class="form-control bg-dark border-subtle text-white" [(ngModel)]="newDropOffDestination" placeholder="Adresse ou Google Maps URL" />
+          </div>
+          <div class="col-md-3">
+            <input type="text" class="form-control bg-dark border-subtle text-white" [(ngModel)]="newDropOffDescription" placeholder="Description du colis (optionnel)" />
+          </div>
+          <div class="col-md-3">
+            <input type="text" class="form-control bg-dark border-subtle text-white" [(ngModel)]="newDropOffExpeditor" placeholder="Expéditeur / ID (optionnel)" />
           </div>
           <div class="col-md-2">
             <button class="btn btn-saas-primary w-100" (click)="addDropOff()" [disabled]="dropOffs.length >= maxStops">

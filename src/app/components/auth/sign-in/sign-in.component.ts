@@ -1,8 +1,9 @@
 import { Component, inject } from '@angular/core';
-import { Auth, AuthErrorCodes, GoogleAuthProvider, signInWithEmailAndPassword, signOut } from '@angular/fire/auth';
+import { Auth, AuthErrorCodes, GoogleAuthProvider, signInWithEmailAndPassword, signInWithPopup, signOut } from '@angular/fire/auth';
 import { Firestore, doc, getDoc } from '@angular/fire/firestore';
 import { FormControl, FormGroup, Validators } from '@angular/forms';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
+import { isUserBanned } from '../../../roleguard';
 
 @Component({
   selector: 'app-sign-in',
@@ -14,15 +15,40 @@ export class SignInComponent {
   auth = inject(Auth);
   firestore = inject(Firestore);
 
-  googleAuthProvider = new GoogleAuthProvider();
+  googleAuthProvider = (() => {
+    const p = new GoogleAuthProvider();
+    p.setCustomParameters({ prompt: 'select_account' });
+    return p;
+  })();
 
   isSubmissionInProgress: boolean = false;
   errorMessage: string = '';
+  isAdminMode: boolean = false;
+  hidePassword = true;
 
-  private allowedRoles = ['company', 'admin']; // Allowed roles
-
-  constructor(private router: Router) {
+  constructor(private router: Router, private route: ActivatedRoute) {
     this.initForm();
+    if (this.route.snapshot.queryParamMap.get('banned') === '1') {
+      this.errorMessage = 'Ce compte est suspendu. Contactez le support Shnell.';
+    }
+  }
+
+  private readonly bannedMessage = 'Ce compte est suspendu. Contactez le support Shnell.';
+
+  /** Reads users/{uid} and, if the account is banned, signs the user back out
+   *  and surfaces the suspension message. Returns true when the login is blocked. */
+  private async blockIfBanned(uid: string): Promise<boolean> {
+    let banned = false;
+    try {
+      const snap = await getDoc(doc(this.firestore, 'users', uid));
+      banned = snap.exists() ? isUserBanned(snap.data()) : false;
+    } catch { /* fail open — a read blip must not lock anyone out */ }
+    if (banned) {
+      await signOut(this.auth).catch(() => {});
+      this.isSubmissionInProgress = false;
+      this.errorMessage = this.bannedMessage;
+    }
+    return banned;
   }
 
   initForm() {
@@ -30,6 +56,45 @@ export class SignInComponent {
       email: new FormControl('', [Validators.required, Validators.email]),
       password: new FormControl('', [Validators.required, Validators.minLength(6)]),
     });
+  }
+
+  toggleAdminMode() {
+    this.isAdminMode = !this.isAdminMode;
+    this.errorMessage = '';
+  }
+
+  async loginWithGoogle() {
+    this.isSubmissionInProgress = true;
+    this.errorMessage = '';
+    try {
+      const cred = await signInWithPopup(this.auth, this.googleAuthProvider);
+      if (await this.blockIfBanned(cred.user.uid)) return;
+      // Google sign-in always lands on the user dashboard (never the admin console).
+      await this.router.navigateByUrl('/app');
+    } catch (error: any) {
+      this.isSubmissionInProgress = false;
+      const code = error?.code || '';
+      const msg = (error?.message || '').toString();
+
+      if (code === 'auth/popup-closed-by-user' || code === 'auth/cancelled-popup-request') {
+        this.errorMessage = '';
+      } else if (
+        code === 'auth/unauthorized-domain' ||
+        code === 'auth/operation-not-allowed' ||
+        msg.includes('redirect_uri_mismatch')
+      ) {
+        this.errorMessage =
+          "Google sign-in isn't configured for this site yet — add this domain's OAuth redirect URI in the Firebase / Google Cloud console.";
+      } else if (code === 'auth/popup-blocked') {
+        this.errorMessage = 'Your browser blocked the sign-in popup. Allow popups for this site and try again.';
+      } else {
+        this.errorMessage = msg || 'Google sign-in failed';
+      }
+    }
+  }
+
+  async loginWithPhone() {
+    this.errorMessage = 'Phone authentication is under construction.';
   }
 
   async onSubmit() {
@@ -44,41 +109,28 @@ export class SignInComponent {
     const { email, password } = this.authForm.value;
 
     try {
-      const userCredential = await signInWithEmailAndPassword(this.auth, email, password);
-      const uid = userCredential.user.uid;
+      const cred = await signInWithEmailAndPassword(this.auth, email, password);
 
-      // Fetch Firestore user data
-      const userDocRef = doc(this.firestore, 'users', uid);
-      const userSnapshot = await getDoc(userDocRef);
+      if (await this.blockIfBanned(cred.user.uid)) return;
 
-      if (!userSnapshot.exists()) {
-        await signOut(this.auth); // Immediately sign out
-        throw new Error('User data not found in the system');
-      }
+      // Email+password + admin role -> admin console. Everyone else -> user dashboard.
+      let role = '';
+      try {
+        const snap = await getDoc(doc(this.firestore, 'users', cred.user.uid));
+        role = (snap.exists() ? (snap.data() as any)?.role : '')?.toString().trim().toLowerCase() || '';
+      } catch { /* non-blocking */ }
 
-      const userData: any = userSnapshot.data();
-
-      // Check if role is allowed
-      if (!this.allowedRoles.includes(userData.role)) {
-        await signOut(this.auth); // Immediately sign out
-        throw new Error('You are not authorized to access this dashboard');
-      }
-
-      // Success → redirect
-      this.router.navigate(['/home-admin']); // successfull login = profile redirection
+      await this.router.navigateByUrl(role === 'admin' ? '/home-admin' : '/app');
     } catch (error: any) {
       this.isSubmissionInProgress = false;
       console.error('Sign-in error:', error);
       if (error.code === AuthErrorCodes.INVALID_EMAIL) {
         this.errorMessage = 'Email is not valid';
-      } else if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
-        this.errorMessage = 'Invalid Email or Password';
+      } else if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
+        this.errorMessage = 'Invalid email or password';
       } else {
-        this.errorMessage = error.message+'' || 'Something went wrong, please try again';
+        this.errorMessage = error.message || 'Something went wrong, please try again';
       }
     }
   }
-hidePassword = true;
-
-
 }

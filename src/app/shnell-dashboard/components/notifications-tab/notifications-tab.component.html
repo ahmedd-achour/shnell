@@ -1,297 +1,191 @@
 <div class="notifications-container">
-  <!-- Top Banners -->
-  <div *ngIf="successMessage" class="alert alert-success alert-dismissible fade show border-0 shadow-sm mb-4 bg-success-subtle text-success border border-success" role="alert">
-    <div class="d-flex align-items-center">
-      <i class="bi bi-check-circle-fill display-6 me-3"></i>
-      <div>
-        <h6 class="fw-bold mb-1">Push Notification Dispatched!</h6>
-        <span>{{ successMessage }}</span>
-      </div>
-    </div>
-    <button type="button" class="btn-close" (click)="successMessage = null"></button>
+
+  <!-- KPI strip -->
+  <div class="kpi-strip mb-4">
+    <div class="kpi"><span class="kpi__ic bg-subtle text-brand"><i class="bi bi-send"></i></span>
+      <span><b>{{ sentLogs.length }}</b><small>Sent this session</small></span></div>
+    <div class="kpi"><span class="kpi__ic bg-subtle text-success"><i class="bi bi-check2-circle"></i></span>
+      <span><b>{{ deliveredCount }}</b><small>Delivered</small></span></div>
+    <div class="kpi"><span class="kpi__ic bg-subtle text-danger"><i class="bi bi-x-octagon"></i></span>
+      <span><b>{{ failedCount }}</b><small>Failed</small></span></div>
+    <div class="kpi"><span class="kpi__ic bg-subtle text-brand"><i class="bi bi-people"></i></span>
+      <span><b>{{ resolvedTargetUsers.length }}</b><small>In current audience</small></span></div>
   </div>
 
-  <div *ngIf="errorMessage" class="alert alert-danger alert-dismissible fade show border-0 shadow-sm mb-4 bg-danger-subtle text-danger border border-danger" role="alert">
-    <div class="d-flex align-items-center">
-      <i class="bi bi-exclamation-triangle-fill display-6 me-3"></i>
-      <div>
-        <h6 class="fw-bold mb-1">Dispatch Alert</h6>
-        <span>{{ errorMessage }}</span>
-      </div>
-    </div>
-    <button type="button" class="btn-close" (click)="errorMessage = null"></button>
-  </div>
-
-  <!-- Notification Dispatch KPI Row -->
-  <div class="row g-3 mb-4">
-    <div class="col-12 col-sm-6 col-md-3">
-      <div class="card border-0 shadow-sm saas-card p-3">
-        <span class="text-uppercase fw-bold text-muted fs-8">Total Dispatched</span>
-        <h3 class="fw-bold text-white mb-0 font-outfit mt-1">{{ sentLogs.length }}</h3>
-        <small class="text-muted fs-8">Session Telemetry</small>
-      </div>
-    </div>
-    <div class="col-12 col-sm-6 col-md-3">
-      <div class="card border-0 shadow-sm saas-card p-3">
-        <span class="text-uppercase fw-bold text-muted fs-8">Delivered</span>
-        <h3 class="fw-bold text-success mb-0 font-outfit mt-1">{{ deliveredCount }}</h3>
-        <small class="text-muted fs-8">Successful FCM Pings</small>
-      </div>
-    </div>
-    <div class="col-12 col-sm-6 col-md-3">
-      <div class="card border-0 shadow-sm saas-card p-3">
-        <span class="text-uppercase fw-bold text-muted fs-8">Failed</span>
-        <h3 class="fw-bold text-danger mb-0 font-outfit mt-1">{{ failedCount }}</h3>
-        <small class="text-muted fs-8">Missing FCM Token / Error</small>
-      </div>
-    </div>
-    <div class="col-12 col-sm-6 col-md-3">
-      <div class="card border-0 shadow-sm saas-card p-3">
-        <span class="text-uppercase fw-bold text-muted fs-8">Target Audience</span>
-        <h3 class="fw-bold text-warning mb-0 font-outfit mt-1">{{ resolvedTargetUsers.length }} Recipient(s)</h3>
-        <small class="text-muted fs-8">Resolved for Broadcast</small>
-      </div>
-    </div>
-  </div>
-
-  <div class="row g-4">
-    <!-- Dispatch Form Column -->
-    <div class="col-12 col-lg-7 col-xl-8">
-      <div class="card border-0 shadow-sm dashboard-card mb-4">
-        <div class="card-header bg-transparent border-bottom border-subtle py-3">
-          <h5 class="card-title font-heading text-white mb-0">
-            <i class="bi bi-bell-fill text-warning me-2"></i>FCM Notification Management Center
-          </h5>
-          <small class="text-muted">Target individual users, fleet drivers or broadcast custom groups via Cloud Functions</small>
+  <!-- ============ LIVE PREVIEW BAND (full width, top) ============ -->
+  <div class="card dashboard-card mb-4">
+    <div class="card-header"><h6 class="mb-0 fw-bold"><i class="bi bi-phone me-2 text-brand"></i>Live preview</h6></div>
+    <div class="card-body">
+      <div class="preview-band">
+        <div class="phone-mockup">
+          <div class="phone-notch"></div>
+          <div class="notification-preview-card">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+              <span class="d-flex align-items-center gap-2"><span class="app-logo-badge">S</span><span class="fw-bold fs-9" style="color:#fff;">SHNELL</span></span>
+              <span class="fs-9" style="color:rgba(255,255,255,.6);">now</span>
+            </div>
+            <h6 class="fw-bold mb-1 fs-8" style="color:#fff;">{{ header || 'Notification title' }}</h6>
+            <p class="mb-0 fs-9" style="color:rgba(255,255,255,.82);">{{ body || 'The message body appears here as it will on the device lock screen.' }}</p>
+            <img *ngIf="imageUrl" [src]="imageUrl" alt="" class="img-fluid rounded-3 mt-2" style="max-height: 100px; width: 100%; object-fit: cover;"/>
+          </div>
         </div>
-        <div class="card-body p-4">
 
-          <!-- 1. Recipient Target Mode Selector -->
-          <div class="mb-4">
-            <label class="form-label text-white fw-bold d-block mb-2">1. Select Target Recipient Group</label>
-            <div class="d-flex flex-wrap gap-2 mb-3">
-              <button class="btn btn-sm rounded-pill px-3" [class.btn-saas-primary]="recipientMode === 'single'" [class.btn-outline-secondary]="recipientMode !== 'single'" (click)="recipientMode = 'single'">
-                <i class="bi bi-person me-1"></i> Single User / Driver
-              </button>
-              <button class="btn btn-sm rounded-pill px-3" [class.btn-saas-primary]="recipientMode === 'everyone'" [class.btn-outline-secondary]="recipientMode !== 'everyone'" (click)="recipientMode = 'everyone'">
-                <i class="bi bi-people me-1"></i> Everyone ({{ users.length }})
-              </button>
-              <button class="btn btn-sm rounded-pill px-3" [class.btn-saas-primary]="recipientMode === 'drivers'" [class.btn-outline-secondary]="recipientMode !== 'drivers'" (click)="recipientMode = 'drivers'">
-                <i class="bi bi-truck me-1"></i> All Drivers
-              </button>
-              <button class="btn btn-sm rounded-pill px-3" [class.btn-saas-primary]="recipientMode === 'clients'" [class.btn-outline-secondary]="recipientMode !== 'clients'" (click)="recipientMode = 'clients'">
-                <i class="bi bi-person-badge me-1"></i> Customers Only
-              </button>
-              <button class="btn btn-sm rounded-pill px-3" [class.btn-saas-primary]="recipientMode === 'pro_drivers'" [class.btn-outline-secondary]="recipientMode !== 'pro_drivers'" (click)="recipientMode = 'pro_drivers'">
-                <i class="bi bi-lightning-charge me-1"></i> Premium PRO Drivers
-              </button>
-              <button class="btn btn-sm rounded-pill px-3" [class.btn-saas-primary]="recipientMode === 'custom_select'" [class.btn-outline-secondary]="recipientMode !== 'custom_select'" (click)="recipientMode = 'custom_select'">
-                <i class="bi bi-ui-checks me-1"></i> Custom Selected List
-              </button>
+        <div class="preview-meta">
+          <div class="preview-meta__grid">
+            <div class="preview-meta__cell"><span>Audience</span><strong>{{ resolvedTargetUsers.length }} recipient(s)</strong></div>
+            <div class="preview-meta__cell"><span>Send mode</span><strong class="text-capitalize">{{ recipientMode.split('_').join(' ') }}</strong></div>
+            <div class="preview-meta__cell"><span>Category</span><strong class="text-capitalize">{{ category.split('_').join(' ') }}</strong></div>
+            <div class="preview-meta__cell"><span>Priority</span><strong class="text-capitalize">{{ priority }}</strong></div>
+            <div class="preview-meta__cell"><span>Title length</span><strong>{{ header.length }} / 100</strong></div>
+            <div class="preview-meta__cell"><span>Body length</span><strong>{{ body.length }} / 500</strong></div>
+          </div>
+          <div class="preview-meta__status" [class.is-ready]="canSend">
+            <i class="bi" [ngClass]="canSend ? 'bi-check-circle-fill' : 'bi-exclamation-circle'"></i>
+            <span *ngIf="canSend">Ready — will dispatch to {{ resolvedTargetUsers.length }} recipient(s)</span>
+            <span *ngIf="!canSend">Add a title, a body and at least one recipient to send</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ COMPOSE ============ -->
+  <div class="row g-4">
+    <div class="col-12">
+      <div class="card dashboard-card">
+        <div class="card-header">
+          <h6 class="mb-0 fw-bold"><i class="bi bi-bell-fill me-2 text-brand"></i>Compose push notification</h6>
+        </div>
+        <div class="card-body">
+
+          <!-- 1 · Audience -->
+          <span class="section-eyebrow">1 · Audience</span>
+          <div class="d-flex flex-wrap gap-2 mb-3 mt-2">
+            <button class="chip" [class.chip--on]="recipientMode === 'single'" (click)="recipientMode = 'single'"><i class="bi bi-person"></i> One recipient</button>
+            <button class="chip" [class.chip--on]="recipientMode === 'custom_select'" (click)="recipientMode = 'custom_select'"><i class="bi bi-ui-checks"></i> Pick a list</button>
+            <button class="chip" [class.chip--on]="recipientMode === 'everyone'" (click)="recipientMode = 'everyone'"><i class="bi bi-globe"></i> Everyone ({{ users.length }})</button>
+            <button class="chip" [class.chip--on]="recipientMode === 'drivers'" (click)="recipientMode = 'drivers'"><i class="bi bi-truck"></i> All drivers</button>
+            <button class="chip" [class.chip--on]="recipientMode === 'clients'" (click)="recipientMode = 'clients'"><i class="bi bi-person-badge"></i> All users</button>
+            <button class="chip" [class.chip--on]="recipientMode === 'pro_drivers'" (click)="recipientMode = 'pro_drivers'"><i class="bi bi-lightning-charge"></i> PRO drivers</button>
+          </div>
+
+          <!-- single -->
+          <div *ngIf="recipientMode === 'single'" class="audience-panel">
+            <div class="selected-recipient" *ngIf="selectedUserObject">
+              <span class="loc-badge">{{ selectedUserObject.name ? selectedUserObject.name.charAt(0).toUpperCase() : 'U' }}</span>
+              <span class="flex-grow-1 overflow-hidden">
+                <strong class="d-block text-truncate">{{ selectedUserObject.name || 'User' }} <span class="fs-9 text-muted">({{ selectedUserObject.role }})</span></strong>
+                <span class="fs-9 text-muted d-block text-truncate">{{ selectedUserObject.phone || selectedUserObject.email }} · {{ selectedUserObject.uid || selectedUserObject.id }}</span>
+              </span>
+              <button type="button" class="btn btn-xs text-danger p-1" (click)="selectSingleRecipient(null)"><i class="bi bi-x-circle-fill"></i></button>
             </div>
-
-            <!-- Single Recipient Input -->
-            <div *ngIf="recipientMode === 'single'" class="row g-2">
-              <div class="col-12 col-md-6">
-                <input
-                  type="text"
-                  class="form-control"
-                  placeholder="Type user name or phone to filter..."
-                  [(ngModel)]="recipientSearchQuery"
-                />
+            <ng-container *ngIf="!selectedUserObject">
+              <div class="input-group input-group-sm">
+                <span class="input-group-text bg-subtle border-subtle text-muted"><i class="bi bi-search"></i></span>
+                <input type="text" class="form-control" placeholder="Search by name, phone, email or UID…" [(ngModel)]="recipientSearchQuery" />
               </div>
-              <div class="col-12 col-md-6">
-                <select class="form-select" [(ngModel)]="selectedUserId" title="Select User">
-                  <option value="">-- Select Target User --</option>
-                  <option *ngFor="let u of filteredRecipientSearchList" [value]="u.uid || u.id">
-                    {{ u.name }} ({{ u.role }}) - {{ u.phone || u.email }}
-                  </option>
-                </select>
+              <div class="pick-list" *ngIf="recipientSearchQuery.trim().length">
+                <button type="button" class="pick-row" *ngFor="let u of filteredRecipientSearchList" (click)="selectSingleRecipient(u)">
+                  <strong>{{ u.name || 'User' }}</strong>
+                  <span class="fs-9 text-muted"> {{ u.role }} · {{ u.phone || u.email }}</span>
+                </button>
+                <div class="pick-row text-muted fs-9" *ngIf="filteredRecipientSearchList.length === 0">No match.</div>
               </div>
-            </div>
+            </ng-container>
+          </div>
 
-            <!-- Custom Multi-Select Experience -->
-            <div *ngIf="recipientMode === 'custom_select'" class="bg-subtle p-3 rounded-3 border border-subtle">
-              <div class="d-flex justify-content-between align-items-center mb-2">
-                <span class="fs-8 fw-bold text-white">Search & Select Custom Target Recipients</span>
-                <div class="d-flex gap-2">
-                  <button class="btn btn-xs btn-outline-info rounded-pill px-2 py-0 fs-8" (click)="selectAllCustomRecipients()">Select All Filtered</button>
-                  <button class="btn btn-xs btn-outline-secondary rounded-pill px-2 py-0 fs-8" (click)="deselectAllCustomRecipients()">Clear Selection</button>
-                </div>
-              </div>
-              <input type="text" class="form-control form-control-sm mb-2" placeholder="Search by name, email, phone..." [(ngModel)]="recipientSearchQuery">
-              <div class="overflow-auto pe-1" style="max-height: 140px;">
-                <div *ngFor="let u of filteredRecipientSearchList" class="form-check text-white fs-8 py-1 border-bottom border-subtle d-flex align-items-center justify-content-between">
-                  <label class="form-check-label cursor-pointer d-flex align-items-center gap-2">
-                    <input type="checkbox" class="form-check-input me-1" [checked]="selectedUserIds.has(u.uid || u.id || '')" (change)="toggleSelectRecipient(u.uid || u.id || '')">
-                    <span class="fw-semibold">{{ u.name }}</span> ({{ u.role }})
-                  </label>
-                  <span class="text-muted font-mono fs-8">{{ u.phone }}</span>
-                </div>
-              </div>
+          <!-- custom list -->
+          <div *ngIf="recipientMode === 'custom_select'" class="audience-panel">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+              <span class="fs-9 fw-bold text-muted text-uppercase">Pick recipients</span>
+              <span class="d-flex gap-2">
+                <button class="btn btn-xs btn-icon-soft rounded-pill px-2" (click)="selectAllCustomRecipients()">Select shown</button>
+                <button class="btn btn-xs btn-icon-soft rounded-pill px-2" (click)="deselectAllCustomRecipients()">Clear</button>
+              </span>
             </div>
-
-            <!-- Selected Chips Bar -->
-            <div class="mt-2" *ngIf="resolvedTargetUsers.length > 0">
-              <span class="text-muted fs-8 d-block mb-1">Target Audience Preview ({{ resolvedTargetUsers.length }} Users):</span>
-              <div class="d-flex flex-wrap gap-1" style="max-height: 60px; overflow-y: auto;">
-                <span *ngFor="let u of resolvedTargetUsers.slice(0, 8)" class="recipient-chip">
-                  {{ u.name }}
-                  <i *ngIf="recipientMode === 'custom_select'" class="bi bi-x chip-remove" (click)="removeRecipientChip(u.uid || u.id || '')"></i>
-                </span>
-                <span *ngIf="resolvedTargetUsers.length > 8" class="badge bg-dark text-muted fs-8 align-self-center">
-                  +{{ resolvedTargetUsers.length - 8 }} more
-                </span>
-              </div>
+            <input type="text" class="form-control form-control-sm mb-2" placeholder="Search by name, phone, email, UID…" [(ngModel)]="recipientSearchQuery">
+            <div class="pick-list" style="max-height: 180px;">
+              <label class="pick-row d-flex align-items-center gap-2" *ngFor="let u of filteredRecipientSearchList">
+                <input type="checkbox" class="form-check-input m-0" [checked]="selectedUserIds.has(u.uid || u.id || '')" (change)="toggleSelectRecipient(u.uid || u.id || '')">
+                <span class="flex-grow-1"><strong>{{ u.name || 'User' }}</strong> <span class="fs-9 text-muted">{{ u.role }}</span></span>
+                <span class="fs-9 text-muted font-monospace">{{ u.phone }}</span>
+              </label>
             </div>
           </div>
 
-          <!-- 2. Quick Action Templates -->
-          <div class="mb-4">
-            <label class="form-label text-white fw-bold d-block mb-2">2. Reusable Action Templates</label>
-            <div class="d-flex flex-wrap gap-2">
-              <button
-                *ngFor="let t of templates"
-                class="btn btn-sm rounded-pill"
-                [ngClass]="t.badgeClass"
-                (click)="applyTemplate(t)">
-                <i class="bi me-1" [ngClass]="t.icon"></i> {{ t.name }}
-              </button>
+          <!-- audience preview -->
+          <div class="mt-2" *ngIf="resolvedTargetUsers.length">
+            <span class="fs-9 text-muted d-block mb-1">Will send to {{ resolvedTargetUsers.length }} recipient(s):</span>
+            <div class="d-flex flex-wrap gap-1">
+              <span *ngFor="let u of resolvedTargetUsers.slice(0, 10)" class="recipient-chip">
+                {{ u.name || 'User' }}
+                <i *ngIf="recipientMode === 'custom_select'" class="bi bi-x chip-remove" (click)="removeRecipientChip(u.uid || u.id || '')"></i>
+              </span>
+              <span *ngIf="resolvedTargetUsers.length > 10" class="recipient-chip">+{{ resolvedTargetUsers.length - 10 }} more</span>
             </div>
           </div>
 
-          <!-- 3. Notification Category & Priority -->
-          <div class="row g-3 mb-3">
-            <div class="col-12 col-md-6">
-              <label class="form-label text-white fw-bold fs-8">Category</label>
-              <select class="form-select" [(ngModel)]="category" title="Category">
-                <option value="promo">🎉 Promotion & Offers</option>
-                <option value="driver_alert">⚡ Driver Operation Alert</option>
-                <option value="customer_alert">👤 Customer Order Notice</option>
-                <option value="system">📲 System Update</option>
-                <option value="maintenance">⚙️ Platform Maintenance</option>
-                <option value="critical">🚨 Critical Urgent Alert</option>
-              </select>
-            </div>
+          <hr class="my-3">
 
-            <div class="col-12 col-md-6">
-              <label class="form-label text-white fw-bold fs-8">Priority Level</label>
-              <select class="form-select" [(ngModel)]="priority" title="Priority">
-                <option value="high">🔴 High Priority (Immediate Pop-up)</option>
-                <option value="normal">🔵 Normal Priority (Standard Badge)</option>
-                <option value="low">⚪ Low Priority (Silent Lockscreen)</option>
-              </select>
-            </div>
-          </div>
-
-          <!-- 4. Notification Fields -->
-          <div class="mb-3">
-            <div class="d-flex justify-content-between align-items-center mb-1">
-              <label class="form-label text-white fw-semibold mb-0">Notification Header (Title)</label>
-              <small class="text-muted fs-8">{{ header.length }}/100 chars</small>
-            </div>
-            <input
-              type="text"
-              class="form-control"
-              placeholder="e.g. 🎉 Account Approved! You are ready to deliver."
-              [(ngModel)]="header"
-              maxlength="100"
-            />
-          </div>
-
-          <div class="mb-4">
-            <div class="d-flex justify-content-between align-items-center mb-1">
-              <label class="form-label text-white fw-semibold mb-0">Notification Body Message</label>
-              <small class="text-muted fs-8">{{ body.length }}/500 chars</small>
-            </div>
-            <textarea
-              class="form-control"
-              rows="4"
-              placeholder="e.g. Welcome to Shnell! You can now log into your app and start accepting orders in real-time."
-              [(ngModel)]="body"
-              maxlength="500"
-            ></textarea>
-          </div>
-
-          <!-- Optional Attachments -->
-          <div class="row g-2 mb-4">
-            <div class="col-12 col-md-6">
-              <label class="form-label text-muted fs-8 mb-1">Optional Image Banner URL</label>
-              <input type="text" class="form-control form-control-sm" placeholder="https://..." [(ngModel)]="imageUrl">
-            </div>
-            <div class="col-12 col-md-6">
-              <label class="form-label text-muted fs-8 mb-1">Optional Action Deep Link URL</label>
-              <input type="text" class="form-control form-control-sm" placeholder="shnell://orders/..." [(ngModel)]="actionUrl">
-            </div>
-          </div>
-
-          <div class="d-flex justify-content-end gap-2">
-            <button
-              class="btn btn-saas-primary rounded-pill px-4 py-2 fw-semibold"
-              [disabled]="sending || resolvedTargetUsers.length === 0 || !header || !body"
-              (click)="sendNotification()">
-              <span *ngIf="sending" class="spinner-border spinner-border-sm me-2" role="status"></span>
-              <i *ngIf="!sending" class="bi bi-send-fill me-2"></i>
-              {{ sending ? 'Dispatching Push Payload...' : 'Send Push Notification' }}
+          <!-- 2 · Templates -->
+          <span class="section-eyebrow">2 · Start from a template <span class="text-muted fw-normal">(optional)</span></span>
+          <div class="d-flex flex-wrap gap-2 mt-2 mb-3">
+            <button *ngFor="let t of templates" class="chip" (click)="applyTemplate(t)">
+              <i class="bi" [ngClass]="t.icon"></i> {{ t.name }}
             </button>
           </div>
-        </div>
-      </div>
-    </div>
 
-    <!-- Right Column: Smartphone Live Preview & Dispatch History -->
-    <div class="col-12 col-lg-5 col-xl-4">
-      <!-- Live Mobile Device Mockup -->
-      <div class="card border-0 shadow-sm dashboard-card mb-4">
-        <div class="card-header bg-transparent border-bottom border-subtle py-3">
-          <h6 class="fw-bold text-white mb-0"><i class="bi bi-phone me-2 text-info"></i>Live Device Mockup Preview</h6>
-        </div>
-        <div class="card-body p-3 d-flex justify-content-center">
-          <div class="phone-mockup">
-            <div class="phone-notch"></div>
-
-            <div class="notification-preview-card">
-              <div class="d-flex justify-content-between align-items-center mb-2">
-                <div class="d-flex align-items-center gap-2">
-                  <div class="app-logo-badge">S</div>
-                  <span class="fw-bold text-white fs-8">SHNELL</span>
-                </div>
-                <span class="fs-8 text-muted">now</span>
-              </div>
-              <h6 class="fw-bold text-white mb-1 fs-7">{{ header || 'Notification Header' }}</h6>
-              <p class="text-light mb-0 fs-8">{{ body || 'Your push notification message body will render live right here on the user device lockscreen...' }}</p>
-              <img *ngIf="imageUrl" [src]="imageUrl" alt="Preview" class="img-fluid rounded-3 mt-2" style="max-height: 100px; width: 100%; object-fit: cover;"/>
+          <!-- 3 · Message -->
+          <span class="section-eyebrow">3 · Message</span>
+          <div class="row g-3 mt-1 mb-3">
+            <div class="col-6">
+              <label class="form-label fs-8 text-muted">Category</label>
+              <select class="form-select form-select-sm" [(ngModel)]="category">
+                <option value="promo">Promotion &amp; offers</option>
+                <option value="driver_alert">Driver operation alert</option>
+                <option value="customer_alert">Customer order notice</option>
+                <option value="system">System update</option>
+                <option value="maintenance">Platform maintenance</option>
+                <option value="critical">Critical / urgent</option>
+              </select>
             </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Dispatch History Telemetry Log -->
-      <div class="card border-0 shadow-sm dashboard-card">
-        <div class="card-header bg-transparent border-bottom border-subtle py-3 d-flex justify-content-between align-items-center">
-          <h6 class="fw-bold text-white mb-0"><i class="bi bi-clock-history me-2 text-warning"></i>Dispatch History Logs</h6>
-          <span class="badge bg-dark border text-muted fs-8">{{ sentLogs.length }} logs</span>
-        </div>
-        <div class="card-body p-2 overflow-auto" style="max-height: 280px;">
-          <div *ngFor="let log of filteredHistoryLogs" class="p-2 mb-2 rounded-3 bg-subtle border border-subtle fs-8">
-            <div class="d-flex justify-content-between align-items-center mb-1">
-              <span class="fw-bold" [ngClass]="log.status === 'success' ? 'text-success' : 'text-danger'">
-                <i class="bi" [ngClass]="log.status === 'success' ? 'bi-check-circle-fill' : 'bi-x-circle-fill'"></i>
-                {{ log.status | uppercase }}
-              </span>
-              <span class="text-muted">{{ log.timestamp | date:'HH:mm:ss' }}</span>
-            </div>
-            <div class="text-white fw-semibold mb-1">{{ log.header }}</div>
-            <div class="text-muted fs-8">Recipient: <strong class="text-light">{{ log.userName || log.userId }}</strong></div>
-            <div class="text-muted font-monospace fs-8" *ngIf="log.messageId">ID: {{ log.messageId }}</div>
-            <div class="text-danger fs-8" *ngIf="log.error">{{ log.error }}</div>
-            <div class="mt-1" *ngIf="log.status === 'error'">
-              <button class="btn btn-xs btn-outline-warning rounded-pill px-2 py-0 fs-8" (click)="retryFailedNotification(log)">Retry</button>
+            <div class="col-6">
+              <label class="form-label fs-8 text-muted">Priority</label>
+              <select class="form-select form-select-sm" [(ngModel)]="priority">
+                <option value="high">High — immediate pop-up</option>
+                <option value="normal">Normal — standard badge</option>
+                <option value="low">Low — silent</option>
+              </select>
             </div>
           </div>
 
-          <div *ngIf="sentLogs.length === 0" class="text-center py-4 text-muted fs-8">
-            No push notifications dispatched in this session yet.
+          <div class="mb-2">
+            <div class="d-flex justify-content-between fs-9 text-muted"><label class="mb-1">Title</label><span>{{ header.length }}/100</span></div>
+            <input type="text" class="form-control form-control-sm" placeholder="e.g. Account approved — you're ready to deliver" [(ngModel)]="header" maxlength="100" />
+          </div>
+          <div class="mb-3">
+            <div class="d-flex justify-content-between fs-9 text-muted"><label class="mb-1">Body</label><span>{{ body.length }}/500</span></div>
+            <textarea class="form-control form-control-sm" rows="3" placeholder="Full message shown on the lock screen…" [(ngModel)]="body" maxlength="500"></textarea>
+          </div>
+          <div class="row g-2 mb-3">
+            <div class="col-6">
+              <label class="form-label fs-9 text-muted mb-1">Image URL (optional)</label>
+              <input type="text" class="form-control form-control-sm" placeholder="https://…" [(ngModel)]="imageUrl">
+            </div>
+            <div class="col-6">
+              <label class="form-label fs-9 text-muted mb-1">Deep link (optional)</label>
+              <input type="text" class="form-control form-control-sm" placeholder="shnell://orders/…" [(ngModel)]="actionUrl">
+            </div>
+          </div>
+
+          <div class="text-end">
+            <button class="btn btn-saas-primary rounded-pill px-4 fw-bold"
+                    [disabled]="sending || resolvedTargetUsers.length === 0 || !header || !body"
+                    (click)="sendNotification()">
+              <span *ngIf="sending" class="spinner-border spinner-border-sm me-2"></span>
+              <i *ngIf="!sending" class="bi bi-send-fill me-2"></i>
+              {{ sending ? 'Sending…' : 'Send to ' + resolvedTargetUsers.length + ' recipient(s)' }}
+            </button>
           </div>
         </div>
       </div>

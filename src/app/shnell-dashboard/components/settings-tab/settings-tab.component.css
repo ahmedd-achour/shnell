@@ -1,5 +1,38 @@
-.dashboard-card {
-  background: rgba(18, 26, 47, 0.7);
-  backdrop-filter: blur(12px);
-  border-radius: 12px;
+/* .dashboard-card comes from the global admin layer */
+
+.vehicle-card {
+  background: var(--sh-card);
 }
+
+details > summary {
+  cursor: pointer;
+  list-style: none;
+  padding: 6px 0;
+}
+details > summary::-webkit-details-marker { display: none; }
+details > summary::before {
+  content: "▸";
+  display: inline-block;
+  margin-right: 6px;
+  transition: transform 0.15s ease;
+}
+details[open] > summary::before { transform: rotate(90deg); }
+
+/* Per-country pricing grid */
+.pricing-table {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.pricing-row {
+  display: grid;
+  grid-template-columns: 3.2rem 1fr 1fr 3.2rem 1.4rem;
+  gap: 6px;
+  align-items: center;
+}
+.pricing-row--head {
+  padding: 0 2px;
+  letter-spacing: 0.04em;
+}
+.pricing-row--head span { padding-left: 2px; }
+.pricing-row .form-control-sm { padding: 0.25rem 0.4rem; font-size: 0.78rem; }

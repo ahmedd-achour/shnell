@@ -39,8 +39,10 @@
 .sh-nav.is-scrolled {
   border-bottom-color: var(--sh-line);
   box-shadow: var(--sh-shadow-sm);
-  background: color-mix(in srgb, var(--sh-paper) 94%, transparent);
+  background: color-mix(in srgb, var(--sh-paper) 96%, transparent);
 }
+.sh-nav__brand { transition: opacity var(--sh-t-fast); }
+.sh-nav__brand:hover { opacity: 0.82; }
 .sh-nav__inner {
   max-width: var(--sh-maxw);
   margin-inline: auto;
@@ -68,15 +70,28 @@
   gap: 0.35rem;
 }
 .sh-nav__links a {
+  position: relative;
   padding: 0.55rem 0.95rem;
   border-radius: var(--sh-r-pill);
   color: var(--sh-ink-700);
   font-weight: 600;
   font-size: 0.92rem;
+  letter-spacing: -0.01em;
   transition: background var(--sh-t-fast), color var(--sh-t-fast);
+}
+.sh-nav__links a::after {
+  content: "";
+  position: absolute;
+  left: 50%; bottom: 0.28rem;
+  width: 0; height: 2px;
+  border-radius: 2px;
+  background: var(--sh-amber-500);
+  transform: translateX(-50%);
+  transition: width var(--sh-t-base);
 }
 .sh-nav__links a:hover { background: var(--sh-card-2); color: var(--sh-ink-900); }
 .sh-nav__links a.is-active { color: var(--sh-amber-900); background: var(--color-brand-subtle); }
+.sh-nav__links a.is-active::after { width: 18px; }
 
 .sh-nav__actions { display: flex; align-items: center; gap: 0.6rem; }
 .sh-nav__actions .sh-btn { padding: 0.62em 1.15em; font-size: 0.88rem; }

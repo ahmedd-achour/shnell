@@ -2,7 +2,6 @@ import { NgModule } from '@angular/core';
 import { RouterModule, Routes, } from '@angular/router';
 import { WelcomePageComponent } from './components/welcome-page/welcome-page.component';
 import { DownloadRedirectComponent } from './components/download-redirect/download-redirect.component';
-import { AuthGuard, redirectUnauthorizedTo } from '@angular/fire/auth-guard';
 import { UserResolver } from './services/user.resolver';
 import { HomeComponent } from './components/home/home.component';
 import { AboutComponent } from './components/about/about.component';
@@ -20,12 +19,11 @@ import { SignInComponent } from './components/auth/sign-in/sign-in.component';
 import { SignUpComponent } from './components/auth/sign-up/sign-up.component';
 import { PublicLayoutComponent } from './public-layout/public-layout.component';
 import { AdminDriverManagementComponent } from './admin-driver-management/admin-driver-management.component';
-import { AdminGuard } from './roleguard';
+import { AdminGuard, AuthedGuard } from './roleguard';
 import { ExpiredOrdersComponent } from './expired-orders/expired-orders.component';
 import { UpdateStopLocationComponent } from './update-stop-location/update-stop-location.component';
 import { ShnellDashboardComponent } from './shnell-dashboard/shnell-dashboard.component';
-
-const redirectToLogin = () => redirectUnauthorizedTo('/sign-in');
+import { UserDashboardComponent } from './user-dashboard/user-dashboard.component';
 
 const routes: Routes = [
   // Default route
@@ -36,6 +34,9 @@ const routes: Routes = [
   },
 
   { path: 'home', redirectTo: '', pathMatch: 'full' },
+
+  // Authenticated user dashboard (web port of the mobile client order flow).
+  { path: 'app', component: UserDashboardComponent, canActivate: [AuthedGuard] },
 
 
 
@@ -73,8 +74,7 @@ const routes: Routes = [
   {
     path: '',
     component: SidebarComponent, // sidebar stays visible
-    canActivate: [AuthGuard],
-    data: { authGuardPipe: redirectToLogin },
+    canActivate: [AdminGuard],
    // resolve: { user: UserResolver },
     children: [
       { path: 'admin-driver-management/details', component: AdminDriverManagementComponent  }, // route protected by AdminGuard

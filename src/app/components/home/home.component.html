@@ -68,7 +68,7 @@
   <div class="sh-container strip__inner">
     <span>Déjà des centaines de livraisons locales réussies</span>
     <div class="strip__stats">
-      <div><strong>6</strong><small>types de véhicules</small></div>
+      <div><strong>8</strong><small>types de véhicules</small></div>
       <div><strong>&lt; 5 min</strong><small>pour une réponse</small></div>
       <div><strong>100%</strong><small>transporteurs contrôlés</small></div>
     </div>
@@ -85,6 +85,8 @@
     </header>
 
     <div class="fleet__grid">
+      <article class="fleet__card"><img src="assets/trucks/super_light.png" alt="Très léger"><h3>Très léger</h3></article>
+      <article class="fleet__card"><img src="assets/trucks/popular.png" alt="Populaire"><h3>Populaire</h3></article>
       <article class="fleet__card"><img src="assets/trucks/light.png" alt="Utilitaire léger"><h3>Utilitaire léger</h3></article>
       <article class="fleet__card"><img src="assets/trucks/light_medium.png" alt="ISUZU"><h3>ISUZU</h3></article>
       <article class="fleet__card"><img src="assets/trucks/medium_heavy.png" alt="Fourgon"><h3>Fourgon</h3></article>
@@ -96,8 +98,13 @@
 </section>
 
 <!-- ===================== VIDEO ===================== -->
-<section class="sh-section sh-section--tight">
+<section class="sh-section sh-section--tight video-sec">
   <div class="sh-container">
+    <header class="sec-head">
+      <span class="sh-eyebrow">En vidéo</span>
+      <h2>Shnell en quelques secondes</h2>
+      <p>Découvrez comment réserver un transporteur et suivre votre course.</p>
+    </header>
     <div class="videobox">
       <iframe
         src="https://www.youtube.com/embed/wYDgQP2r7dM"
@@ -148,10 +155,7 @@
   <div class="sh-container story__grid">
     <div class="story__media">
       <img src="assets/123.jpeg" alt="Shnell">
-      <div class="story__badge">
-        <span class="sh-live-dot"></span>
-        <span>En direct</span>
-      </div>
+     
     </div>
     <div class="story__body">
       <span class="sh-eyebrow">Notre histoire</span>
@@ -186,6 +190,24 @@
           <i class="fa-solid" [class.fa-plus]="!faq.open" [class.fa-minus]="faq.open"></i>
         </button>
         <div class="faq__a" *ngIf="faq.open">{{ faq.answer }}</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== CLOSING CTA ===================== -->
+<section class="sh-section cta" data-tone="dark">
+  <div class="sh-container">
+    <div class="cta__card">
+      <span class="sh-eyebrow">Prêt à commander</span>
+      <h2>Votre prochain transport commence maintenant</h2>
+      <p>Réservez un transporteur vérifié en quelques secondes, suivez-le en temps réel et payez en toute sécurité.</p>
+      <div class="cta__actions">
+        <a href="https://play.google.com/store/apps/details?id=com.shnell.app"
+           class="sh-btn sh-btn--primary sh-btn--lg" target="_blank" rel="noopener">
+          <i class="fa-brands fa-google-play"></i> Télécharger l'app
+        </a>
+        <a routerLink="/sign-in" class="sh-btn sh-btn--ghost sh-btn--lg">Espace entreprise</a>
       </div>
     </div>
   </div>

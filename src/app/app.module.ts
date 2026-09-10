@@ -1,4 +1,5 @@
 import { BrowserModule } from '@angular/platform-browser';
+import { HttpClientModule } from '@angular/common/http';
 
 import { AppRoutingModule } from './app-routing.module';
 import { AppComponent } from './app.component';
@@ -12,7 +13,6 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { GoogleMapsModule } from '@angular/google-maps';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { HomeComponent } from './components/home/home.component';
 import { AboutComponent } from './components/about/about.component';
@@ -77,13 +77,13 @@ export function playerFactory() {
     DragDropModule,
 
 AuthModule,
-    GoogleMapsModule,
     ReactiveFormsModule,
     MatFormFieldModule,
     MatInputModule,
     MatProgressSpinnerModule,
     ShnellDashboardComponent,
-    LottieComponent
+    LottieComponent,
+    HttpClientModule
   ],
     schemas: [],
 

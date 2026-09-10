@@ -10,6 +10,11 @@ export const environment = {
     appId: "1:217120837439:web:bf8efa57bd6d30294e0d8a",
     measurementId: "G-7H2GZ2YM6V"
   },
-  googleMapsApiKey: 'AIzaSyCPNt6re39yO5lhlD-H1eXWmRs4BAp_y6w' ,// Ensure this is present,
-  mapboxAccessToken: 'pk.eyJ1IjoiYWhtZWQ3MDkiLCJhIjoiY20zbGczcDl0MHJmODJqczdlMmdkdDcxaiJ9.at6AxThyq4iJokPBfo-FBw',
+  googleMapsApiKey: 'REDACTED' ,// legacy — no longer used by the app maps
+  mapboxAccessToken: 'REDACTED',
+  // Gemini — smart column-mapping for the Parcels Excel import (Parcels tab).
+  // NOTE: this ships in the browser bundle; restrict the key to the
+  // Generative Language API + your domains, or proxy it via a Cloud Function.
+  geminiApiKey: 'REDACTED',
+  geminiModel: 'gemini-2.0-flash',
 };

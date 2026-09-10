@@ -19,7 +19,13 @@ export class ShnellUser {
     this.email = data.email || '';
     this.name = data.name || '';
     this.phone = data.phone || '';
-    this.role = data.role || 'client';
+    // Platform roles are 'user' or 'driver' ('admin'/'company' are console-only).
+    // Legacy 'customer'/'client' values are normalised to 'user'.
+    this.role = ((): string => {
+      const r = (data.role || '').toString().trim().toLowerCase();
+      if (r === 'customer' || r === 'client' || r === '') return 'user';
+      return r;
+    })();
     this.fcmToken = data.fcmToken || null;
     this.balance = Number(data.balance ?? 0);
     this.isActive = data.isActive ?? true;

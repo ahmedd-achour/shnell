@@ -1,7 +1,9 @@
-import { Component, OnInit, NgZone, ViewChild, ElementRef } from '@angular/core';
-import * as L from 'leaflet';
+import { Component, OnInit, AfterViewInit, AfterViewChecked, NgZone, ViewChild, ElementRef } from '@angular/core';
+import Chart from 'chart.js/auto';
+import { LatLng } from '../../shared/latlng';
+import { mapboxGeocodeOne } from '../../shared/mapbox';
 import { DropOffDataModel } from '../../../Models/dropoffdata.model';
-import { getFirestore, collection, addDoc, doc, docData, Timestamp, runTransaction, query, where, getDocs, deleteDoc } from '@angular/fire/firestore';
+import { getFirestore, collection, addDoc, doc, setDoc, docData, Timestamp, serverTimestamp, runTransaction, query, where, getDocs, deleteDoc } from '@angular/fire/firestore';
 import { getAuth } from '@angular/fire/auth';
 import { firstValueFrom } from 'rxjs';
 import { ShnellUser } from '../../../Models/shnellUsers.models';
@@ -14,27 +16,35 @@ import * as XLSX from 'xlsx'; // For Excel parsing (npm install xlsx)
   templateUrl: './partnerdash.component.html',
   styleUrls: ['./partnerdash.component.css']
 })
-export class PartnerdashComponent implements OnInit {
+export class PartnerdashComponent implements OnInit, AfterViewInit, AfterViewChecked {
   @ViewChild('fileInput') fileInput!: ElementRef<HTMLInputElement>;
+  @ViewChild('govChartEl') govChartRef?: ElementRef<HTMLCanvasElement>;
+  @ViewChild('prodChartEl') prodChartRef?: ElementRef<HTMLCanvasElement>;
+  private govChart?: Chart;
+  private prodChart?: Chart;
+  private chartSig = '';
 
   // Step management
   currentStep: number = 1;
 
   pickupAddress: string = '';
-  pickupLatLng: L.LatLng | null = null;
+  pickupLatLng: LatLng | null = null;
   dropOffs: DropOffDataModel[] = [];
   orderedDropOffs: DropOffDataModel[] = [];
-  maxStops: number = 100;
+  maxStops: number = 250;
   excelFile: File | null = null;
   isProcessingExcel = false;
   processedRows = 0;
   totalRows = 0;
   errorMessage: string | null = null;
-  private nominatimProxyUrl = 'https://xschnellroutes.shnellservices.workers.dev/search'; // Your Nominatim Worker URL
   newDropOffName: string = '';
   newDropOffPhone: string = '';
+  newDropOffPhone2: string = '';
   newDropOffDestination: string = '';
   newDropOffGov: string = '';
+  newDropOffDescription: string = '';
+  newDropOffParcelPrice: number | null = null;
+  newDropOffExpeditor: string = '';
   editIndex: number | null = null;
 
   // Enhanced available stops filtering and sorting
@@ -99,6 +109,78 @@ export class PartnerdashComponent implements OnInit {
       const companyDocRef = doc(this.firestore, 'users', currentUser.uid);
       docData(companyDocRef).subscribe((data: any) => {
         this.companyPayrate = Number(data?.payrate) ?? 0.25;
+      });
+    }
+  }
+
+  ngAfterViewInit(): void {
+    setTimeout(() => this.refreshCharts(), 0);
+  }
+
+  ngAfterViewChecked(): void {
+    if (this.currentStep !== 2) return;
+    const rows = this.getFilteredAndSortedAvailable();
+    const sig = rows.length + '|' + rows.map(r => (r.gov || '') + ':' + (r.productName || '')).join(',');
+    if (sig !== this.chartSig) {
+      this.chartSig = sig;
+      setTimeout(() => this.refreshCharts(), 0);
+    }
+  }
+
+  /** KPI + grouping helpers for the insights strip (based on the current filter). */
+  get availableValue(): number {
+    return Number(this.getFilteredAvailable().reduce((n, s) => n + (s.price || 0), 0).toFixed(2));
+  }
+  get selectedValue(): number {
+    return Number(this.availableStops
+      .filter(s => this.selectedStopIds.has((s as any).id))
+      .reduce((n, s) => n + (s.price || 0), 0).toFixed(2));
+  }
+  private groupCount(rows: DropOffDataModel[], key: 'gov' | 'productName'): { label: string; n: number }[] {
+    const m = new Map<string, number>();
+    rows.forEach(r => { const k = (r[key] || '—').toString(); m.set(k, (m.get(k) || 0) + 1); });
+    return [...m.entries()].map(([label, n]) => ({ label, n })).sort((a, b) => b.n - a.n).slice(0, 8);
+  }
+
+  private refreshCharts(): void {
+    if (this.currentStep !== 2) return;
+    const rows = this.getFilteredAvailable();
+    const ink = getComputedStyle(document.documentElement).getPropertyValue('--sh-ink-500')?.trim() || '#6B6459';
+
+    if (this.govChartRef?.nativeElement) {
+      const g = this.groupCount(rows, 'gov');
+      const data = {
+        labels: g.map(x => x.label),
+        datasets: [{ label: 'Arrêts', data: g.map(x => x.n), backgroundColor: '#FFB300', borderRadius: 4, maxBarThickness: 22 }],
+      };
+      if (this.govChart) { this.govChart.data = data as any; this.govChart.update(); }
+      else this.govChart = new Chart(this.govChartRef.nativeElement, {
+        type: 'bar', data: data as any,
+        options: {
+          responsive: true, maintainAspectRatio: false, indexAxis: 'y',
+          plugins: { legend: { display: false } },
+          scales: {
+            x: { beginAtZero: true, ticks: { color: ink, precision: 0 }, grid: { color: 'rgba(0,0,0,0.06)' } },
+            y: { ticks: { color: ink, font: { size: 10 } }, grid: { display: false } },
+          },
+        },
+      });
+    }
+
+    if (this.prodChartRef?.nativeElement) {
+      const g = this.groupCount(rows, 'productName');
+      const palette = ['#FFC107', '#12805C', '#2563EB', '#D42F2F', '#7A5300', '#0E7A5F', '#B7791F', '#938B7D'];
+      const data = {
+        labels: g.map(x => x.label),
+        datasets: [{ data: g.map(x => x.n), backgroundColor: palette.slice(0, g.length), borderWidth: 0 }],
+      };
+      if (this.prodChart) { this.prodChart.data = data as any; this.prodChart.update(); }
+      else this.prodChart = new Chart(this.prodChartRef.nativeElement, {
+        type: 'doughnut', data: data as any,
+        options: {
+          responsive: true, maintainAspectRatio: false, cutout: '60%',
+          plugins: { legend: { position: 'right', labels: { color: ink, boxWidth: 10, font: { size: 10 } } } },
+        },
       });
     }
   }
@@ -383,6 +465,9 @@ export class PartnerdashComponent implements OnInit {
       const phoneCol = headers.findIndex(h => h && (h.includes('phone') || h.includes('téléphone') || h.includes('tel')));
       const destCol = headers.findIndex(h => h && (h.includes('address') || h.includes('adresse') || h.includes('dest') || h.includes('location')));
       const govCol = headers.findIndex(h => h && (h.includes('gov') || h.includes('gouvernorat')));
+      const descCol = headers.findIndex(h => h && (h.includes('desc') || h.includes('note') || h.includes('article') || h.includes('colis')));
+      const priceCol = headers.findIndex(h => h && (h.includes('prix') || h.includes('price') || h.includes('montant') || h.includes('cod')));
+      const expeditorCol = headers.findIndex(h => h && (h.includes('expedit') || h.includes('sender') || h.includes('expéd') || h.includes('vendeur') || h.includes('boutique')));
       if (destCol === -1) {
         this.errorMessage = '❌ Colonne "Adresse" ou "Destination" non trouvée';
         return;
@@ -404,7 +489,16 @@ export class PartnerdashComponent implements OnInit {
         const name = nameCol >= 0 ? row[nameCol]?.toString().trim() || '' : '';
         const rawPhone = phoneCol >= 0 ? row[phoneCol]?.toString().trim() || '' : '';
         const normalizedPhone = this.normalizePhoneNumber(rawPhone);
+        // Professional import requires a valid phone per stop — skip rows without one.
+        if (!normalizedPhone) {
+          console.warn(`Row ${i + 1} has no valid phone number, skipping`);
+          continue;
+        }
         const gov = govCol >= 0 ? row[govCol]?.toString().trim() || '' : '';
+        const description = descCol >= 0 ? row[descCol]?.toString().trim() || '' : '';
+        const expeditor = expeditorCol >= 0 ? row[expeditorCol]?.toString().trim() || '' : '';
+        const parcelPriceRaw = priceCol >= 0 ? Number(row[priceCol]?.toString().replace(',', '.')) : NaN;
+        const parcelPrice = isFinite(parcelPriceRaw) && parcelPriceRaw > 0 ? parcelPriceRaw : undefined;
         // Geocode with full fallback system (Nominatim/Mapbox/Google)
         const geocodeResult = await this.geocodeAddress(destination);
         if (!geocodeResult) {
@@ -413,15 +507,19 @@ export class PartnerdashComponent implements OnInit {
         }
         // Create DropOffDataModel and add to dropOffs
         const dropOff = new DropOffDataModel(
-          new L.LatLng(geocodeResult.lat, geocodeResult.lng),
+          new LatLng(geocodeResult.lat, geocodeResult.lng),
           geocodeResult.formatted_address,
           name || undefined,
-          normalizedPhone ?? undefined,
-          false, // isdelivered - default to false for new stops (pending)
+          normalizedPhone,
+          undefined, // state defaults to 'pending'
           gov || undefined,
-          undefined, // expeditorId
+          expeditor || undefined, // expeditorId
           undefined, // price
           undefined, // productName
+          undefined, // quantity
+          description || undefined,
+          undefined, // receiverPhone2
+          parcelPrice,
         );
         this.dropOffs.push(dropOff);
         this.processedRows++;
@@ -460,7 +558,7 @@ export class PartnerdashComponent implements OnInit {
       return;
     }
     try {
-      let latLng: L.LatLng | null = null;
+      let latLng: LatLng | null = null;
       let destinationName: string = '';
       if (typeof input === 'string' && input.startsWith('http')) {
         const atMatch = input.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/);
@@ -469,13 +567,13 @@ export class PartnerdashComponent implements OnInit {
           const parsedLat = parseFloat(coordMatch[1]);
           const parsedLng = parseFloat(coordMatch[2]);
           if (!isNaN(parsedLat) && !isNaN(parsedLng)) {
-            latLng = new L.LatLng(parsedLat, parsedLng);
+            latLng = new LatLng(parsedLat, parsedLng);
           }
         } else if (atMatch) {
           const parsedLat = parseFloat(atMatch[1]);
           const parsedLng = parseFloat(atMatch[2]);
           if (!isNaN(parsedLat) && !isNaN(parsedLng)) {
-            latLng = new L.LatLng(parsedLat, parsedLng);
+            latLng = new LatLng(parsedLat, parsedLng);
           }
         }
         if (!latLng) {
@@ -496,7 +594,7 @@ export class PartnerdashComponent implements OnInit {
           Swal.fire({ icon: 'error', title: 'Oops...', text: 'Address not found in Tunisia' });
           return;
         }
-        latLng = new L.LatLng(geocoded.lat, geocoded.lng);
+        latLng = new LatLng(geocoded.lat, geocoded.lng);
         destinationName = geocoded.formatted_address;
       }
       // Now latLng is guaranteed valid - set pickup
@@ -555,7 +653,7 @@ export class PartnerdashComponent implements OnInit {
   setDropOff(place: any) {
     if (!place?.geometry?.location) return;
     const drop = new DropOffDataModel(
-      new L.LatLng(place.geometry.location.lat(), place.geometry.location.lng()),
+      new LatLng(place.geometry.location.lat(), place.geometry.location.lng()),
       place.formatted_address
     );
     if (this.dropOffs.length < this.maxStops) this.dropOffs.push(drop);
@@ -574,16 +672,24 @@ export class PartnerdashComponent implements OnInit {
 
   async addDropOff() {
     if (!this.newDropOffDestination || this.dropOffs.length >= this.maxStops) return;
-    let latLng: L.LatLng;
+
+    // Professional data entry requires at least one valid phone number per stop.
+    const primaryPhone = this.normalizePhoneNumber(this.newDropOffPhone);
+    if (!primaryPhone) {
+      Swal.fire('Erreur', 'Au moins un numéro de téléphone valide (8 chiffres) est requis.', 'error');
+      return;
+    }
+
+    let latLng: LatLng;
     let destinationName: string;
     try {
       if (this.newDropOffDestination.startsWith('http')) {
         const atMatch = this.newDropOffDestination.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/);
         const coordMatch = this.newDropOffDestination.match(/3d(-?\d+\.\d+)!4d(-?\d+\.\d+)/);
         if (coordMatch) {
-          latLng = new L.LatLng(parseFloat(coordMatch[1]), parseFloat(coordMatch[2]));
+          latLng = new LatLng(parseFloat(coordMatch[1]), parseFloat(coordMatch[2]));
         } else if (atMatch) {
-          latLng = new L.LatLng(parseFloat(atMatch[1]), parseFloat(atMatch[2]));
+          latLng = new LatLng(parseFloat(atMatch[1]), parseFloat(atMatch[2]));
         } else {
           return;
         }
@@ -599,20 +705,24 @@ export class PartnerdashComponent implements OnInit {
           });
           return;
         }
-        latLng = new L.LatLng(geocoded.lat, geocoded.lng);
+        latLng = new LatLng(geocoded.lat, geocoded.lng);
         destinationName = geocoded.formatted_address;
       }
-      const normalizedPhone = this.normalizePhoneNumber(this.newDropOffPhone);
       const drop = new DropOffDataModel(
         latLng,
         destinationName,
         this.newDropOffName || undefined,
-        normalizedPhone ?? undefined,
-        null, // isdelivered - default to null for new stops (pending)
+        primaryPhone,
+        undefined, // state defaults to 'pending'
         this.newDropOffGov || undefined,
-        undefined, // expeditorId
+        this.newDropOffExpeditor.trim() || undefined, // expeditorId
         undefined, // price
         undefined, // productName
+        undefined, // quantity
+        this.newDropOffDescription.trim() || undefined,
+        this.normalizePhoneNumber(this.newDropOffPhone2) ?? undefined,
+        (this.newDropOffParcelPrice != null && !isNaN(Number(this.newDropOffParcelPrice)))
+          ? Number(this.newDropOffParcelPrice) : undefined,
       );
       // Fixed: Single if-block, no duplicate
       if (this.editIndex !== null) {
@@ -640,8 +750,12 @@ export class PartnerdashComponent implements OnInit {
     const stop = this.dropOffs[index];
     this.newDropOffName = stop.name || '';
     this.newDropOffPhone = stop.phoneNumber || ''; // Display the normalized version (8 digits)
+    this.newDropOffPhone2 = stop.receiverPhone2 || '';
     this.newDropOffDestination = stop.destinationName;
     this.newDropOffGov = stop.gov || '';
+    this.newDropOffDescription = stop.description || '';
+    this.newDropOffParcelPrice = stop.parcelPrice ?? null;
+    this.newDropOffExpeditor = stop.expeditorId || '';
     this.editIndex = index;
   }
 
@@ -718,8 +832,12 @@ async deleteSelectedStops() {
   resetInputs() {
     this.newDropOffName = '';
     this.newDropOffPhone = '';
+    this.newDropOffPhone2 = '';
     this.newDropOffDestination = '';
     this.newDropOffGov = '';
+    this.newDropOffDescription = '';
+    this.newDropOffParcelPrice = null;
+    this.newDropOffExpeditor = '';
     this.editIndex = null;
   }
 
@@ -733,12 +851,9 @@ async deleteSelectedStops() {
     }
     const promise = (async () => {
       try {
-        // --- Step 3: HERE fallback ---
-        const hereResult = await this.hereGeocode(address);
-        if (hereResult) {
-          return hereResult;
-        }
-        console.warn('No geocoding results found anywhere');
+        const hit = await mapboxGeocodeOne(address);
+        if (hit) return hit;
+        console.warn('No geocoding results found for', address);
         return null;
       } catch (err) {
         console.error('Geocoding error:', err);
@@ -749,37 +864,6 @@ async deleteSelectedStops() {
     })();
     this.geocodingCache.set(cacheKey, promise);
     return promise;
-  }
-
-  async hereGeocode(address: string): Promise<{ lat: number; lng: number; formatted_address: string } | null> {
-    try {
-      const workerUrl = 'https://xschnellroutes.shnellservices.workers.dev/geocode';
-      const response = await fetch(`${workerUrl}?address=${encodeURIComponent(address)}`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-      if (!response.ok) {
-        console.error('HERE Geocoding request failed:', response.status, response.statusText);
-        return null;
-      }
-      const data = await response.json();
-      // Validate response structure
-      if (data && typeof data.lat === 'number' && typeof data.lng === 'number' && typeof data.formatted_address === 'string') {
-        return {
-          lat: data.lat,
-          lng: data.lng,
-          formatted_address: data.formatted_address,
-        };
-      } else {
-        console.error('Invalid geocoding response:', data);
-        return null;
-      }
-    } catch (err) {
-      console.error('HERE Geocoding error:', err);
-      return null;
-    }
   }
 
   /** ------------------- TSP UI UPDATE ------------------- **/
@@ -888,6 +972,8 @@ async deleteSelectedStops() {
             let docData = drop.toFirestore();
             docData.createdBy = userId;
             docData.companyId = userId;
+            docData.definedBy = userId; // professional user who created this stop
+            if (!docData.expeditorPayout) docData.expeditorPayout = 'unpaid';
             // FIXED: Clean undefined values to null to prevent Firestore error
             docData = Object.fromEntries(
               Object.entries(docData).map(([key, value]) => [key, value === undefined ? null : value])
@@ -915,24 +1001,44 @@ async deleteSelectedStops() {
 
       // Granular try-catch for order
       try {
-        await addDoc(orderCollection, {
-          price: totalCost,  // Updated: Use actual totalCost instead of 0
+        const orderRef = doc(orderCollection);
+        const orderId = orderRef.id;
+        await setDoc(orderRef, {
+          id: orderId,
+          price: totalCost,
           distance: 0,  // Can compute later if needed
           namePickUp: this.pickupAddress,
+          // GeoJSON: [longitude, latitude] — matches every reader (Orders.fromFirestore).
           pickUpLocation: {
-            'coordinates': [
-             this.pickupLatLng.lat,  // Fixed: Consistent {lat, lng} format
-             this.pickupLatLng.lng
-            ],
+            coordinates: [this.pickupLatLng.lng, this.pickupLatLng.lat],
+            type: 'Point',
           },
           stops: optimizedStopIds,  // Array of stop IDs (strings)
           userID: userId,
-          isInstantDelivery: true,
-          additionalInfo: null,
-          isAcepted: false,
+          category: 'eco',
+          currencyCode: 'TND',
+          optionalAssets: [],
+          budget: 0,
+          notes: null,
+          scheduleAt: Timestamp.now(),
+          isAccepted: false,
+          isAcepted: false,       // legacy mirror (client pending-screen query)
+          isBiddingMode: false,
+          isAdministrative: true, // company-assigned -> driver in-app calling hidden
           chosenDriver: this.selectedDriverId,
           timestamp: Timestamp.now()
         });
+
+        // Push the job into the chosen driver's inbox so it actually reaches them
+        // (the driver app reads users/{uid}/assigned_jobs, never orders.chosenDriver).
+        if (this.selectedDriverId) {
+          await addDoc(collection(this.firestore, 'users', this.selectedDriverId, 'assigned_jobs'), {
+            orderId,
+            category: 'eco',
+            status: 'pending',
+            assignedAt: serverTimestamp(),
+          }).catch(err => console.warn('assigned_jobs write failed:', err));
+        }
       } catch (orderErr: any) {
         console.error('Order save failed:', orderErr);
         throw new Error(`Failed to save order: ${orderErr.message || orderErr}`);
@@ -970,7 +1076,7 @@ async deleteSelectedStops() {
     }
   }
 
-  reorderStops(pickup: L.LatLng, stops: { id: string, lat: number, lng: number }[]): string[] {
+  reorderStops(pickup: LatLng, stops: { id: string, lat: number, lng: number }[]): string[] {
     const remaining = [...stops];
     const orderedIds: string[] = [];
     let current = { lat: pickup.lat, lng: pickup.lng };

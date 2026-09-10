@@ -1,20 +1,19 @@
 <div id="wrapper" [class.toggled]="sidebarCollapsed">
   <!-- Modern SaaS Navigation Sidebar -->
   <aside id="sidebar-wrapper" [class.collapsed]="sidebarCollapsed">
-    <!-- Brand Header -->
-    <div class="sidebar-brand d-flex align-items-center justify-content-between p-3 border-bottom border-subtle">
-      <div class="d-flex align-items-center gap-3 cursor-pointer" (click)="navigate({path: 'home-admin'})">
-        <div class="brand-icon-box">
-          <i class="bi bi-lightning-charge-fill"></i>
-        </div>
-        <div class="brand-text" *ngIf="!sidebarCollapsed">
-          <span class="brand-name">SHNELL</span>
-          <span class="brand-tag">FLEET OS</span>
-        </div>
-      </div>
-      <button class="btn-toggle-icon d-none d-lg-flex" (click)="toggleSidebar()" [title]="sidebarCollapsed ? 'Expand Sidebar' : 'Collapse Sidebar'">
-        <i class="bi" [ngClass]="sidebarCollapsed ? 'bi-chevron-right' : 'bi-chevron-left'"></i>
+    <!-- Brand Header — the menu button doubles as the collapse / expand control -->
+    <div class="sidebar-brand d-flex align-items-center gap-2 p-3 border-bottom border-subtle"
+         [class.justify-content-center]="sidebarCollapsed">
+      <button class="sidebar-menu-btn"
+              (click)="toggleSidebar()"
+              [attr.aria-label]="sidebarCollapsed ? 'Expand menu' : 'Collapse menu'"
+              [title]="sidebarCollapsed ? 'Expand menu' : 'Collapse menu'">
+        <i class="bi bi-list"></i>
       </button>
+      <div class="brand-text cursor-pointer" *ngIf="!sidebarCollapsed" (click)="navigate({path: 'home-admin'})">
+        <span class="brand-name">SHNELL</span>
+        <span class="brand-tag">FLEET OS</span>
+      </div>
     </div>
 
     <!-- User Status Banner if Unauthorized -->

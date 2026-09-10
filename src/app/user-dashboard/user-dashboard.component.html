@@ -1,0 +1,970 @@
+<div class="ud" [class.ud--locked]="banned">
+
+  <!-- ============ BAN WALL — immediate, refresh-free lockout ============ -->
+  <div class="ud-banwall" *ngIf="banned" role="alertdialog" aria-modal="true">
+    <div class="ud-banwall__card">
+      <div class="ud-banwall__icon"><i class="bi bi-shield-lock-fill"></i></div>
+      <h2>Compte suspendu</h2>
+      <p>Votre accès à l’espace professionnel Shnell a été suspendu. Toute activité est interrompue.</p>
+      <p class="ud-banwall__hint">Contactez le support Shnell pour rétablir votre compte.</p>
+      <div class="ud-banwall__spin"><span></span><span></span><span></span></div>
+      <span class="ud-banwall__foot">Déconnexion sécurisée…</span>
+    </div>
+  </div>
+
+  <!-- ============ TOP BAR ============ -->
+  <header class="ud-top">
+    <div class="ud-top__in">
+      <div class="ud-brand">
+        <span class="ud-logo"><i class="bi bi-box-seam-fill"></i> Shnell</span>
+        <span class="ud-logo__tag">Business</span>
+      </div>
+
+      <nav class="ud-nav">
+        <button [class.on]="view === 'jobs'" (click)="setView('jobs')">
+          <i class="bi bi-grid-1x2-fill"></i> Répartition
+        </button>
+        <button [class.on]="view === 'parcels'" (click)="setView('parcels')">
+          <i class="bi bi-geo-alt-fill"></i> Colis
+          <span class="ud-nav__badge" *ngIf="parcels.length">{{ parcels.length }}</span>
+        </button>
+        <button [class.on]="view === 'api'" (click)="setView('api')">
+          <i class="bi bi-code-slash"></i> API
+        </button>
+      </nav>
+
+      <span class="ud-flex"></span>
+
+      <span class="ud-user" [title]="userEmail">{{ userEmail }}</span>
+      <button class="ud-btn ud-btn--primary" *ngIf="view === 'jobs'"
+              [disabled]="!anyReady || dispatchingAll" (click)="dispatchAll()">
+        <span *ngIf="dispatchingAll" class="spinner-border spinner-border-sm me-2"></span>
+        <i class="bi bi-rocket-takeoff-fill me-1" *ngIf="!dispatchingAll"></i> Tout publier
+      </button>
+      <button class="ud-btn ud-btn--ghost" (click)="signOut()" title="Se déconnecter">
+        <i class="bi bi-box-arrow-right"></i>
+      </button>
+    </div>
+  </header>
+
+  <!-- ============ INSIGHTS BAND ============ -->
+  <section class="ud-insights" *ngIf="view === 'jobs'">
+    <div class="ud-insights__head">
+      <span class="ud-insights__title"><i class="bi bi-bar-chart-line-fill"></i> Vue d’ensemble</span>
+      <button class="ud-btn ud-btn--ghost ud-insights__toggle" (click)="toggleInsights()">
+        <i class="bi" [ngClass]="showInsights ? 'bi-chevron-up' : 'bi-chevron-down'"></i>
+      </button>
+    </div>
+
+    <div class="ud-insights__body" *ngIf="showInsights" [class.ud-insights__body--nocharts]="!insightsHaveData">
+      <div class="ud-kpis">
+        <div class="ud-kpi"><i class="bi bi-grid-1x2-fill ud-kpi__i"></i><span class="ud-kpi__n">{{ jobs.length }}</span><span class="ud-kpi__l">Commandes</span></div>
+        <div class="ud-kpi ud-kpi--ok"><i class="bi bi-check-circle-fill ud-kpi__i"></i><span class="ud-kpi__n">{{ kpiReady }}</span><span class="ud-kpi__l">Prêtes</span></div>
+        <div class="ud-kpi"><i class="bi bi-send-check-fill ud-kpi__i"></i><span class="ud-kpi__n">{{ kpiPlaced }}</span><span class="ud-kpi__l">Publiées</span></div>
+        <div class="ud-kpi"><i class="bi bi-geo-alt-fill ud-kpi__i"></i><span class="ud-kpi__n">{{ kpiTotalStops }}</span><span class="ud-kpi__l">Arrêts</span></div>
+        <div class="ud-kpi"><i class="bi bi-pin-map-fill ud-kpi__i"></i><span class="ud-kpi__n">{{ kpiLocatedStops }}</span><span class="ud-kpi__l">Localisés</span></div>
+        <div class="ud-kpi"><i class="bi bi-signpost-2-fill ud-kpi__i"></i><span class="ud-kpi__n">{{ kpiTotalDistance }}</span><span class="ud-kpi__l">km total</span></div>
+        <div class="ud-kpi ud-kpi--amber"><i class="bi bi-cash-stack ud-kpi__i"></i><span class="ud-kpi__n">{{ kpiValue | number:'1.0-0' }}</span><span class="ud-kpi__l">Valeur TND</span></div>
+      </div>
+      <div class="ud-charts" *ngIf="insightsHaveData">
+        <div class="ud-chartbox">
+          <span class="ud-chartbox__t">Statut des commandes</span>
+          <div class="ud-chartbox__c"><canvas #statusChartEl></canvas></div>
+        </div>
+        <div class="ud-chartbox">
+          <span class="ud-chartbox__t">Arrêts par commande</span>
+          <div class="ud-chartbox__c"><canvas #stopsChartEl></canvas></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="ud-shell" [class.ud-shell--wide]="view === 'api' || view === 'parcels'">
+
+    <!-- ============ SIDEBAR ============ -->
+    <aside class="ud-side" *ngIf="view === 'jobs'">
+      <div class="ud-side__head">
+        <div>
+          <span class="ud-side__eyebrow">Commandes actives</span>
+          <span class="ud-side__count">{{ jobs.length }}<i> / {{ maxJobs }}</i></span>
+        </div>
+        <button class="ud-newbtn" (click)="addJob()" [disabled]="jobs.length >= maxJobs">
+          <i class="bi bi-plus-lg"></i> Ajouter
+        </button>
+      </div>
+
+      <div class="ud-side__list">
+        <button *ngFor="let j of jobs"
+                class="ud-jc"
+                [class.is-active]="j.id === activeJobId"
+                [class.is-placed]="j.status === 'placed'"
+                [class.is-error]="j.status === 'error'"
+                (click)="selectJob(j.id)">
+          <span class="ud-jc__ic">
+            <i class="bi" [ngClass]="{
+              'bi-check-circle-fill': j.status === 'placed',
+              'bi-exclamation-triangle-fill': j.status === 'error',
+              'bi-arrow-repeat': j.status === 'placing',
+              'bi-truck': j.status === 'draft'
+            }"></i>
+          </span>
+          <span class="ud-jc__body">
+            <span class="ud-jc__title">{{ j.title }}</span>
+            <span class="ud-jc__meta">
+              {{ j.stops.length }} arrêt(s)
+              <ng-container *ngIf="j.status === 'placed'"> · publiée</ng-container>
+              <ng-container *ngIf="j.status === 'error'"> · à corriger</ng-container>
+              <ng-container *ngIf="j.status === 'draft' && jobReady(j)"> · prête</ng-container>
+            </span>
+          </span>
+          <i class="bi bi-x-lg ud-jc__x" *ngIf="jobs.length > 1"
+             (click)="$event.stopPropagation(); removeJob(j.id)"></i>
+        </button>
+      </div>
+
+      <div class="ud-side__meter">
+        <div class="ud-side__meterrow"><span>Prêtes à publier</span><b>{{ kpiReady }} / {{ jobs.length }}</b></div>
+        <div class="ud-side__bar"><i [style.width.%]="jobs.length ? kpiReady / jobs.length * 100 : 0"></i></div>
+        <div class="ud-side__meterrow"><span>Publiées</span><b>{{ kpiPlaced }} / {{ jobs.length }}</b></div>
+        <div class="ud-side__bar"><i class="is-ok" [style.width.%]="jobs.length ? kpiPlaced / jobs.length * 100 : 0"></i></div>
+      </div>
+
+      <div class="ud-side__flow">
+        <span class="ud-side__floweyebrow">Comment ça marche</span>
+        <ol>
+          <li><span>1</span> Tracez l’itinéraire — retrait + arrêts</li>
+          <li><span>2</span> Choisissez le véhicule</li>
+          <li><span>3</span> Publiez — les chauffeurs sont notifiés</li>
+        </ol>
+      </div>
+
+      <ng-lottie class="ud-side__lottie" [options]="lot.delivery" *ngIf="jobs.length === 1"></ng-lottie>
+
+      <div class="ud-side__lifetime" *ngIf="lifetimePlaced">
+        <b>{{ lifetimePlaced }}</b>
+        <span>commande{{ lifetimePlaced > 1 ? 's' : '' }} publiée{{ lifetimePlaced > 1 ? 's' : '' }} avec Shnell</span>
+      </div>
+
+      <p class="ud-side__foot">
+        <i class="bi bi-lightning-charge-fill"></i>
+        Jusqu’à {{ maxStops }} arrêts par commande. Attribution automatique dès la publication.
+      </p>
+    </aside>
+
+    <!-- ============ WORKSPACE · JOBS ============ -->
+    <main class="ud-work" *ngIf="view === 'jobs'">
+      <ng-container *ngIf="activeJob as j">
+
+        <!-- placed -->
+        <div class="ud-placed" *ngIf="j.status === 'placed'">
+          <ng-lottie class="ud-placed__lottie" [options]="lot.delivery"></ng-lottie>
+          <span class="sh-eyebrow">Commande publiée</span>
+          <h1 class="ud-placed__h">{{ j.title }} est en ligne</h1>
+          <p class="ud-placed__sub">
+            {{ j.priceMode === 'bidding'
+                ? 'Ouverte aux enchères chauffeurs'
+                : ('Prix fixe ' + (j.computedPrice | number:'1.2-2') + ' ' + j.currency) }}
+            · {{ j.stops.length }} arrêts · {{ j.distanceKm | number:'1.1-1' }} km
+          </p>
+          <p class="ud-placed__id" *ngIf="j.placedOrderId"><i class="bi bi-hash"></i>{{ j.placedOrderId }}</p>
+          <p class="ud-placed__streak" *ngIf="lifetimePlaced">
+            <i class="bi bi-stars"></i> Votre {{ lifetimePlaced }}<sup>e</sup> commande publiée
+          </p>
+          <button class="ud-btn ud-btn--primary" (click)="resetJob(j)">
+            <i class="bi bi-arrow-counterclockwise me-1"></i> Nouvelle commande ici
+          </button>
+        </div>
+
+        <ng-container *ngIf="j.status !== 'placed'">
+          <div class="ud-restored" *ngIf="draftRestored">
+            <span><i class="bi bi-arrow-counterclockwise"></i> Brouillon restauré — reprenez là où vous vous étiez arrêté.</span>
+            <button type="button" (click)="draftRestored = false" aria-label="Fermer"><i class="bi bi-x-lg"></i></button>
+          </div>
+          <!-- workspace header -->
+          <div class="ud-workhead ud-workhead--editorial">
+            <div class="ud-workhead__main">
+              <span class="sh-eyebrow">Nouvelle commande</span>
+              <h1 class="ud-title">{{ j.title }}</h1>
+              <p class="ud-lede">Composez l’itinéraire, choisissez le véhicule, publiez — vos chauffeurs sont notifiés dans la seconde.</p>
+              <div class="ud-facts">
+                <span class="ud-fact" *ngIf="j.distanceKm > 0">
+                  <i class="bi bi-signpost-2"></i> {{ j.distanceKm | number:'1.1-1' }} km
+                </span>
+                <span class="ud-fact"><i class="bi bi-geo-alt"></i> {{ j.stops.length }} arrêt(s)</span>
+                <span class="ud-fact" [class.ok]="jobReady(j)">
+                  <i class="bi" [ngClass]="jobReady(j) ? 'bi-check-circle-fill' : 'bi-circle'"></i>
+                  {{ jobReady(j) ? 'Prête à publier' : 'Brouillon' }}
+                </span>
+              </div>
+            </div>
+
+            <nav class="ud-stepnav">
+              <button *ngFor="let s of steps; let i = index"
+                      [class.on]="j.step === i + 1"
+                      [class.done]="j.step > i + 1"
+                      (click)="goToStep(j, i + 1)">
+                <span class="ud-stepnav__n">
+                  <i class="bi bi-check-lg" *ngIf="j.step > i + 1"></i>
+                  <span *ngIf="j.step <= i + 1">{{ i + 1 }}</span>
+                </span>
+                {{ s }}
+              </button>
+            </nav>
+          </div>
+
+          <div class="ud-alert" *ngIf="j.error">
+            <i class="bi bi-exclamation-triangle-fill me-2"></i>{{ j.error }}
+          </div>
+
+          <!-- two-column canvas — form + a context rail (steps 1–2) or the order summary (step 3) -->
+          <div class="ud-canvas">
+            <div class="ud-formcol">
+
+              <!-- STEP 1 · ROUTE -->
+              <section class="ud-panel" [hidden]="j.step !== 1">
+                <div class="ud-panel__head ud-stephead">
+                  <span class="ud-stephead__n">01</span>
+                  <div class="ud-stephead__main">
+                    <h6><i class="bi bi-signpost-split-fill me-2"></i>Itinéraire</h6>
+                    <span class="ud-stephead__sub">Point de retrait &amp; arrêts — géocodés en Tunisie</span>
+                  </div>
+                  <span class="ud-muted ud-stephead__aside">{{ j.stops.length }} / {{ maxStops }}</span>
+                </div>
+                <div class="ud-panel__pad">
+
+                  <div class="ud-routehero" *ngIf="activeJobUntouched">
+                    <ng-lottie class="ud-routehero__lottie" [options]="lot.pin"></ng-lottie>
+                    <div class="ud-routehero__body">
+                      <span class="sh-eyebrow">Nouvelle tournée</span>
+                      <h3>Où commence la course ?</h3>
+                      <p>Définissez le retrait, puis enchaînez jusqu’à {{ maxStops }} arrêts. Vos chauffeurs sont notifiés dès la publication.</p>
+                    </div>
+                  </div>
+
+                  <p class="ud-help">
+                    <i class="bi bi-lightbulb me-1"></i>
+                    Search a place in Tunisia and pick a suggestion, or hit <strong>Pin on map</strong> to drop it precisely.
+                  </p>
+
+                  <!-- ===== Visual stop query + bulk tools ===== -->
+                  <div class="ud-query" *ngIf="j.stops.length > 1">
+                    <div class="ud-query__row">
+                      <span class="ud-query__lead"><i class="bi bi-funnel-fill"></i> Where</span>
+                      <select class="ud-inp ud-query__sel" [(ngModel)]="stopQ.field">
+                        <option value="address">address</option>
+                        <option value="name">contact name</option>
+                        <option value="phone">contact phone</option>
+                      </select>
+                      <select class="ud-inp ud-query__sel" [(ngModel)]="stopQ.op">
+                        <option value="contains">contains</option>
+                        <option value="empty">is empty</option>
+                        <option value="notEmpty">is set</option>
+                        <option value="located">is located</option>
+                        <option value="unlocated">not located</option>
+                      </select>
+                      <input class="ud-inp ud-query__val" type="text" placeholder="value…"
+                             [(ngModel)]="stopQ.value" [disabled]="stopQ.op !== 'contains'" />
+                      <span class="ud-query__count">{{ matchedStopCount }} / {{ j.stops.length }} match</span>
+                    </div>
+                    <div class="ud-query__row ud-query__actions">
+                      <button class="ud-btn ud-btn--soft" (click)="selectMatches()">
+                        <i class="bi bi-check2-square me-1"></i> Select matches
+                      </button>
+                      <button class="ud-btn ud-btn--soft" (click)="clearSelection()" [disabled]="!bulkSel.size">
+                        Clear ({{ bulkSel.size }})
+                      </button>
+                      <span class="ud-flex"></span>
+                      <button class="ud-btn ud-btn--soft" (click)="clearContactsOnSelected()" [disabled]="!bulkSel.size">
+                        <i class="bi bi-eraser me-1"></i> Wipe contacts
+                      </button>
+                      <button class="ud-btn ud-btn--soft" (click)="keepOnlySelectedStops()" [disabled]="!bulkSel.size">
+                        <i class="bi bi-filter-circle me-1"></i> Keep only
+                      </button>
+                      <button class="ud-btn ud-btn--soft ud-danger" (click)="removeSelectedStops()" [disabled]="!bulkSel.size">
+                        <i class="bi bi-trash3 me-1"></i> Remove selected
+                      </button>
+                    </div>
+                  </div>
+
+                  <!-- recent pickups — one tap to reuse -->
+                  <div class="ud-recent" *ngIf="recentPickups.length && !j.pickupAddress.trim()">
+                    <span class="ud-recent__lbl"><i class="bi bi-clock-history"></i> Retraits récents</span>
+                    <button type="button" class="ud-recent__chip" *ngFor="let r of recentPickups"
+                            (click)="useRecentPickup(j, r)" [title]="r.address">
+                      {{ r.address.length > 34 ? (r.address | slice:0:34) + '…' : r.address }}
+                    </button>
+                  </div>
+
+                  <!-- pickup -->
+                  <div class="ud-loc ud-loc--pickup">
+                    <span class="ud-loc__badge">A</span>
+                    <div class="ud-loc__fields">
+                      <span class="ud-loc__label">Retrait</span>
+                      <div class="ud-ac">
+                        <input class="ud-inp" type="text" placeholder="Search a place in Tunisia…"
+                               [(ngModel)]="j.pickupAddress" (ngModelChange)="onPickupType(j)" autocomplete="off" />
+                        <span class="ud-ac__state">
+                          <span *ngIf="j.pickupLoading" class="spinner-border spinner-border-sm"></span>
+                          <i *ngIf="!j.pickupLoading && j.pickupLat != null" class="bi bi-check-circle-fill text-success"></i>
+                        </span>
+                        <ul class="ud-ac__list" *ngIf="j.pickupSuggests.length">
+                          <li *ngFor="let r of j.pickupSuggests" (click)="choosePickup(j, r)">
+                            <i class="bi bi-geo-alt me-1"></i>{{ r.display_name }}
+                          </li>
+                        </ul>
+                      </div>
+                      <button class="ud-onmap" (click)="openPin({ kind: 'pickup' })">
+                        <i class="bi bi-pin-map-fill"></i> Pin on map
+                      </button>
+                    </div>
+                  </div>
+
+                  <!-- stops -->
+                  <div class="ud-loc" *ngFor="let s of j.stops; let i = index"
+                       [class.is-qmatch]="j.stops.length > 1 && (stopQ.op !== 'contains' || stopQ.value) && stopMatches(s)"
+                       [class.is-bulksel]="bulkSel.has(i)">
+                    <button type="button" class="ud-loc__badge ud-loc__badge--stop"
+                            *ngIf="j.stops.length > 1"
+                            [class.on]="bulkSel.has(i)" (click)="toggleBulk(i)"
+                            title="Select for bulk action">{{ i + 1 }}</button>
+                    <span class="ud-loc__badge ud-loc__badge--stop" *ngIf="j.stops.length <= 1">{{ i + 1 }}</span>
+                    <div class="ud-loc__fields">
+                      <span class="ud-loc__label">Stop {{ i + 1 }}</span>
+                      <div class="ud-ac">
+                        <input class="ud-inp" type="text" placeholder="Search a place in Tunisia…"
+                               [(ngModel)]="s.address" (ngModelChange)="onStopType(j, i)" autocomplete="off" />
+                        <span class="ud-ac__state">
+                          <span *ngIf="s.loading" class="spinner-border spinner-border-sm"></span>
+                          <i *ngIf="!s.loading && s.lat != null" class="bi bi-check-circle-fill text-success"></i>
+                        </span>
+                        <ul class="ud-ac__list" *ngIf="s.suggests.length">
+                          <li *ngFor="let r of s.suggests" (click)="chooseStop(j, i, r)">
+                            <i class="bi bi-geo-alt me-1"></i>{{ r.display_name }}
+                          </li>
+                        </ul>
+                      </div>
+                      <div class="ud-grid2">
+                        <div class="ud-ig"><span class="ud-ig__ic"><i class="bi bi-person"></i></span>
+                          <input class="ud-inp" type="text" placeholder="Contact name (optional)" [(ngModel)]="s.name" />
+                        </div>
+                        <div class="ud-ig" [class.ud-ig--err]="stopPhoneMissing(s)">
+                          <span class="ud-ig__ic"><i class="bi bi-telephone"></i></span>
+                          <input class="ud-inp" type="tel" placeholder="Contact phone (required) *" [(ngModel)]="s.phone" />
+                        </div>
+                      </div>
+                      <small class="ud-hint ud-danger" *ngIf="stopPhoneMissing(s)">
+                        <i class="bi bi-exclamation-triangle"></i> Au moins un numéro de téléphone est requis.
+                      </small>
+                      <div class="ud-grid2">
+                        <div class="ud-ig"><span class="ud-ig__ic"><i class="bi bi-telephone-plus"></i></span>
+                          <input class="ud-inp" type="tel" placeholder="2e téléphone (optionnel)" [(ngModel)]="s.phone2" />
+                        </div>
+                        <div class="ud-ig"><span class="ud-ig__ic"><i class="bi bi-cash-coin"></i></span>
+                          <input class="ud-inp" type="number" min="0" step="0.1"
+                                 placeholder="Frais de vente du colis (TND, optionnel)" [(ngModel)]="s.parcelPrice" />
+                        </div>
+                      </div>
+                      <div class="ud-grid2">
+                        <div class="ud-ig"><span class="ud-ig__ic"><i class="bi bi-card-text"></i></span>
+                          <input class="ud-inp" type="text" placeholder="Description du colis (optionnel)" [(ngModel)]="s.description" />
+                        </div>
+                        <div class="ud-ig"><span class="ud-ig__ic"><i class="bi bi-shop"></i></span>
+                          <input class="ud-inp" type="text" placeholder="Expéditeur / ID (optionnel)" [(ngModel)]="s.expeditorId" />
+                        </div>
+                      </div>
+                      <div class="ud-loc__row">
+                        <button class="ud-onmap" (click)="openPin({ kind: 'stop', index: i })">
+                          <i class="bi bi-pin-map-fill"></i> Pin on map
+                        </button>
+                        <button class="ud-btn ud-btn--soft ud-danger" *ngIf="j.stops.length > 1" (click)="removeStop(j, i)">
+                          <i class="bi bi-x-lg"></i> Remove
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  <button class="ud-btn ud-btn--soft ud-addstop" (click)="addStop(j)" [disabled]="j.stops.length >= maxStops">
+                    <i class="bi bi-plus-lg me-1"></i> Add stop
+                  </button>
+
+                  <div class="ud-actions">
+                    <span></span>
+                    <button class="ud-btn ud-btn--primary" [disabled]="!step1Ok(j)" (click)="goToStep(j, 2)">
+                      Next <i class="bi bi-arrow-right ms-1"></i>
+                    </button>
+                  </div>
+                </div>
+              </section>
+
+              <!-- STEP 2 · VEHICLE -->
+              <section class="ud-panel" [hidden]="j.step !== 2">
+                <div class="ud-panel__head ud-stephead">
+                  <span class="ud-stephead__n">02</span>
+                  <div class="ud-stephead__main">
+                    <h6><i class="bi bi-truck me-2"></i>Véhicule</h6>
+                    <span class="ud-stephead__sub">Le tarif s’ajuste au gabarit choisi</span>
+                  </div>
+                </div>
+                <div class="ud-panel__pad">
+                  <div class="ud-muted py-4 text-center" *ngIf="loadingVehicles">Loading vehicles…</div>
+                  <div class="ud-vgrid" *ngIf="!loadingVehicles">
+                    <button class="ud-vcard" *ngFor="let v of vehicleOptions"
+                            [class.on]="v.key === j.vehicleKey" (click)="j.vehicleKey = v.key">
+                      <img [src]="v.image" (error)="onImgError($event)" [alt]="v.name" />
+                      <span class="ud-vcard__name">{{ v.name }}</span>
+                      <span class="ud-vcard__meta">
+                        <span *ngIf="v.maxWeight">{{ v.maxWeight }} kg</span><span *ngIf="v.volume"> · {{ v.volume }} m³</span>
+                      </span>
+                      <i class="bi bi-check-circle-fill ud-vcard__check"></i>
+                    </button>
+                    <div class="ud-muted" *ngIf="vehicleOptions.length === 0">No vehicle types configured.</div>
+                  </div>
+                  <div class="ud-actions">
+                    <button class="ud-btn ud-btn--soft" (click)="goToStep(j, 1)"><i class="bi bi-arrow-left me-1"></i> Back</button>
+                    <button class="ud-btn ud-btn--primary" [disabled]="!j.vehicleKey" (click)="goToStep(j, 3)">
+                      Next <i class="bi bi-arrow-right ms-1"></i>
+                    </button>
+                  </div>
+                </div>
+              </section>
+
+              <!-- STEP 3 · PRICING & OPTIONS -->
+              <section class="ud-panel" [hidden]="j.step !== 3">
+                <div class="ud-panel__head ud-stephead">
+                  <span class="ud-stephead__n">03</span>
+                  <div class="ud-stephead__main">
+                    <h6><i class="bi bi-cash-coin me-2"></i>Tarif &amp; options</h6>
+                    <span class="ud-stephead__sub">Prix fixe ou enchère, planning, équipement</span>
+                  </div>
+                </div>
+                <div class="ud-panel__pad">
+                  <div class="ud-priceband" *ngIf="j.pricing">
+                    <span class="ud-spin"><span></span><span></span><span></span></span>
+                    <span>Calculating your price…</span>
+                  </div>
+
+                  <div class="ud-pmodes" [class.dim]="j.pricing">
+                    <button class="ud-pmode" [class.on]="j.priceMode === 'fixed'" (click)="j.priceMode = 'fixed'">
+                      <i class="bi bi-tag-fill"></i>
+                      <span class="ud-pmode__t">Fixed price</span>
+                      <span class="ud-pmode__amt">{{ j.computedPrice | number:'1.2-2' }} {{ j.currency }}</span>
+                    </button>
+                    <button class="ud-pmode" [class.on]="j.priceMode === 'bidding'" (click)="j.priceMode = 'bidding'">
+                      <i class="bi bi-people-fill"></i>
+                      <span class="ud-pmode__t">Let drivers bid</span>
+                      <span class="ud-pmode__amt">~ {{ j.computedPrice | number:'1.0-0' }} {{ j.currency }}</span>
+                    </button>
+                  </div>
+
+                  <div class="ud-row2">
+                    <label>Schedule (optional)<input type="datetime-local" class="ud-inp" [(ngModel)]="j.scheduleAt" /></label>
+                    <label>Budget cap (optional)<input type="number" class="ud-inp" [(ngModel)]="j.budget" placeholder="0" /></label>
+                  </div>
+
+                  <span class="ud-lbl">Notes</span>
+                  <textarea class="ud-inp" rows="3" [(ngModel)]="j.notes" placeholder="Anything the driver should know…"></textarea>
+
+                  <div class="ud-actions">
+                    <button class="ud-btn ud-btn--soft" (click)="goToStep(j, 2)"><i class="bi bi-arrow-left me-1"></i> Back</button>
+                    <span class="ud-muted d-none d-lg-inline"><i class="bi bi-arrow-right-circle me-1"></i>Place it from the summary</span>
+                  </div>
+                </div>
+              </section>
+            </div>
+
+            <!-- steps 1–2: an intelligence rail (route preview + live metrics),
+                 NOT the order summary / place CTA — that is final-step only. -->
+            <aside class="ud-context" *ngIf="j.step !== 3">
+              <div class="ud-context__card">
+                <span class="ud-summary__eyebrow">Aperçu de la tournée</span>
+                <div class="ud-context__map">
+                  <img *ngIf="routeStaticUrl" [src]="routeStaticUrl" alt="Aperçu de l’itinéraire" loading="lazy" />
+                  <div class="ud-context__mapempty" *ngIf="!routeStaticUrl">
+                    <ng-lottie class="ud-context__lottie" [options]="lot.pin"></ng-lottie>
+                    <span>Définissez un point de retrait pour visualiser l’itinéraire</span>
+                  </div>
+                </div>
+                <div class="ud-context__stats">
+                  <div><b>{{ j.stops.length }}</b><span>Arrêts</span></div>
+                  <div><b>{{ locatedStops(j) }}</b><span>Localisés</span></div>
+                  <div><b>{{ j.distanceKm ? (j.distanceKm | number:'1.0-0') : '—' }}</b><span>km</span></div>
+                </div>
+
+                <ul class="ud-checklist">
+                  <li [class.done]="j.pickupLat != null">
+                    <i class="bi" [ngClass]="j.pickupLat != null ? 'bi-check-circle-fill' : 'bi-circle'"></i>
+                    Point de retrait
+                  </li>
+                  <li [class.done]="j.stops.length && locatedStops(j) === j.stops.length">
+                    <i class="bi" [ngClass]="j.stops.length && locatedStops(j) === j.stops.length ? 'bi-check-circle-fill' : 'bi-circle'"></i>
+                    {{ locatedStops(j) }}/{{ j.stops.length }} arrêts localisés
+                  </li>
+                  <li [class.done]="j.stops.length && stopsWithPhone(j) === j.stops.length">
+                    <i class="bi" [ngClass]="j.stops.length && stopsWithPhone(j) === j.stops.length ? 'bi-check-circle-fill' : 'bi-circle'"></i>
+                    {{ stopsWithPhone(j) }}/{{ j.stops.length }} contacts téléphone
+                  </li>
+                  <li [class.done]="!!j.vehicleKey" *ngIf="j.step >= 2">
+                    <i class="bi" [ngClass]="j.vehicleKey ? 'bi-check-circle-fill' : 'bi-circle'"></i>
+                    Véhicule choisi
+                  </li>
+                </ul>
+
+                <div class="ud-dq" *ngIf="j.stops.length">
+                  <div class="ud-dq__top">
+                    <span>Qualité pour le chauffeur</span>
+                    <b [attr.data-q]="driverQualityLabel(j)">{{ driverQuality(j) }}</b>
+                  </div>
+                  <div class="ud-dq__bar"><i [style.width.%]="driverQuality(j)"></i></div>
+                  <p class="ud-dq__hint" *ngIf="driverQuality(j) < 80">
+                    Ajoutez noms de contact + descriptions et épinglez précisément — les chauffeurs livrent plus vite et acceptent plus souvent.
+                  </p>
+                </div>
+              </div>
+              <p class="ud-context__hint">
+                <i class="bi bi-info-circle"></i>
+                {{ j.step === 1
+                    ? 'Chaque adresse est géocodée en Tunisie. Épinglez sur la carte pour caler la position au mètre près.'
+                    : 'Le tarif final s’ajuste au gabarit choisi et à la distance totale de la tournée.' }}
+              </p>
+            </aside>
+
+            <!-- sticky primary CTA — final step only, and the recap ("definition")
+                 only appears once the whole order is complete. -->
+            <aside class="ud-summary" *ngIf="j.step === 3">
+              <div class="ud-summary__card">
+
+                <ng-container *ngIf="jobReady(j); else notReadyYet">
+                  <span class="ud-summary__eyebrow">Order summary</span>
+
+                  <div class="ud-sumline">
+                    <span>Pickup</span>
+                    <b>{{ j.pickupAddress }}</b>
+                  </div>
+                  <div class="ud-sumline">
+                    <span>Stops</span>
+                    <b>{{ j.stops.length }} <i class="ud-sumline__sub">· {{ locatedStops(j) }} located</i></b>
+                  </div>
+                  <div class="ud-sumline">
+                    <span>Vehicle</span>
+                    <b>{{ vehicleFor(j.vehicleKey)?.name }}</b>
+                  </div>
+                  <div class="ud-sumline">
+                    <span>Distance</span>
+                    <b>{{ j.distanceKm > 0 ? (j.distanceKm | number:'1.1-1') + ' km' : '—' }}</b>
+                  </div>
+
+                  <div class="ud-summary__price">
+                    <span *ngIf="j.pricing" class="ud-spin ud-spin--lg"><span></span><span></span><span></span></span>
+                    <ng-container *ngIf="!j.pricing">
+                      <span class="ud-summary__amt">{{ j.computedPrice ? (j.computedPrice | number:'1.2-2') : '—' }}</span>
+                      <span class="ud-summary__cur">{{ j.currency }}</span>
+                    </ng-container>
+                    <span class="ud-summary__mode">{{ j.priceMode === 'bidding' ? 'starting bid' : 'fixed price' }}</span>
+                  </div>
+                </ng-container>
+
+                <ng-template #notReadyYet>
+                  <span class="ud-summary__eyebrow">Order</span>
+                  <p class="ud-summary__hint">
+                    <i class="bi bi-info-circle"></i>
+                    Complete every step — pickup, each stop located and with a phone, and a vehicle —
+                    then the full order summary appears here.
+                  </p>
+                </ng-template>
+
+                <button class="ud-btn ud-btn--primary ud-btn--block"
+                        [disabled]="!jobReady(j) || j.status === 'placing'" (click)="placeJob(j)">
+                  <span *ngIf="j.status === 'placing'" class="spinner-border spinner-border-sm me-2"></span>
+                  <i class="bi bi-send-check-fill me-1" *ngIf="j.status !== 'placing'"></i>
+                  {{ j.status === 'placing' ? 'Placing…' : 'Place order' }}
+                </button>
+              </div>
+
+              <p class="ud-summary__meta" *ngIf="jobReady(j)">
+                <i class="bi bi-shield-check"></i>
+                Web-portal order — flagged administrative, so drivers won't try to call in-app.
+              </p>
+            </aside>
+          </div>
+        </ng-container>
+      </ng-container>
+    </main>
+
+    <!-- ============ WORKSPACE · API ============ -->
+    <main class="ud-work ud-work--api" *ngIf="view === 'api'">
+      <div class="ud-workhead ud-workhead--editorial">
+        <div class="ud-workhead__main">
+          <span class="sh-eyebrow">Développeurs</span>
+          <h1 class="ud-title">API de commande</h1>
+          <p class="ud-lede">Créez des commandes Shnell depuis votre propre système, avec la même logique d’attribution des chauffeurs.</p>
+          <div class="ud-facts">
+            <span class="ud-fact"><i class="bi bi-hdd-network"></i> One HTTP call per order</span>
+            <span class="ud-fact"><i class="bi bi-geo"></i> Tunisia only</span>
+            <span class="ud-fact ok"><i class="bi bi-magic"></i> Same driver-matching logic</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="ud-apigrid">
+        <section class="ud-panel">
+          <div class="ud-panel__head"><h6><i class="bi bi-key-fill me-2"></i>Authentication</h6></div>
+          <div class="ud-panel__pad">
+            <p class="ud-sub">
+              Create Shnell orders straight from your own system and have drivers auto-assigned.
+              Authenticate with your account UID — every order created this way is attributed to you.
+            </p>
+
+            <span class="ud-lbl">Your API key <em>(account UID)</em></span>
+            <div class="ud-keyrow">
+              <code class="ud-key">{{ userUid || '—' }}</code>
+              <button class="ud-btn ud-btn--soft" (click)="copy(userUid)"><i class="bi bi-clipboard"></i> Copy</button>
+            </div>
+            <p class="ud-mini">Send it as the <code>x-api-key</code> header on every request. Keep it secret — it can place paid orders.</p>
+
+            <span class="ud-lbl">Endpoint</span>
+            <div class="ud-keyrow">
+              <code class="ud-key"><span class="ud-method">POST</span> {{ apiEndpoint }}</code>
+              <button class="ud-btn ud-btn--soft" (click)="copy(apiEndpoint)"><i class="bi bi-clipboard"></i> Copy</button>
+            </div>
+
+            <p class="ud-mini">
+              <i class="bi bi-shield-check me-1"></i>
+              All coordinates must be inside Tunisia. Pricing uses your fleet's per-country rates
+              (<code>settings/vehicles</code>). Orders are flagged administrative, so drivers won't call in-app.
+            </p>
+          </div>
+        </section>
+
+        <section class="ud-panel">
+          <div class="ud-panel__head">
+            <h6><i class="bi bi-terminal-fill me-2"></i>Quickstart</h6>
+            <div class="ud-langtabs">
+              <button [class.on]="apiLang === 'curl'" (click)="apiLang = 'curl'">cURL</button>
+              <button [class.on]="apiLang === 'node'" (click)="apiLang = 'node'">Node</button>
+              <button [class.on]="apiLang === 'python'" (click)="apiLang = 'python'">Python</button>
+            </div>
+          </div>
+          <div class="ud-panel__pad">
+            <div class="ud-code-wrap">
+              <button class="ud-copybtn" (click)="copy(apiSnippet)"><i class="bi bi-clipboard"></i></button>
+              <pre class="ud-code">{{ apiSnippet }}</pre>
+            </div>
+          </div>
+        </section>
+
+        <section class="ud-panel">
+          <div class="ud-panel__head"><h6><i class="bi bi-braces me-2"></i>Request body</h6></div>
+          <div class="ud-panel__pad">
+            <div class="ud-code-wrap">
+              <button class="ud-copybtn" (click)="copy(sampleBody)"><i class="bi bi-clipboard"></i></button>
+              <pre class="ud-code">{{ sampleBody }}</pre>
+            </div>
+            <table class="ud-ptable">
+              <thead><tr><th>Field</th><th>Type</th><th>Required</th><th>Notes</th></tr></thead>
+              <tbody>
+                <tr *ngFor="let p of apiParams">
+                  <td><code>{{ p.k }}</code></td>
+                  <td class="ud-ptable__t">{{ p.t }}</td>
+                  <td><span class="ud-req" [class.no]="!p.req">{{ p.req ? 'yes' : 'no' }}</span></td>
+                  <td>{{ p.d }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="ud-panel">
+          <div class="ud-panel__head"><h6><i class="bi bi-check2-circle me-2"></i>Response &amp; errors</h6></div>
+          <div class="ud-panel__pad">
+            <span class="ud-lbl">200 OK</span>
+            <pre class="ud-code">{{ '{' }} "success": true, "orderId": "…", "price": 42.5, "currency": "TND", "distanceKm": 128.4, "stopIds": ["…"] {{ '}' }}</pre>
+            <table class="ud-ptable mt-3">
+              <thead><tr><th>Status</th><th>Meaning</th></tr></thead>
+              <tbody>
+                <tr *ngFor="let e of apiErrors">
+                  <td><code>{{ e.c }}</code></td>
+                  <td>{{ e.m }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+      </div>
+    </main>
+
+    <!-- ============ WORKSPACE · PARCELS ============ -->
+    <main class="ud-work ud-work--parcels" *ngIf="view === 'parcels'">
+      <div class="ud-workhead ud-workhead--editorial">
+        <div class="ud-workhead__main">
+          <span class="sh-eyebrow">Colis &amp; encaissement</span>
+          <h1 class="ud-title">Vos colis</h1>
+          <p class="ud-lede">Importez, filtrez, regroupez en tournées, et suivez l’argent collecté par expéditeur.</p>
+          <div class="ud-facts">
+            <span class="ud-fact"><i class="bi bi-box2"></i> {{ parcelKpis.total }} stored</span>
+            <span class="ud-fact"><i class="bi bi-geo"></i> {{ parcelKpis.located }} located</span>
+            <span class="ud-fact"><i class="bi bi-funnel"></i> {{ parcelKpis.filtered }} in view</span>
+            <span class="ud-fact ok" *ngIf="parcelKpis.selected"><i class="bi bi-check-circle-fill"></i> {{ parcelKpis.selected }} selected</span>
+            <span class="ud-fact"><i class="bi bi-cash-stack"></i> {{ parcelKpis.collected }} TND collecté</span>
+            <span class="ud-fact" *ngIf="parcelKpis.toCollect"><i class="bi bi-hourglass-split"></i> {{ parcelKpis.toCollect }} TND à collecter</span>
+          </div>
+        </div>
+        <button class="ud-btn ud-btn--ghost" (click)="loadParcels()" [disabled]="loadingParcels" title="Reload">
+          <span *ngIf="loadingParcels" class="spinner-border spinner-border-sm"></span>
+          <i class="bi bi-arrow-clockwise" *ngIf="!loadingParcels"></i>
+        </button>
+      </div>
+
+      <div class="ud-parcels">
+        <!-- query + list -->
+        <aside class="ud-parcels__side">
+
+          <!-- ===== Excel import → AI column-mapping → stops pool ===== -->
+          <div class="ud-panel ud-import">
+            <div class="ud-panel__head">
+              <h6><i class="bi bi-filetype-xlsx me-2"></i>Import Excel</h6>
+              <span class="ud-badge-ai"><i class="bi bi-stars"></i> AI mapping</span>
+            </div>
+            <div class="ud-panel__pad">
+
+              <ng-container *ngIf="importStage === 'idle'">
+                <p class="ud-mini">
+                  Upload a .xlsx / .xls / .csv of parcels. Gemini maps your columns
+                  (any names, FR/AR/EN, typos) to the stop schema. Rows land in the
+                  pool below — <b>not</b> attached to any order.
+                </p>
+                <label class="ud-btn ud-btn--soft ud-btn--block ud-filebtn">
+                  <i class="bi bi-upload me-1"></i> Choose a file
+                  <input type="file" accept=".xlsx,.xls,.csv" hidden (change)="onStopsFile($event)" />
+                </label>
+                <p class="ud-mini ud-danger" *ngIf="importError"><i class="bi bi-exclamation-triangle"></i> {{ importError }}</p>
+              </ng-container>
+
+              <ng-container *ngIf="importStage !== 'idle'">
+                <div class="ud-import__status">
+                  <ng-lottie class="ud-import__lottie" [options]="lot.pin"
+                             *ngIf="importStage === 'ai' || importStage === 'geocoding'"></ng-lottie>
+                  <span class="spinner-border spinner-border-sm"
+                        *ngIf="importStage === 'parsing' || importStage === 'saving'"></span>
+                  <i class="bi bi-check-circle-fill text-success" *ngIf="importStage === 'ready'"></i>
+                  <span class="ud-import__file">{{ importFileName }}</span>
+                  <span class="ud-import__stage">
+                    {{ importStage === 'parsing' ? 'Lecture…'
+                       : importStage === 'ai' ? 'Extraction IA…'
+                       : importStage === 'geocoding' ? 'Géocodage…'
+                       : importStage === 'saving' ? 'Enregistrement…'
+                       : 'Revue' }}
+                  </span>
+                </div>
+
+                <div class="ud-import__log" *ngIf="importLog.length">
+                  <div *ngFor="let l of importLog">{{ l }}</div>
+                </div>
+
+                <p class="ud-mini ud-danger" *ngIf="importError"><i class="bi bi-exclamation-triangle"></i> {{ importError }}</p>
+
+                <ng-container *ngIf="importStage === 'ready' || importStage === 'saving'">
+                  <div class="ud-import__kpis">
+                    <span><b>{{ importRows.length }}</b> reconnus</span>
+                    <span><b>{{ importKeepCount }}</b> à garder</span>
+                    <span><b>{{ importLocatedCount }}</b> localisés</span>
+                  </div>
+
+                  <div class="ud-import__rows">
+                    <label class="ud-import__row" *ngFor="let r of importRows">
+                      <input type="checkbox" [(ngModel)]="r.keep" />
+                      <span class="ud-import__row-main">
+                        <b>{{ r.name || '(sans nom)' }}</b>
+                        <span class="ud-mini">{{ r.address || '—' }}</span>
+                        <span class="ud-mini">
+                          {{ r.phone || 'pas de tél.' }}<ng-container *ngIf="r.gov"> · {{ r.gov }}</ng-container>
+                          <ng-container *ngIf="r.parcelPrice"> · {{ r.parcelPrice }} TND</ng-container>
+                          <ng-container *ngIf="r.expeditorId"> · {{ r.expeditorId }}</ng-container>
+                        </span>
+                        <span class="ud-mini" [class.ud-danger]="r.lat == null">{{ r.note }}</span>
+                      </span>
+                    </label>
+                  </div>
+
+                  <div class="ud-import__actions">
+                    <button class="ud-btn ud-btn--soft" (click)="cancelImport()" [disabled]="importStage === 'saving'">Annuler</button>
+                    <button class="ud-btn ud-btn--primary" (click)="registerImportedStops()"
+                            [disabled]="importStage === 'saving' || !importKeepCount">
+                      <span *ngIf="importStage === 'saving'" class="spinner-border spinner-border-sm me-2"></span>
+                      Enregistrer {{ importKeepCount }} arrêt(s)
+                    </button>
+                  </div>
+                </ng-container>
+              </ng-container>
+            </div>
+          </div>
+
+          <div class="ud-panel mt-3">
+            <div class="ud-panel__head"><h6><i class="bi bi-funnel-fill me-2"></i>Filter parcels</h6></div>
+            <div class="ud-panel__pad">
+              <input class="ud-inp" type="text" placeholder="Search name, phone, address, product…"
+                     [(ngModel)]="parcelSearch" (ngModelChange)="onParcelFilterChange()" />
+              <div class="ud-row2 mt-2">
+                <label>Governorate
+                  <select class="ud-inp" [(ngModel)]="parcelGov" (ngModelChange)="onParcelFilterChange()">
+                    <option value="">All</option>
+                    <option *ngFor="let g of parcelGovs" [value]="g">{{ g }}</option>
+                  </select>
+                </label>
+                <label>Status
+                  <select class="ud-inp" [(ngModel)]="parcelStatus" (ngModelChange)="onParcelFilterChange()">
+                    <option value="any">Any</option>
+                    <option *ngFor="let s of parcelStates" [value]="s">{{ stateLabels[s] }}</option>
+                  </select>
+                </label>
+              </div>
+              <div class="ud-checks mt-2">
+                <label><input type="checkbox" [(ngModel)]="parcelOnlyLocated" (ngModelChange)="onParcelFilterChange()"> Located only</label>
+                <label><input type="checkbox" [(ngModel)]="parcelOnlyPhone" (ngModelChange)="onParcelFilterChange()"> Has phone</label>
+              </div>
+
+              <hr class="my-3" />
+
+              <span class="ud-lbl"><i class="bi bi-bullseye me-1"></i>K-nearest to anchor</span>
+              <div class="ud-knn">
+                <input type="range" min="1" max="50" [(ngModel)]="kNearest" />
+                <span class="ud-knn__n">{{ kNearest }}</span>
+              </div>
+              <p class="ud-mini" *ngIf="!parcelAnchor"><i class="bi bi-info-circle me-1"></i>Click the map (or a parcel) to drop an anchor.</p>
+              <p class="ud-mini" *ngIf="parcelAnchor">
+                <i class="bi bi-crosshair me-1"></i>{{ parcelAnchor.lat | number:'1.4-4' }}, {{ parcelAnchor.lng | number:'1.4-4' }}
+                <button class="ud-linkbtn" (click)="clearAnchor()">clear</button>
+              </p>
+              <div class="ud-actions">
+                <button class="ud-btn ud-btn--soft" (click)="findKNearest()" [disabled]="!parcelAnchor">
+                  <i class="bi bi-magnet me-1"></i> Select {{ kNearest }} nearest
+                </button>
+              </div>
+
+              <hr class="my-3" />
+              <div class="ud-parcels__batch">
+                <button class="ud-btn ud-btn--soft" (click)="selectAllFilteredParcels()">Select all in view</button>
+                <button class="ud-btn ud-btn--soft" (click)="clearParcelSel()" [disabled]="!parcelSel.size">Clear ({{ parcelSel.size }})</button>
+              </div>
+              <button class="ud-btn ud-btn--primary ud-btn--block mt-2"
+                      [disabled]="!parcelKpis.selected" (click)="createOrderFromParcels()">
+                <i class="bi bi-bag-plus-fill me-1"></i> Batch {{ parcelKpis.selected }} into an order
+              </button>
+            </div>
+          </div>
+
+          <div class="ud-panel mt-3">
+            <div class="ud-panel__head">
+              <h6><i class="bi bi-list-ul me-2"></i>{{ filteredParcels.length }} parcels</h6>
+            </div>
+            <div class="ud-panel__pad ud-parcels__list">
+              <button *ngFor="let p of filteredParcels" class="ud-parcelrow"
+                      [class.is-sel]="parcelSel.has(p.id)" (click)="toggleParcelSel(p.id)">
+                <span class="ud-parcelrow__tick"><i class="bi" [ngClass]="parcelSel.has(p.id) ? 'bi-check-square-fill' : 'bi-square'"></i></span>
+                <span class="ud-parcelrow__body">
+                  <span class="ud-parcelrow__t">{{ p.name || p.address || 'Parcel' }}</span>
+                  <span class="ud-parcelrow__m">
+                    <span class="ud-state ud-state--{{ p.state }}">{{ stateLabels[p.state] }}</span>
+                    · {{ p.gov || '—' }}<ng-container *ngIf="p.phone"> · {{ p.phone }}</ng-container>
+                    <ng-container *ngIf="p.parcelPrice"> · <i class="bi bi-cash-coin"></i> {{ p.parcelPrice }} TND</ng-container>
+                    <ng-container *ngIf="p.dist != null"> · {{ p.dist }} km</ng-container>
+                    <ng-container *ngIf="p.lat == null"> · <span class="ud-warn">no location</span></ng-container>
+                  </span>
+                </span>
+                <button class="ud-parcelrow__go" (click)="$event.stopPropagation(); anchorFromParcel(p)" title="Anchor here" *ngIf="p.lat != null">
+                  <i class="bi bi-crosshair"></i>
+                </button>
+              </button>
+              <div class="ud-empty" *ngIf="!loadingParcels && filteredParcels.length === 0">
+                <ng-lottie class="ud-empty__lottie" [options]="lot.emptyBox"></ng-lottie>
+                <h4>{{ parcels.length ? 'Aucun colis ne correspond' : 'Aucun colis pour l’instant' }}</h4>
+                <p>{{ parcels.length
+                      ? 'Ajustez les filtres pour retrouver vos colis.'
+                      : 'Importez un fichier Excel — l’IA reconnaît vos colonnes automatiquement.' }}</p>
+              </div>
+            </div>
+          </div>
+        </aside>
+
+        <!-- map -->
+        <section class="ud-parcels__mapwrap">
+          <div class="ud-maptools ud-parcels__maptools">
+            <button [class.on]="parcelMapMode === 'street'" (click)="setParcelMapMode('street')"><i class="bi bi-map"></i> Map</button>
+            <button [class.on]="parcelMapMode === 'satellite'" (click)="setParcelMapMode('satellite')"><i class="bi bi-globe-americas"></i> Satellite</button>
+          </div>
+          <div #parcelMapEl class="ud-parcels__map"></div>
+        </section>
+      </div>
+
+      <!-- per-expeditor money analysis -->
+      <div class="ud-panel mt-3" *ngIf="expeditorRollups.length">
+        <div class="ud-panel__head">
+          <h6><i class="bi bi-shop me-2"></i>Analyse par expéditeur</h6>
+        </div>
+        <div class="ud-panel__pad" style="overflow-x:auto">
+          <table class="ud-table" style="width:100%; min-width:820px; border-collapse:collapse">
+            <thead>
+              <tr>
+                <th style="text-align:left">Expéditeur</th>
+                <th>Colis</th>
+                <th>En attente</th>
+                <th>En route</th>
+                <th>Livré</th>
+                <th>Non livré</th>
+                <th>Collecté (TND)</th>
+                <th>À collecter (TND)</th>
+                <th>Réglé (TND)</th>
+                <th>Dû à l'expéditeur (TND)</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let r of expeditorRollups">
+                <td style="text-align:left"><strong>{{ r.expeditorId }}</strong></td>
+                <td class="text-center">{{ r.total }}</td>
+                <td class="text-center">{{ r.pending }}</td>
+                <td class="text-center">{{ r.inRoute }}</td>
+                <td class="text-center">{{ r.delivered }}</td>
+                <td class="text-center">{{ r.notDelivered }}</td>
+                <td class="text-center">{{ r.collected }}</td>
+                <td class="text-center">{{ r.toCollect }}</td>
+                <td class="text-center">{{ r.paidOut }}</td>
+                <td class="text-center"><strong>{{ r.outstanding }}</strong></td>
+                <td class="text-end">
+                  <button class="ud-btn ud-btn--soft" [disabled]="!r.outstanding"
+                          (click)="markExpeditorPaid(r.expeditorId)">
+                    <i class="bi bi-cash-stack me-1"></i> Marquer réglé
+                  </button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- ============ PIN PICKER MODAL ============ -->
+  <div class="ud-pinmodal" *ngIf="pinOpen">
+    <div class="ud-pinmodal__sheet">
+      <div class="ud-pinmodal__head">
+        <strong>{{ pinTarget.kind === 'pickup' ? 'Set the pickup' : ('Set stop ' + (pinTarget.index + 1)) }}</strong>
+        <div class="ud-maptools">
+          <button [class.on]="pinMode === 'street'" (click)="setPinMode('street')"><i class="bi bi-map"></i> Map</button>
+          <button [class.on]="pinMode === 'satellite'" (click)="setPinMode('satellite')"><i class="bi bi-globe-americas"></i> Satellite</button>
+        </div>
+        <button class="ud-btn ud-btn--ghost" (click)="closePin()"><i class="bi bi-x-lg"></i></button>
+      </div>
+      <div #pinMapEl class="ud-pinmodal__map"></div>
+      <div class="ud-pinmodal__foot">
+        <span class="ud-coords"><i class="bi bi-geo-alt-fill me-1"></i>{{ pinLat | number:'1.5-5' }}, {{ pinLng | number:'1.5-5' }}</span>
+        <div class="d-flex gap-2">
+          <button class="ud-btn ud-btn--soft" (click)="closePin()">Cancel</button>
+          <button class="ud-btn ud-btn--primary" [disabled]="pinLoading" (click)="confirmPin()">
+            <span *ngIf="pinLoading" class="spinner-border spinner-border-sm me-2"></span>
+            <i class="bi bi-check-lg me-1" *ngIf="!pinLoading"></i> Confirm location
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

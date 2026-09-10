@@ -4,59 +4,74 @@
 
 .map-viewport {
   width: 100%;
-  height: 580px;
-  border-radius: var(--radius-lg);
-  background: var(--color-surface-subtle);
+  height: 600px;
+  border-radius: var(--sh-r-lg);
+  background: var(--sh-card-2);
   z-index: 1;
 }
 
 .driver-list-viewport {
-  max-height: 520px;
+  max-height: 560px;
 }
 
+/* ---- Top control bar ---- */
+.map-filter {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.map-filter__label {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--sh-ink-500);
+  white-space: nowrap;
+}
+.map-filter .form-select { min-width: 140px; text-transform: capitalize; }
+
+/* Advanced filter rail: label sits above its control */
+.map-adv-filters .map-filter {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+}
+.map-adv-filters .map-filter__label { font-size: 0.7rem; }
+.map-adv-filters .form-check.map-filter { flex-direction: row; align-items: center; gap: 6px; padding-left: 2.4rem; }
+
+/* ---- Driver telemetry card ---- */
 .driver-card {
-  background: var(--color-surface-subtle);
-  transition: all 0.2s ease;
+  background: var(--sh-card-2);
+  border-color: var(--sh-line) !important;
+  transition: background-color var(--sh-t-fast), border-color var(--sh-t-fast), transform var(--sh-t-fast);
+}
+.driver-card:hover,
+.driver-card.active-selected {
+  background: var(--sh-card);
+  border-color: var(--color-brand-border) !important;
+  transform: translateY(-2px);
+  box-shadow: var(--sh-shadow-sm);
 }
 
-.driver-card:hover, .driver-card.active-selected {
-  background: var(--color-surface-card-hover);
-  border-color: var(--color-brand-primary) !important;
+.driver-card__veh {
+  width: 52px;
+  height: 34px;
+  object-fit: contain;
+  flex-shrink: 0;
+  border-radius: var(--sh-r-xs);
+  background: var(--sh-card);
+  border: 1px solid var(--sh-line);
+  padding: 2px;
 }
 
-/* Custom Marker Styling */
-.custom-driver-pin {
-  background: transparent !important;
-  border: none !important;
+.driver-card__stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px 10px;
+  margin-top: 8px;
+  font-size: 0.72rem;
+  color: var(--sh-ink-500);
 }
+.driver-card__stats .grid-span-2 { grid-column: 1 / -1; font-family: var(--sh-font-mono); }
+.driver-card__stats b { color: var(--sh-ink-900); font-weight: 700; }
 
-.driver-marker-wrapper {
-  position: relative;
-  width: 36px;
-  height: 36px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.marker-core {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  background: var(--color-warning);
-  color: #000;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1rem;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
-  border: 2px solid #ffffff;
-  z-index: 2;
-}
-
-.pulse-indicator {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  display: inline-block;
-}
+/* Marker + popup visuals are injected by Mapbox at document level and are
+   styled globally in src/styles.css (.mbx-truck, .map-driver-popup). */

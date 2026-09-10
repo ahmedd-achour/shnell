@@ -1,0 +1,40 @@
+:host { display: block; }
+
+/* The blog still runs on legacy Bootstrap-4 markup. Retint it to the
+   Shnell warm-light system without rewriting every row. */
+:host ::ng-deep .text-primary { color: var(--sh-amber-900) !important; }
+:host ::ng-deep .bg-primary { background-color: var(--sh-amber-500) !important; color: var(--sh-ink-900) !important; }
+:host ::ng-deep .bg-secondary {
+  background-color: var(--sh-card) !important;
+  color: var(--sh-ink-700) !important;
+  border: 1px solid var(--sh-line);
+  border-radius: var(--sh-r-lg);
+  box-shadow: var(--sh-shadow-xs);
+}
+:host ::ng-deep .bg-light { background-color: var(--sh-card-2) !important; }
+:host ::ng-deep .text-dark { color: var(--sh-ink-900) !important; }
+:host ::ng-deep .text-muted { color: var(--sh-ink-500) !important; }
+
+:host ::ng-deep img.img-fluid { border-radius: var(--sh-r-md); }
+
+:host ::ng-deep .btn-primary,
+:host ::ng-deep .btn-secondary {
+  background: var(--sh-amber-500);
+  border-color: transparent;
+  color: var(--sh-ink-900);
+  border-radius: var(--sh-r-pill);
+  font-weight: 700;
+}
+:host ::ng-deep .btn-secondary { background: var(--sh-card-2); color: var(--sh-ink-900); border: 1px solid var(--sh-line-2); }
+:host ::ng-deep .btn-primary:hover { background: var(--sh-amber-400); }
+
+:host ::ng-deep .border-primary { border-color: var(--color-brand-border) !important; }
+:host ::ng-deep a.border-bottom { border-color: var(--sh-amber-700) !important; color: var(--sh-amber-900); font-weight: 700; }
+:host ::ng-deep .badge-secondary, :host ::ng-deep .badge-pill {
+  background: var(--color-brand-subtle); color: var(--sh-amber-900);
+}
+
+:host ::ng-deep .page-link { color: var(--sh-amber-900); border-color: var(--sh-line); }
+:host ::ng-deep .page-item.active .page-link { background: var(--sh-amber-500); border-color: var(--sh-amber-500); color: var(--sh-ink-900); }
+
+:host ::ng-deep .container.py-5 { max-width: var(--sh-maxw); }

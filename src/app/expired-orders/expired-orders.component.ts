@@ -2,6 +2,7 @@ import { Component, OnInit, inject } from '@angular/core';
 import { Firestore, collection, getDocs, deleteDoc, doc } from '@angular/fire/firestore';
 import * as XLSX from 'xlsx';
 import { confirmAction, toastSuccess, toastError } from '../shared/swal';
+import { vehicleImage, onVehicleImgError } from '../shared/vehicle-assets';
 
 export interface OrderWithDocId {
   docId: string; // Firestore document ID for deletion
@@ -15,10 +16,14 @@ export interface OrderWithDocId {
   vehicleType?: string;
   isAcepted?: boolean;
   timestamp: Date;
+  scheduleAt?: Date | null;
   governorate?: string;
   region?: string;
   driverId?: string;
   driverName?: string;
+  /** Why this order is unhandled: past its scheduled time ('expired'),
+   *  or still open with no driver having taken it ('awaiting'). */
+  status?: 'expired' | 'awaiting';
 }
 
 @Component({
@@ -30,6 +35,8 @@ export class ExpiredOrdersComponent implements OnInit {
   private firestore = inject(Firestore);
 
   Math = Math;
+  vehicleImage = vehicleImage;
+  onVehicleImgError = onVehicleImgError;
   expiredOrders: OrderWithDocId[] = [];
   isLoading: boolean = true;
 
@@ -38,6 +45,7 @@ export class ExpiredOrdersComponent implements OnInit {
   datePreset: 'all' | 'today' | 'week' | 'month' = 'all';
   vehicleTypeFilter: string = 'all';
   governorateFilter: string = 'all';
+  statusFilter: 'all' | 'expired' | 'awaiting' = 'all';
 
   // Selection & Bulk Operations
   selectedDocIds: Set<string> = new Set();
@@ -54,46 +62,73 @@ export class ExpiredOrdersComponent implements OnInit {
     this.loadExpiredOrders();
   }
 
-  /** Load all orders older than 72 hours */
+  /** Unhandled orders = orders with NO matching deal (no driver ever attached).
+   *  Each is tagged 'expired' (its scheduled time has passed / > 72h old) or
+   *  'awaiting' (still open, just nobody has taken it yet). */
   async loadExpiredOrders(): Promise<void> {
     this.isLoading = true;
     this.selectedDocIds.clear();
     try {
-      const ordersRef = collection(this.firestore, 'orders');
-      const snapshot = await getDocs(ordersRef);
+      const [ordersSnap, dealsSnap] = await Promise.all([
+        getDocs(collection(this.firestore, 'orders')),
+        getDocs(collection(this.firestore, 'deals'))
+      ]);
 
-      this.expiredOrders = snapshot.docs.map(docSnap => {
-        const data = docSnap.data() as any;
-
-        // Convert timestamp safely
-        const timestamp = data.timestamp?.toDate
-          ? data.timestamp.toDate()
-          : data.timestamp?.seconds
-            ? new Date(data.timestamp.seconds * 1000)
-            : new Date();
-
-        return {
-          docId: docSnap.id,
-          id: docSnap.id,
-          namePickUp: data.namePickUp || 'Unnamed Pickup Location',
-          userID: data.userID || data.userId || 'N/A',
-          userId: data.userId || data.userID || 'N/A',
-          price: data.price || 45,
-          distance: data.distance || 12,
-          stops: Array.isArray(data.stops) ? data.stops : [],
-          vehicleType: data.vehicleType || 'Isuzu',
-          isAcepted: !!data.isAcepted,
-          governorate: data.governorate || 'Tunis',
-          region: data.region || 'Grand Tunis',
-          timestamp
-        } as OrderWithDocId;
+      // Orders that already have a driver matched (a deal) — exclude these.
+      const matchedOrderIds = new Set<string>();
+      dealsSnap.docs.forEach(d => {
+        const idOrder = (d.data() as any)?.idOrder;
+        if (idOrder) matchedOrderIds.add(String(idOrder));
       });
+
+      const now = Date.now();
+      const toDate = (v: any): Date | null => {
+        if (!v) return null;
+        if (v.toDate) return v.toDate();
+        if (v.seconds) return new Date(v.seconds * 1000);
+        const d = new Date(v);
+        return isNaN(d.getTime()) ? null : d;
+      };
+
+      this.expiredOrders = ordersSnap.docs
+        .filter(s => !matchedOrderIds.has(s.id) && !matchedOrderIds.has(String((s.data() as any)?.id)))
+        .map(docSnap => {
+          const data = docSnap.data() as any;
+          const timestamp = toDate(data.timestamp) || new Date();
+          const scheduleAt = toDate(data.scheduleAt);
+
+          const expired =
+            (scheduleAt ? scheduleAt.getTime() < now : false) ||
+            (now - timestamp.getTime()) > 72 * 3600 * 1000;
+
+          return {
+            docId: docSnap.id,
+            id: docSnap.id,
+            namePickUp: data.namePickUp || 'Unnamed pickup',
+            userID: data.userID || data.userId || 'N/A',
+            userId: data.userId || data.userID || 'N/A',
+            price: data.price ?? 0,
+            distance: data.distance ?? 0,
+            stops: Array.isArray(data.stops) ? data.stops : [],
+            vehicleType: data.vehicleType || '—',
+            isAcepted: !!data.isAcepted,
+            governorate: data.governorate || 'Tunis',
+            region: data.region || 'Grand Tunis',
+            timestamp,
+            scheduleAt,
+            status: expired ? 'expired' : 'awaiting'
+          } as OrderWithDocId;
+        });
     } catch (err) {
-      console.error('Error loading expired orders:', err);
+      console.error('Error loading unhandled orders:', err);
     } finally {
       this.isLoading = false;
     }
   }
+
+  get unhandledCount(): number { return this.expiredOrders.length; }
+  get expiredCount(): number { return this.expiredOrders.filter(o => o.status === 'expired').length; }
+  get awaitingCount(): number { return this.expiredOrders.filter(o => o.status === 'awaiting').length; }
 
   // --- KPI CALCULATIONS ---
   get totalExpiredCount(): number {
@@ -115,10 +150,6 @@ export class ExpiredOrdersComponent implements OnInit {
     const now = Date.now();
     const oneMonthMs = 30 * 24 * 60 * 60 * 1000;
     return this.expiredOrders.filter(o => (now - o.timestamp.getTime()) <= oneMonthMs).length;
-  }
-
-  get estimatedLostRevenue(): number {
-    return this.expiredOrders.reduce((sum, o) => sum + (o.price || 0), 0);
   }
 
   get avgExpirationHours(): string {
@@ -163,8 +194,9 @@ export class ExpiredOrdersComponent implements OnInit {
 
       const matchesVehicle = this.vehicleTypeFilter === 'all' || o.vehicleType === this.vehicleTypeFilter;
       const matchesGov = this.governorateFilter === 'all' || o.governorate === this.governorateFilter;
+      const matchesStatus = this.statusFilter === 'all' || o.status === this.statusFilter;
 
-      return matchesSearch && matchesDate && matchesVehicle && matchesGov;
+      return matchesSearch && matchesDate && matchesVehicle && matchesGov && matchesStatus;
     });
   }
 

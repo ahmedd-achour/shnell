@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ShnellUser } from '../../models/dashboard.models';
 import { NotificationService } from '../../services/notification.service';
+import { toastError, alertSuccess, alertError } from '../../../shared/swal';
 
 export interface NotificationLog {
   id: string;
@@ -144,7 +145,9 @@ export class NotificationsTabComponent implements OnInit, OnChanges {
     }
 
     if (this.recipientMode === 'clients') {
-      return this.users.filter(u => u.role === 'user' || u.role === 'client');
+      // "user" is the intended role; "customer"/"client" are legacy values the
+      // Flutter client app has written historically (see UserRole enum).
+      return this.users.filter(u => ['user', 'customer', 'client'].includes((u.role || '').toLowerCase()));
     }
 
     if (this.recipientMode === 'companies') {
@@ -175,6 +178,18 @@ export class NotificationsTabComponent implements OnInit, OnChanges {
 
   get selectedUserObject(): ShnellUser | undefined {
     return this.users.find(u => (u.uid || u.id) === this.selectedUserId);
+  }
+
+  get canSend(): boolean {
+    return !this.sending
+      && this.resolvedTargetUsers.length > 0
+      && this.header.trim().length > 0
+      && this.body.trim().length > 0;
+  }
+
+  selectSingleRecipient(u: ShnellUser | null): void {
+    this.selectedUserId = u ? (u.uid || u.id || '') : '';
+    this.recipientSearchQuery = '';
   }
 
   toggleSelectRecipient(userId: string): void {
@@ -208,20 +223,17 @@ export class NotificationsTabComponent implements OnInit, OnChanges {
   }
 
   async sendNotification(): Promise<void> {
-    this.successMessage = null;
-    this.errorMessage = null;
-
     const targets = this.resolvedTargetUsers;
     if (targets.length === 0) {
-      this.errorMessage = 'Please select at least one recipient user or recipient group.';
+      toastError('Pick a recipient', 'Select at least one recipient or a recipient group.');
       return;
     }
     if (!this.header.trim()) {
-      this.errorMessage = 'Please enter a notification header (title).';
+      toastError('Title required', 'Enter a notification title.');
       return;
     }
     if (!this.body.trim()) {
-      this.errorMessage = 'Please enter notification message body.';
+      toastError('Message required', 'Enter the notification body.');
       return;
     }
 
@@ -288,15 +300,18 @@ export class NotificationsTabComponent implements OnInit, OnChanges {
       }
 
       if (successCount > 0) {
-        this.successMessage = `Successfully dispatched push notification to ${successCount} recipient(s).` + (failCount > 0 ? ` (${failCount} failed)` : '');
+        alertSuccess(
+          'Notification dispatched',
+          `Delivered to ${successCount} recipient(s)` + (failCount > 0 ? ` · ${failCount} failed` : '') + '.'
+        );
         this.header = '';
         this.body = '';
       } else {
-        this.errorMessage = `Failed to send push notification to selected target(s).`;
+        alertError('Dispatch failed', 'The push notification could not be delivered to any recipient.');
       }
     } catch (err: any) {
       console.error('Notification dispatch error:', err);
-      this.errorMessage = err.message || 'Error processing FCM notifications.';
+      alertError('Dispatch error', err.message || 'Error processing FCM notifications.');
     } finally {
       this.sending = false;
     }

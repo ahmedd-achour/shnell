@@ -18,7 +18,10 @@
   box-shadow: var(--shadow-md);
 }
 
-/* Accent top border lines */
+.kpi-card { padding: 1.15rem 1.15rem 1.1rem !important; }
+
+/* Accent top border — single, restrained warm-brand hairline on every card
+   (the old blue / indigo / cyan / violet rainbow read as a stock admin theme). */
 .kpi-card::before {
   content: '';
   position: absolute;
@@ -26,38 +29,46 @@
   left: 0;
   right: 0;
   height: 3px;
-  background: transparent;
+  background: linear-gradient(90deg, var(--sh-amber-500), var(--sh-amber-300));
+  opacity: 0.9;
 }
-
-/* Accent top-border — one brand family (amber · green · blue · bronze · violet · teal) */
-.kpi-card.accent-indigo::before  { background: linear-gradient(90deg, #2563EB, #60A5FA); }
-.kpi-card.accent-blue::before    { background: linear-gradient(90deg, #2563EB, #60A5FA); }
-.kpi-card.accent-emerald::before { background: linear-gradient(90deg, #0E7A5F, #34D399); }
-.kpi-card.accent-green::before   { background: linear-gradient(90deg, #0B5C48, #0E7A5F); }
-.kpi-card.accent-amber::before   { background: linear-gradient(90deg, #FFB300, #FFD54F); }
-.kpi-card.accent-cyan::before    { background: linear-gradient(90deg, #15AABB, #4FD1DE); }
-.kpi-card.accent-purple::before  { background: linear-gradient(90deg, #7C5CE0, #A78BFA); }
-.kpi-card.accent-rose::before    { background: linear-gradient(90deg, #D42F2F, #F87171); }
+.kpi-card.accent-emerald::before,
+.kpi-card.accent-green::before   { background: linear-gradient(90deg, var(--sh-green-500), #34D399); }
+.kpi-card.accent-rose::before    { background: linear-gradient(90deg, var(--sh-danger), #F87171); }
 
 .icon-shape {
   width: 46px;
   height: 46px;
-  border-radius: var(--radius-md);
+  border-radius: var(--sh-r-md);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.25rem;
-  box-shadow: var(--shadow-sm);
+  font-size: 1.2rem;
+  box-shadow: none;
 }
 
+/* Icon chips — warm amber tile by default (like the marketing .mkt-feature__icon);
+   green kept only for genuinely "positive availability" metrics. */
 .bg-indigo,
-.bg-blue   { background: rgba(37, 99, 235, 0.12) !important;  color: #1D4ED8 !important; border: 1px solid rgba(37, 99, 235, 0.28); }
-.bg-emerald { background: rgba(14, 122, 95, 0.12) !important;  color: #0B5C48 !important; border: 1px solid rgba(14, 122, 95, 0.28); }
-.bg-green   { background: rgba(11, 92, 72, 0.12) !important;   color: #0B5C48 !important; border: 1px solid rgba(11, 92, 72, 0.28); }
-.bg-amber   { background: rgba(255, 160, 0, 0.14) !important;  color: #B7791F !important; border: 1px solid rgba(255, 160, 0, 0.34); }
-.bg-cyan    { background: rgba(21, 170, 187, 0.12) !important; color: #0F7C88 !important; border: 1px solid rgba(21, 170, 187, 0.28); }
-.bg-purple  { background: rgba(124, 92, 224, 0.12) !important; color: #5B3FBF !important; border: 1px solid rgba(124, 92, 224, 0.28); }
-.bg-rose    { background: rgba(212, 47, 47, 0.12) !important;  color: #B91C1C !important; border: 1px solid rgba(212, 47, 47, 0.28); }
+.bg-blue,
+.bg-amber,
+.bg-cyan,
+.bg-purple  {
+  background: var(--color-brand-subtle) !important;
+  color: var(--sh-amber-900) !important;
+  border: 1px solid var(--color-brand-border);
+}
+.bg-emerald,
+.bg-green   {
+  background: var(--sh-success-bg) !important;
+  color: var(--sh-success) !important;
+  border: 1px solid var(--sh-success-line);
+}
+.bg-rose    {
+  background: var(--sh-danger-bg) !important;
+  color: var(--sh-danger) !important;
+  border: 1px solid var(--sh-danger-line);
+}
 
 /* Avatar Badges */
 .avatar-circle-sm {

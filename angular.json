@@ -43,7 +43,6 @@
               "src/lib/owlcarousel/assets/owl.theme.default.min.css",
               "src/lib/owlcarousel/assets/owl.theme.green.min.css",
               "node_modules/mapbox-gl/dist/mapbox-gl.css",
-              "node_modules/maplibre-gl/dist/maplibre-gl.css",
               "src/styles.css"
             ],
             "scripts": [
@@ -125,7 +124,6 @@
               "src/lib/owlcarousel/assets/owl.theme.default.min.css",
               "src/lib/owlcarousel/assets/owl.theme.green.min.css",
               "node_modules/mapbox-gl/dist/mapbox-gl.css",
-              "node_modules/maplibre-gl/dist/maplibre-gl.css",
               "src/styles.css"
             ],
             "scripts": [

@@ -67,8 +67,7 @@ export class SidebarComponent implements OnInit {
             { group: 'Operations', label: 'Expired Orders', path: 'expired-orders', icon: 'bi-clock-history' },
 
             { group: 'System', label: 'App Config', path: 'home-admin', queryParams: { tab: 'settings' }, icon: 'bi-gear-wide-connected' },
-            { group: 'System', label: 'FCM Notifications', path: 'home-admin', queryParams: { tab: 'notifications' }, icon: 'bi-bell-fill' },
-            { group: 'System', label: 'Profile', path: 'profile', icon: 'bi-person' }
+            { group: 'System', label: 'FCM Notifications', path: 'home-admin', queryParams: { tab: 'notifications' }, icon: 'bi-bell-fill' }
           ] as any;
           this.unauthorizedMessage = null;
         } else {

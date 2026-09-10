@@ -52,7 +52,7 @@
                   }"></i>
                 </div>
                 <div>
-                  <h5 class="fw-bold mb-0 text-white font-heading">{{ v.type || 'Vehicle Asset' }}</h5>
+                  <h5 class="fw-bold mb-0 text-white font-heading">Fleet Vehicle</h5>
                   <small class="text-muted font-monospace fs-8">ID: {{ (v.id || 'N/A') | slice:0:12 }}</small>
                 </div>
               </div>
@@ -182,7 +182,7 @@
             <i class="bi" [ngClass]="isTruckType(selectedVehicleDossier.type) ? 'bi-truck' : 'bi-car-front-fill'"></i>
           </div>
           <div>
-            <h3 class="modal-title font-heading mb-0 text-white fs-4">Dossier Complet: {{ selectedVehicleDossier.type }}</h3>
+            <h3 class="modal-title font-heading mb-0 text-white fs-4">Dossier Complet: {{ selectedVehicleDossier.driver?.name || selectedVehicleDossier.idDriver }}</h3>
             <small class="text-muted">Driver: <strong class="text-white">{{ selectedVehicleDossier.driver?.name || selectedVehicleDossier.idDriver }}</strong> ({{ selectedVehicleDossier.driver?.phone || 'N/A' }})</small>
           </div>
         </div>

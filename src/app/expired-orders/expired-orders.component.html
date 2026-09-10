@@ -1,9 +1,9 @@
-<div class="expired-orders-container p-4">
+<div class="expired-orders-container dashboard-root dash-tab-viewport p-4">
   <!-- Top Header Bar -->
   <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3 mb-4">
     <div>
-      <h2 class="font-heading mb-1 text-white">Expired & Archival Order Center</h2>
-      <p class="text-muted small mb-0">Orders exceeding the 72-hour operational window awaiting administrative clean-up & telemetry audit.</p>
+      <h2 class="font-heading mb-1">Unhandled orders</h2>
+      <p class="text-muted small mb-0">Orders that never got a driver attached — either <strong>expired</strong> (past their scheduled time / &gt; 72h old) or still <strong>awaiting a driver</strong>.</p>
     </div>
     <div class="d-flex align-items-center gap-2">
       <button class="btn btn-outline-secondary btn-sm rounded-pill px-3" (click)="exportToExcel()" [disabled]="!expiredOrders.length">
@@ -16,59 +16,27 @@
     </div>
   </div>
 
-  <!-- Summary KPI Cards Row (6 Metric Cards) -->
+  <!-- Summary KPI Cards -->
   <div class="row g-3 mb-4">
-    <!-- Total Expired -->
-    <div class="col-12 col-sm-6 col-md-4 col-xl-2">
+    <div class="col-6 col-md-4">
       <div class="card kpi-stat-card p-3 h-100">
-        <span class="text-uppercase fw-bold text-muted fs-8 d-block mb-1">Total Expired</span>
-        <h3 class="fw-bold text-white mb-0 font-outfit">{{ totalExpiredCount }}</h3>
-        <small class="text-muted fs-8 mt-2 d-block">> 72h Operational Limit</small>
+        <span class="text-uppercase fw-bold text-muted fs-8 d-block mb-1">Unhandled total</span>
+        <h3 class="fw-bold mb-0 font-outfit">{{ unhandledCount }}</h3>
+        <small class="text-muted fs-8 mt-2 d-block">No driver ever attached</small>
       </div>
     </div>
-
-    <!-- Expired Today -->
-    <div class="col-12 col-sm-6 col-md-4 col-xl-2">
+    <div class="col-6 col-md-4">
       <div class="card kpi-stat-card p-3 h-100">
-        <span class="text-uppercase fw-bold text-muted fs-8 d-block mb-1">Expired Today</span>
-        <h3 class="fw-bold text-warning mb-0 font-outfit">{{ expiredTodayCount }}</h3>
-        <small class="text-muted fs-8 mt-2 d-block">Today's Timeout</small>
+        <span class="text-uppercase fw-bold text-muted fs-8 d-block mb-1">Expired</span>
+        <h3 class="fw-bold text-danger mb-0 font-outfit">{{ expiredCount }}</h3>
+        <small class="text-muted fs-8 mt-2 d-block">Past schedule / &gt; 72h</small>
       </div>
     </div>
-
-    <!-- Expired This Week -->
-    <div class="col-12 col-sm-6 col-md-4 col-xl-2">
+    <div class="col-12 col-md-4">
       <div class="card kpi-stat-card p-3 h-100">
-        <span class="text-uppercase fw-bold text-muted fs-8 d-block mb-1">Expired This Week</span>
-        <h3 class="fw-bold text-white mb-0 font-outfit">{{ expiredWeekCount }}</h3>
-        <small class="text-muted fs-8 mt-2 d-block">Last 7 Days</small>
-      </div>
-    </div>
-
-    <!-- Expired This Month -->
-    <div class="col-12 col-sm-6 col-md-4 col-xl-2">
-      <div class="card kpi-stat-card p-3 h-100">
-        <span class="text-uppercase fw-bold text-muted fs-8 d-block mb-1">Expired This Month</span>
-        <h3 class="fw-bold text-white mb-0 font-outfit">{{ expiredMonthCount }}</h3>
-        <small class="text-muted fs-8 mt-2 d-block">Current 30D Window</small>
-      </div>
-    </div>
-
-    <!-- Estimated Lost Revenue -->
-    <div class="col-12 col-sm-6 col-md-4 col-xl-2">
-      <div class="card kpi-stat-card p-3 h-100">
-        <span class="text-uppercase fw-bold text-muted fs-8 d-block mb-1">Est. Lost Revenue</span>
-        <h3 class="fw-bold text-danger mb-0 font-outfit">{{ estimatedLostRevenue | number:'1.0-0' }} TND</h3>
-        <small class="text-muted fs-8 mt-2 d-block">Sum of Expired Values</small>
-      </div>
-    </div>
-
-    <!-- Avg Expiration Time -->
-    <div class="col-12 col-sm-6 col-md-4 col-xl-2">
-      <div class="card kpi-stat-card p-3 h-100">
-        <span class="text-uppercase fw-bold text-muted fs-8 d-block mb-1">Avg Expiration Time</span>
-        <h3 class="fw-bold text-info mb-0 font-outfit">{{ avgExpirationHours }}</h3>
-        <small class="text-muted fs-8 mt-2 d-block">Telemetry Age</small>
+        <span class="text-uppercase fw-bold text-muted fs-8 d-block mb-1">Awaiting driver</span>
+        <h3 class="fw-bold text-warning mb-0 font-outfit">{{ awaitingCount }}</h3>
+        <small class="text-muted fs-8 mt-2 d-block">Still open, nobody took it</small>
       </div>
     </div>
   </div>
@@ -80,10 +48,10 @@
         <!-- Search -->
         <div class="col-12 col-md-4 col-lg-5">
           <div class="input-group">
-            <span class="input-group-text bg-dark border-secondary text-muted"><i class="bi bi-search"></i></span>
+            <span class="input-group-text"><i class="bi bi-search"></i></span>
             <input
               type="text"
-              class="form-control bg-dark border-secondary text-white"
+              class="form-control"
               placeholder="Search pickup location, expiter user ID, order ID..."
               [(ngModel)]="searchQuery"
             />
@@ -93,20 +61,21 @@
         <!-- Filters -->
         <div class="col-12 col-md-8 col-lg-7 d-flex flex-wrap gap-2 justify-content-md-end">
           <div class="btn-group btn-group-sm" role="group">
-            <button class="btn btn-outline-secondary" [class.active]="datePreset === 'all'" (click)="datePreset = 'all'">All Time</button>
-            <button class="btn btn-outline-warning" [class.active]="datePreset === 'today'" (click)="datePreset = 'today'">Today</button>
-            <button class="btn btn-outline-info" [class.active]="datePreset === 'week'" (click)="datePreset = 'week'">This Week</button>
-            <button class="btn btn-outline-primary" [class.active]="datePreset === 'month'" (click)="datePreset = 'month'">This Month</button>
+            <button class="btn btn-outline-secondary" [class.active]="statusFilter === 'all'" (click)="statusFilter = 'all'">All</button>
+            <button class="btn btn-outline-danger" [class.active]="statusFilter === 'expired'" (click)="statusFilter = 'expired'">Expired</button>
+            <button class="btn btn-outline-warning" [class.active]="statusFilter === 'awaiting'" (click)="statusFilter = 'awaiting'">Awaiting driver</button>
           </div>
 
-          <select class="form-select w-auto btn-sm bg-dark border-secondary text-white" [(ngModel)]="vehicleTypeFilter" title="Vehicle Type">
-            <option value="all">Vehicle: All</option>
-            <option *ngFor="let v of availableVehicleTypes" [value]="v">{{ v }}</option>
-          </select>
+          <div class="btn-group btn-group-sm" role="group">
+            <button class="btn btn-outline-secondary" [class.active]="datePreset === 'all'" (click)="datePreset = 'all'">All time</button>
+            <button class="btn btn-outline-secondary" [class.active]="datePreset === 'today'" (click)="datePreset = 'today'">Today</button>
+            <button class="btn btn-outline-secondary" [class.active]="datePreset === 'week'" (click)="datePreset = 'week'">Week</button>
+            <button class="btn btn-outline-secondary" [class.active]="datePreset === 'month'" (click)="datePreset = 'month'">Month</button>
+          </div>
 
-          <select class="form-select w-auto btn-sm bg-dark border-secondary text-white" [(ngModel)]="governorateFilter" title="Governorate">
-            <option value="all">Governorate: All</option>
-            <option *ngFor="let g of availableGovernorates" [value]="g">{{ g }}</option>
+          <select class="form-select form-select-sm w-auto" [(ngModel)]="vehicleTypeFilter" title="Vehicle type">
+            <option value="all">Vehicle: all</option>
+            <option *ngFor="let v of availableVehicleTypes" [value]="v">{{ v }}</option>
           </select>
         </div>
       </div>
@@ -116,14 +85,14 @@
   <!-- Loading State -->
   <div *ngIf="isLoading" class="text-center py-5">
     <div class="spinner-border text-brand mb-3" role="status"></div>
-    <div class="text-muted font-mono fs-8">QUERYING FIRESTORE EXPIRED ORDER TELEMETRY...</div>
+    <div class="text-muted fs-8">Loading unhandled orders…</div>
   </div>
 
   <!-- Table Container Card -->
   <div class="card border-0 shadow-sm saas-card mb-4" *ngIf="!isLoading && expiredOrders.length > 0">
     <div class="card-body p-0">
       <div class="table-responsive">
-        <table class="table table-dark table-striped table-hover align-middle">
+        <table class="table table-hover align-middle">
           <thead>
             <tr>
               <th class="ps-4" style="width: 40px;">
@@ -134,8 +103,8 @@
               <th>Vehicle Requested</th>
               <th class="numeric">Stops Count</th>
               <th class="numeric">Est. Price</th>
-              <th>Expiration Timestamp</th>
-              <th>Status Badge</th>
+              <th>Scheduled / created</th>
+              <th>Why unhandled</th>
               <th class="pe-4 text-end">Actions</th>
             </tr>
           </thead>
@@ -164,8 +133,9 @@
                 </div>
               </td>
               <td>
-                <span class="badge bg-subtle text-warning border border-warning fs-8">
-                  <i class="bi bi-truck me-1"></i>{{ order.vehicleType }}
+                <span class="veh-cell">
+                  <img class="veh-cell__img" [src]="vehicleImage(order.vehicleType)" (error)="onVehicleImgError($event)" [alt]="order.vehicleType">
+                  <span class="veh-cell__label">{{ order.vehicleType }}</span>
                 </span>
               </td>
               <td class="numeric font-mono">
@@ -175,11 +145,15 @@
                 <span class="fw-bold text-success fs-7">{{ (order.price || 0) | number:'1.2-2' }} TND</span>
               </td>
               <td>
-                <span class="text-muted fs-8">{{ order.timestamp | date:'medium' }}</span>
+                <span class="text-muted fs-8 d-block" *ngIf="order.scheduleAt">Sched: {{ order.scheduleAt | date:'short' }}</span>
+                <span class="text-muted fs-8 d-block">Created: {{ order.timestamp | date:'short' }}</span>
               </td>
               <td>
-                <span class="status-pill error fs-8">
-                  <i class="bi bi-clock-history me-1"></i> Expired (>72h)
+                <span class="status-pill error fs-8" *ngIf="order.status === 'expired'">
+                  <i class="bi bi-clock-history me-1"></i> Expired · no driver
+                </span>
+                <span class="status-pill warning fs-8" *ngIf="order.status === 'awaiting'">
+                  <i class="bi bi-hourglass-split me-1"></i> Awaiting driver
                 </span>
               </td>
               <td class="pe-4 text-end">
@@ -196,7 +170,7 @@
             <tr *ngIf="filteredExpiredOrders.length === 0">
               <td colspan="9" class="text-center py-5 text-muted">
                 <i class="bi bi-search display-6 d-block mb-2 text-muted"></i>
-                No expired order records matching criteria.
+                No unhandled orders match your filters.
               </td>
             </tr>
           </tbody>
@@ -225,8 +199,8 @@
   <div *ngIf="!isLoading && expiredOrders.length === 0" class="card border-0 shadow-sm saas-card text-center p-5">
     <div class="py-4">
       <i class="bi bi-check-circle-fill display-3 text-success mb-3"></i>
-      <h4 class="font-heading text-white mb-2">No Expired Orders Found</h4>
-      <p class="text-muted max-w-md mx-auto fs-8">All fleet routes are active and processed within the valid 72-hour operational window.</p>
+      <h4 class="font-heading mb-2">Every order has a driver</h4>
+      <p class="text-muted mx-auto fs-8">There are no orders sitting without a matched driver right now.</p>
     </div>
   </div>
 
@@ -241,7 +215,8 @@
         </div>
         <div>
           <h4 class="modal-title font-heading mb-0 text-white">{{ selectedOrderModal.namePickUp }}</h4>
-          <span class="badge bg-danger-subtle text-danger border border-danger">EXPIRED TELEMETRY ROUTE</span>
+          <span class="badge bg-danger-subtle text-danger border border-danger" *ngIf="selectedOrderModal.status === 'expired'">EXPIRED · NO DRIVER</span>
+          <span class="badge bg-warning-subtle text-warning border border-warning" *ngIf="selectedOrderModal.status === 'awaiting'">AWAITING DRIVER</span>
         </div>
       </div>
 
@@ -261,7 +236,10 @@
         <div class="col-6">
           <div class="bg-dark p-3 rounded-3 border border-secondary border-opacity-25">
             <span class="text-muted small d-block mb-1">Vehicle Requested</span>
-            <span class="fw-bold text-white">{{ selectedOrderModal.vehicleType }}</span>
+            <span class="veh-cell">
+              <img class="veh-cell__img" [src]="vehicleImage(selectedOrderModal.vehicleType)" (error)="onVehicleImgError($event)" [alt]="selectedOrderModal.vehicleType">
+              <span class="veh-cell__label">{{ selectedOrderModal.vehicleType }}</span>
+            </span>
           </div>
         </div>
         <div class="col-6">

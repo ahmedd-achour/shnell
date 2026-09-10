@@ -38,12 +38,11 @@
         <table  class="table table-dark table-striped table-hover align-middle">
           <thead>
             <tr>
-              <th class="ps-4">User Dossier & Profile</th>
-              <th>System Role</th>
-              <th>Account Tier</th>
-              <th>Contact Info</th>
-              <th class="numeric">Ledger Balance</th>
-              <th>Security Status</th>
+              <th class="ps-4">User</th>
+              <th>Role</th>
+              <th>Contact</th>
+              <th class="numeric">Balance</th>
+              <th>Status</th>
               <th class="pe-4 text-end">Actions</th>
             </tr>
           </thead>
@@ -80,26 +79,6 @@
                 </span>
               </td>
               <td>
-                <div class="tier-switcher-pill d-inline-flex p-1 rounded-pill">
-                  <button
-                    class="btn btn-xs rounded-pill px-2 py-1 fs-8 text-uppercase fw-bold"
-                    [class.btn-emerald]="u.accType !== 'pro'"
-                    [class.btn-ghost]="u.accType === 'pro'"
-                    [disabled]="updatingAccTypeId === (u.uid || u.id)"
-                    (click)="updateAccType(u, 'eco')">
-                    <i class="bi bi-leaf-fill me-1"></i>ECO
-                  </button>
-                  <button
-                    class="btn btn-xs rounded-pill px-2 py-1 fs-8 text-uppercase fw-bold"
-                    [class.btn-gold]="u.accType === 'pro'"
-                    [class.btn-ghost]="u.accType !== 'pro'"
-                    [disabled]="updatingAccTypeId === (u.uid || u.id)"
-                    (click)="updateAccType(u, 'pro')">
-                    <i class="bi bi-lightning-charge-fill me-1"></i>PRO
-                  </button>
-                </div>
-              </td>
-              <td>
                 <div class="text-light fs-8"><i class="bi bi-envelope me-1 text-info"></i>{{ u.email }}</div>
                 <div class="text-muted fs-8" *ngIf="u.phone"><i class="bi bi-telephone me-1 text-success"></i>{{ u.phone }}</div>
               </td>
@@ -133,7 +112,7 @@
               </td>
             </tr>
             <tr *ngIf="filteredUsers.length === 0">
-              <td colspan="7" class="text-center py-5 text-muted">
+              <td colspan="6" class="text-center py-5 text-muted">
                 <i class="bi bi-search display-5 d-block mb-2 text-muted"></i>
                 No user records matching telemetry filter criteria.
               </td>

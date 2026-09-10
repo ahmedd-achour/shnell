@@ -1,8 +1,13 @@
 import { Component, Input, Output, EventEmitter, OnInit, OnChanges, SimpleChanges, AfterViewInit, OnDestroy, ElementRef, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import * as L from 'leaflet';
+import mapboxgl from 'mapbox-gl';
 import { DriverRTDBLocation, ShnellUser, Vehicle } from '../../models/dashboard.models';
+import { vehicleImage } from '../../../shared/vehicle-assets';
+import {
+  MAPBOX_TOKEN, MAPBOX_STYLE_STREET, MAPBOX_STYLE_SATELLITE,
+  TN_CENTER_LNGLAT, makeTruckMarkerEl, tnLngLat,
+} from '../../../shared/mapbox';
 
 @Component({
   selector: 'app-live-map-tab',
@@ -21,17 +26,59 @@ export class LiveMapTabComponent implements OnInit, AfterViewInit, OnChanges, On
 
   @ViewChild('mapElement') mapElementRef!: ElementRef<HTMLDivElement>;
 
-  private map: L.Map | null = null;
-  private markersLayer: L.LayerGroup = L.layerGroup();
-  private markersMap = new Map<string, L.Marker>();
+  private map: mapboxgl.Map | null = null;
+  private markersMap = new Map<string, mapboxgl.Marker>();
 
   searchQuery: string = '';
+  vehicleTypeFilter: string = 'all';
+  mapStyle: 'street' | 'satellite' = 'street';
   selectedDriver: (DriverRTDBLocation & { user?: ShnellUser; vehicle?: Vehicle }) | null = null;
+
+  // ---- advanced filters (admin-tunable) ----
+  showFilters = true;
+  freshnessSec: number = 0;              // 0 = any; else "pinged within N seconds"
+  statusFilter: 'any' | 'online' | 'busy' | 'idle' | 'offline' = 'any';
+  maxAccuracy: number = 0;              // 0 = any; else "accuracy <= N metres"
+  sortBy: 'recent' | 'stale' | 'name' | 'accuracy' = 'recent';
+  autoFit = true;                       // re-frame the map when the filter set changes
+
+  readonly freshnessOptions = [
+    { v: 0, label: 'Any time' },
+    { v: 60, label: 'Last 1 min' },
+    { v: 300, label: 'Last 5 min' },
+    { v: 900, label: 'Last 15 min' },
+    { v: 3600, label: 'Last 1 hour' },
+    { v: 21600, label: 'Last 6 hours' },
+  ];
+
+  vehicleImage = vehicleImage;
+
+  /** Resolve the vehicle type for a driver ping (used for markers + filtering). */
+  vehicleTypeFor(driverId: string): string {
+    const v = this.vehicles.find(x => x.idDriver === driverId);
+    return (v?.type || '').toString();
+  }
+
+  /** Distinct vehicle types present among the live drivers, for the filter. */
+  get availableVehicleTypes(): string[] {
+    const set = new Set<string>();
+    this.driverLocations.forEach(loc => {
+      const t = this.vehicleTypeFor(loc.driverId);
+      if (t) set.add(t);
+    });
+    return Array.from(set).sort();
+  }
+
+  setMapStyle(style: 'street' | 'satellite'): void {
+    if (this.mapStyle === style) return;
+    this.mapStyle = style;
+    this.map?.setStyle(style === 'satellite' ? MAPBOX_STYLE_SATELLITE : MAPBOX_STYLE_STREET);
+  }
 
   ngOnInit(): void {}
 
   ngAfterViewInit(): void {
-    this.initLeafletMap();
+    this.initMap();
   }
 
   ngOnChanges(changes: SimpleChanges): void {
@@ -41,62 +88,49 @@ export class LiveMapTabComponent implements OnInit, AfterViewInit, OnChanges, On
   }
 
   ngOnDestroy(): void {
-    if (this.map) {
-      this.map.remove();
-      this.map = null;
-    }
+    this.markersMap.forEach(m => m.remove());
+    this.markersMap.clear();
+    if (this.map) { this.map.remove(); this.map = null; }
   }
 
-  private initLeafletMap(): void {
+  private initMap(): void {
     if (!this.mapElementRef?.nativeElement) return;
 
-    this.map = L.map(this.mapElementRef.nativeElement, {
-      center: [36.8065, 10.1815],
-      zoom: 10,
-      zoomControl: true
+    mapboxgl.accessToken = MAPBOX_TOKEN;
+    this.map = new mapboxgl.Map({
+      container: this.mapElementRef.nativeElement,
+      style: this.mapStyle === 'satellite' ? MAPBOX_STYLE_SATELLITE : MAPBOX_STYLE_STREET,
+      center: TN_CENTER_LNGLAT,
+      zoom: 8.5,
+      attributionControl: false,
     });
+    this.map.addControl(new mapboxgl.NavigationControl({ showCompass: false }), 'top-right');
+    this.map.addControl(new mapboxgl.AttributionControl({ compact: true }));
 
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-      attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
-      subdomains: 'abcd',
-      maxZoom: 19
-    }).addTo(this.map);
-
-    this.markersLayer.addTo(this.map);
-    this.updateMarkers();
-  }
-
-  private createCustomIcon(): L.DivIcon {
-    return L.divIcon({
-      className: 'custom-driver-pin',
-      html: `
-        <div class="driver-marker-wrapper">
-          <div class="pulse-ring"></div>
-          <div class="marker-core bg-warning text-dark">
-            <i class="bi bi-truck-front-fill"></i>
-          </div>
-        </div>
-      `,
-      iconSize: [40, 40],
-      iconAnchor: [20, 20],
-      popupAnchor: [0, -20]
+    this.map.on('load', () => {
+      this.map?.resize();
+      this.updateMarkers();
     });
   }
 
-  updateMarkers(): void {
+  /** Explicit "fit all pins" — bound to the Recenter button. */
+  recenter(): void {
+    this.updateMarkers(true);
+  }
+
+  updateMarkers(forceFit = false): void {
     if (!this.map) return;
 
-    this.markersLayer.clearLayers();
+    this.markersMap.forEach(m => m.remove());
     this.markersMap.clear();
 
     const filtered = this.filteredLocations;
-    const bounds: L.LatLngExpression[] = [];
+    const bounds = new mapboxgl.LngLatBounds();
 
     filtered.forEach(loc => {
-      const lng = loc.coordinates[0];
-      const lat = loc.coordinates[1];
-
-      if (!lat || !lng || isNaN(lat) || isNaN(lng)) return;
+      const ll = tnLngLat(loc.coordinates);
+      if (!ll) return;
+      const [lng, lat] = ll;
 
       const user = this.users.find(u => u.uid === loc.driverId || u.id === loc.driverId);
       const vehicle = this.vehicles.find(v => v.idDriver === loc.driverId);
@@ -105,60 +139,103 @@ export class LiveMapTabComponent implements OnInit, AfterViewInit, OnChanges, On
       const phone = user ? (user.phone || 'N/A') : 'N/A';
       const vehicleType = vehicle ? vehicle.type : 'Delivery Fleet';
 
-      bounds.push([lat, lng]);
+      bounds.extend([lng, lat]);
 
-      const icon = this.createCustomIcon();
-      const marker = L.marker([lat, lng], { icon });
+      const el = makeTruckMarkerEl(vehicleImage(vehicle ? vehicle.type : undefined), { size: 26, live: true });
+      el.addEventListener('click', () => { this.selectedDriver = { ...loc, user, vehicle }; });
 
       const popupContent = `
-        <div class="card bg-dark text-white shadow-lg p-2 border border-secondary">
-          <h6 class="fw-bold mb-1 text-warning">${driverName}</h6>
-          <p class="mb-1 small text-light"><i class="bi bi-truck me-1"></i> ${vehicleType}</p>
-          <p class="mb-1 small text-light"><i class="bi bi-telephone me-1"></i> ${phone}</p>
-          <hr class="my-1 border-secondary"/>
-          <p class="mb-1 fs-8 text-muted">Geohash: <span class="font-monospace text-info">${loc.g || 'N/A'}</span></p>
-          <p class="mb-2 fs-8 text-muted">Provider: ${loc.provider || 'fused'} (${loc.accuracy || 10}m)</p>
-          <button class="btn btn-xs btn-outline-info w-100 rounded-pill py-1 fs-8 fw-semibold" onclick="window.open('/analytics/driver-details?id=${loc.driverId}', '_blank')">
+        <div class="map-driver-popup">
+          <img class="map-driver-popup__veh" src="${vehicleImage(vehicle ? vehicle.type : undefined)}" alt="" onerror="this.src='assets/trucks/medium.png'">
+          <h6 class="fw-bold mb-1">${driverName}</h6>
+          <p class="mb-1 small"><i class="bi bi-truck me-1"></i> ${vehicleType}</p>
+          <p class="mb-1 small"><i class="bi bi-telephone me-1"></i> ${phone}</p>
+          <hr class="my-1"/>
+          <p class="mb-1 fs-8 muted">Geohash: <span class="font-monospace">${loc.g || 'N/A'}</span></p>
+          <p class="mb-2 fs-8 muted">Provider: ${loc.provider || 'fused'} (${loc.accuracy || 10}m)</p>
+          <button class="map-driver-popup__btn" onclick="window.open('/analytics/driver-details?id=${loc.driverId}', '_blank')">
             <i class="bi bi-box-arrow-up-right me-1"></i> See Details (New Tab)
           </button>
         </div>
       `;
 
-      marker.bindPopup(popupContent);
-      marker.on('click', () => {
-        this.selectedDriver = { ...loc, user, vehicle };
-      });
+      const marker = new mapboxgl.Marker({ element: el, anchor: 'center' })
+        .setLngLat([lng, lat])
+        .setPopup(new mapboxgl.Popup({ offset: 16, closeButton: true }).setHTML(popupContent))
+        .addTo(this.map!);
 
-      marker.addTo(this.markersLayer);
       this.markersMap.set(loc.driverId, marker);
     });
 
-    if (bounds.length > 0 && this.map) {
-      this.map.fitBounds(L.latLngBounds(bounds), { padding: [50, 50], maxZoom: 14 });
+    if (!bounds.isEmpty() && (forceFit || this.autoFit)) {
+      this.map.fitBounds(bounds, { padding: 60, maxZoom: 14, duration: 600 });
+    }
+  }
+
+  /** Seconds since this driver last pinged (Infinity when unknown). */
+  ageSec(loc: DriverRTDBLocation): number {
+    return loc.ts ? Math.max(0, Math.floor((Date.now() - loc.ts) / 1000)) : Infinity;
+  }
+
+  private matchesStatus(loc: DriverRTDBLocation): boolean {
+    switch (this.statusFilter) {
+      case 'online':  return !!loc.isOnline;
+      case 'offline': return !loc.isOnline;
+      case 'busy':    return !!loc.isBusy;
+      case 'idle':    return !!loc.isOnline && !loc.isBusy;
+      default:        return true;
     }
   }
 
   get filteredLocations(): DriverRTDBLocation[] {
-    if (!this.searchQuery) return this.driverLocations;
-    const q = this.searchQuery.toLowerCase();
-
-    return this.driverLocations.filter(loc => {
+    const q = this.searchQuery.toLowerCase().trim();
+    const rows = this.driverLocations.filter(loc => {
+      if (this.vehicleTypeFilter !== 'all' && this.vehicleTypeFor(loc.driverId) !== this.vehicleTypeFilter) return false;
+      if (!this.matchesStatus(loc)) return false;
+      if (this.freshnessSec > 0 && this.ageSec(loc) > this.freshnessSec) return false;
+      if (this.maxAccuracy > 0 && (loc.accuracy ?? 9999) > this.maxAccuracy) return false;
+      if (!q) return true;
       const user = this.users.find(u => u.uid === loc.driverId || u.id === loc.driverId);
       const name = user?.name?.toLowerCase() || '';
       const phone = user?.phone || '';
       const geohash = loc.g?.toLowerCase() || '';
-
       return loc.driverId.toLowerCase().includes(q) || name.includes(q) || phone.includes(q) || geohash.includes(q);
+    });
+
+    const nameOf = (loc: DriverRTDBLocation) =>
+      (this.users.find(u => u.uid === loc.driverId || u.id === loc.driverId)?.name || loc.driverId).toLowerCase();
+
+    return rows.sort((a, b) => {
+      switch (this.sortBy) {
+        case 'stale':    return this.ageSec(b) - this.ageSec(a);
+        case 'name':     return nameOf(a).localeCompare(nameOf(b));
+        case 'accuracy': return (a.accuracy ?? 9999) - (b.accuracy ?? 9999);
+        default:         return this.ageSec(a) - this.ageSec(b); // recent first
+      }
     });
   }
 
+  /** Re-run filtering + markers (bound to every filter control). */
+  applyFilters(): void {
+    this.updateMarkers();
+  }
+
+  resetFilters(): void {
+    this.searchQuery = '';
+    this.vehicleTypeFilter = 'all';
+    this.freshnessSec = 0;
+    this.statusFilter = 'any';
+    this.maxAccuracy = 0;
+    this.sortBy = 'recent';
+    this.updateMarkers(true);
+  }
+
   centerOnDriver(loc: DriverRTDBLocation): void {
-    const lng = loc.coordinates[0];
-    const lat = loc.coordinates[1];
-    if (this.map && lat && lng) {
-      this.map.flyTo([lat, lng], 15, { duration: 1.2 });
+    const ll = tnLngLat(loc.coordinates);
+    if (this.map && ll) {
+      this.map.flyTo({ center: ll, zoom: 15, duration: 1200 });
       const marker = this.markersMap.get(loc.driverId);
-      if (marker) marker.openPopup();
+      if (marker && !marker.getPopup()?.isOpen()) marker.togglePopup();
       const user = this.users.find(u => u.uid === loc.driverId || u.id === loc.driverId);
       const vehicle = this.vehicles.find(v => v.idDriver === loc.driverId);
       this.selectedDriver = { ...loc, user, vehicle };

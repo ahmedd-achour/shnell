@@ -1,464 +1,310 @@
 <div class="dispatch-order-container">
-  <!-- Header + workflow steps -->
-  <div class="card border-0 saas-card mb-4 overflow-hidden">
-    <div class="glass-header p-3 p-md-4">
-      <div class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-2 mb-3">
-        <div>
-          <h3 class="mb-1 font-heading fw-bold d-flex align-items-center gap-2">
-            <i class="bi bi-send-plus-fill text-brand"></i> Assign an order
-          </h3>
-          <p class="text-muted small mb-0">
-            Dispatch an order straight to a driver — this creates the order, its stop and an accepted deal in one step.
-          </p>
-        </div>
-      </div>
 
-      <!-- Workflow step indicators -->
-      <div class="workflow-steps-bar pt-3 border-top border-subtle">
-        <div class="step-pill" [class.active]="true">
-          <span class="badge rounded-circle">1</span> Driver
-        </div>
-        <i class="bi bi-chevron-right text-muted fs-8"></i>
-        <div class="step-pill" [class.active]="!!selectedDriverId">
-          <span class="badge rounded-circle">2</span> Route &amp; locations
-        </div>
-        <i class="bi bi-chevron-right text-muted fs-8"></i>
-        <div class="step-pill" [class.active]="!!pickupName && !!dropoffName">
-          <span class="badge rounded-circle">3</span> Order details
-        </div>
-        <i class="bi bi-chevron-right text-muted fs-8"></i>
-        <div class="step-pill" [class.active]="!!selectedDriverId && !!pickupName && !!dropoffName">
-          <span class="badge rounded-circle">4</span> Dispatch
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Success Notification Alert -->
-  <div class="alert alert-success border-0 shadow-lg mb-4 rounded-4 p-4 position-relative bg-success bg-opacity-15 border-start border-4 border-success" *ngIf="successOrderInfo">
-    <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
-      <div>
-        <h5 class="alert-heading text-white fw-bold mb-2 d-flex align-items-center gap-2">
-          <i class="bi bi-check-circle-fill text-success fs-4"></i> Order, Stop & Deal Created Successfully!
-        </h5>
-        <div class="fs-7 text-light d-flex flex-wrap gap-3 mb-2">
-          <div>Order ID: <strong class="font-monospace text-warning bg-dark bg-opacity-50 px-2 py-0.5 rounded">{{ successOrderInfo.orderId }}</strong></div>
-          <div>Stop ID: <strong class="font-monospace text-info bg-dark bg-opacity-50 px-2 py-0.5 rounded">{{ successOrderInfo.stopId }}</strong></div>
-          <div>Deal ID: <strong class="font-monospace text-success bg-dark bg-opacity-50 px-2 py-0.5 rounded">{{ successOrderInfo.dealId }}</strong></div>
-        </div>
-        <div class="fs-7 text-light">
-          Assigned Chauffeur: <strong class="text-white fw-bold">{{ successOrderInfo.driverName }}</strong> |
-          Pickup Distance: <strong class="text-warning fw-bold">{{ successOrderInfo.distanceToPickup }} km</strong> |
-          Order Status: <strong class="badge bg-success">isAcepted: true</strong> |
-          Deal Status: <strong class="badge bg-info text-dark">status: 'accepted'</strong>
-        </div>
-        <small class="d-block text-muted mt-2">
-          Document created in <code class="text-info">orders/{{ successOrderInfo.orderId }}</code>, <code class="text-success">deals/{{ successOrderInfo.dealId }}</code>, <code class="text-warning">stops/{{ successOrderInfo.stopId }}</code>, and driver <code class="text-light">assigned_jobs</code> subcollection.
-        </small>
-      </div>
-      <div class="d-flex gap-2">
-        <button class="btn btn-sm btn-outline-light rounded-pill px-3 fw-semibold" (click)="onInspectDriverClick()">
-          <i class="bi bi-person-badge me-1"></i> Inspect Driver
+  <!-- ================= SUCCESS ================= -->
+  <div class="card saas-card mb-4" *ngIf="successOrderInfo">
+    <div class="card-body p-4 text-center">
+      <div class="success-check mb-3"><i class="bi bi-check-lg"></i></div>
+      <h4 class="font-heading fw-bold mb-1">Order dispatched</h4>
+      <p class="text-muted mb-3">
+        Assigned to <strong>{{ successOrderInfo.driverName }}</strong> ·
+        {{ successOrderInfo.stopIds.length }} stop(s) · pickup {{ successOrderInfo.distanceToPickup }} km away
+      </p>
+      <div class="d-flex flex-wrap gap-2 justify-content-center">
+        <button class="btn btn-sm btn-icon-soft rounded-pill px-3" (click)="onInspectDriverClick()">
+          <i class="bi bi-person-badge me-1"></i> Inspect driver
         </button>
-        <button class="btn btn-sm btn-success rounded-pill px-3 fw-bold" (click)="resetForm()">
-          <i class="bi bi-plus-circle me-1"></i> Dispatch Another Task
+        <button class="btn btn-sm btn-saas-primary rounded-pill px-3" (click)="resetForm()">
+          <i class="bi bi-plus-circle me-1"></i> Assign another
         </button>
       </div>
     </div>
   </div>
 
-  <!-- Error Alert -->
-  <div class="alert alert-danger border-0 shadow-sm mb-4 rounded-3" *ngIf="errorMessage">
-    <i class="bi bi-exclamation-triangle-fill me-2"></i>{{ errorMessage }}
-  </div>
+  <ng-container *ngIf="!successOrderInfo">
+    <!-- ================= HEADER + STEPPER ================= -->
+    <div class="card saas-card mb-4">
+      <div class="p-3 p-md-4">
+        <h3 class="font-heading fw-bold mb-1 d-flex align-items-center gap-2">
+          <i class="bi bi-send-plus-fill text-brand"></i> Assign an order
+        </h3>
+        <p class="text-muted small mb-3">Dispatch an order straight to a driver — creates the order, its stops and an accepted deal.</p>
 
-  <div class="row g-4">
-    <!-- Top Left Column: Target Driver & Customer Selector -->
-    <div class="col-12 col-lg-5 col-xl-4 d-flex flex-column gap-4">
-      <!-- 1. Select Driver Card -->
-      <div class="card border-0 shadow-sm saas-card mb-4">
-        <div class="card-header bg-transparent border-bottom border-subtle p-3 d-flex justify-content-between align-items-center">
-          <h5 class="card-title text-white mb-0 font-heading fs-6 d-flex align-items-center">
-            <i class="bi bi-person-check-fill me-2 text-info fs-5"></i>1. Select Chauffeur to Assign
-          </h5>
-          <span class="badge bg-primary bg-opacity-20 text-primary border border-primary border-opacity-30 rounded-pill px-2.5 py-1">
-            {{ driverUsers.length }} Driver(s)
-          </span>
+        <ol class="stepper">
+          <li *ngFor="let s of steps; let i = index"
+              class="stepper__item"
+              [class.is-active]="currentStep === i + 1"
+              [class.is-done]="currentStep > i + 1"
+              (click)="goToStep(i + 1)">
+            <span class="stepper__dot">
+              <i class="bi bi-check-lg" *ngIf="currentStep > i + 1"></i>
+              <span *ngIf="currentStep <= i + 1">{{ i + 1 }}</span>
+            </span>
+            <span class="stepper__label">{{ s }}</span>
+          </li>
+        </ol>
+      </div>
+    </div>
+
+    <div class="alert alert-danger border-0 shadow-sm mb-4" *ngIf="errorMessage">
+      <i class="bi bi-exclamation-triangle-fill me-2"></i>{{ errorMessage }}
+    </div>
+
+    <!-- ================= STEP 1 · DRIVER ================= -->
+    <div class="card saas-card" [hidden]="currentStep !== 1">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <h6 class="mb-0 fw-bold"><i class="bi bi-person-check-fill me-2 text-brand"></i>Select driver</h6>
+        <span class="status-pill info fs-9">{{ driverUsers.length }} driver(s)</span>
+      </div>
+      <div class="card-body">
+        <div class="input-group input-group-sm mb-3" style="max-width: 420px;">
+          <span class="input-group-text bg-subtle border-subtle text-muted"><i class="bi bi-search"></i></span>
+          <input type="text" class="form-control" placeholder="Search driver by name, phone, email…" [(ngModel)]="driverSearchQuery" />
         </div>
-        <div class="card-body p-3">
-          <!-- Search Driver Filter -->
-          <div class="mb-3">
-            <div class="input-group input-group-sm">
-              <span class="input-group-text border-subtle bg-subtle text-muted"><i class="bi bi-search"></i></span>
-              <input
-                type="text"
-                class="form-control bg-dark text-white border-secondary"
-                placeholder="Search driver by name, phone, email..."
-                [(ngModel)]="driverSearchQuery"
-              />
-            </div>
+
+        <div class="driver-picker">
+          <button type="button" class="driver-item"
+                  *ngFor="let d of filteredDrivers"
+                  [class.is-selected]="(d.uid || d.id) === selectedDriverId"
+                  (click)="selectDriver(d.uid || d.id || '')">
+            <span class="driver-avatar">
+              {{ d.name ? d.name.charAt(0).toUpperCase() : 'D' }}
+              <span [class.online]="isDriverOnline(d.uid || d.id)" class="dot"></span>
+            </span>
+            <span class="flex-grow-1 text-start overflow-hidden">
+              <span class="fw-bold d-block text-truncate">{{ d.name || 'Unnamed driver' }}</span>
+              <span class="fs-9 text-muted d-block text-truncate"><i class="bi bi-telephone me-1"></i>{{ d.phone || d.email || '—' }}</span>
+            </span>
+            <span class="status-pill fs-9" [ngClass]="(d.isBan || d.isBanned) ? 'error' : 'success'">
+              {{ (d.isBan || d.isBanned) ? 'Banned' : 'Active' }}
+            </span>
+            <i class="bi bi-check-circle-fill text-brand ms-1" *ngIf="(d.uid || d.id) === selectedDriverId"></i>
+          </button>
+          <div class="text-center text-muted py-4 fs-8" *ngIf="filteredDrivers.length === 0">
+            <i class="bi bi-person-x fs-4 d-block mb-1 opacity-50"></i>No drivers match your search.
           </div>
+        </div>
 
-          <!-- Drivers List Picker -->
-          <div class="driver-picker-list mb-3 pe-1" style="max-height: 290px; overflow-y: auto;">
-            <div
-              *ngFor="let d of filteredDrivers"
-              class="driver-item p-2.5 px-3 mb-2 border cursor-pointer d-flex align-items-center justify-content-between"
-              [class.active-driver]="(d.uid || d.id) === selectedDriverId"
-              [class.bg-subtle]="(d.uid || d.id) !== selectedDriverId"
-              [class.border-subtle]="(d.uid || d.id) !== selectedDriverId"
-              (click)="selectDriver(d.uid || d.id || '')">
-              <div class="d-flex align-items-center gap-2.5 overflow-hidden me-2">
-                <div class="driver-avatar">
-                  {{ d.name ? d.name.charAt(0).toUpperCase() : 'D' }}
-                  <span [ngClass]="isDriverOnline(d.uid || d.id) ? 'pulse-online' : 'pulse-offline'"></span>
-                </div>
-                <div class="text-truncate">
-                  <div class="fw-bold text-white fs-7 text-truncate">{{ d.name }}</div>
-                  <small class="text-muted fs-8 d-block text-truncate">
-                    <i class="bi bi-telephone me-1"></i>{{ d.phone || d.email }}
-                  </small>
-                </div>
-              </div>
-
-              <div class="d-flex align-items-center gap-1 flex-shrink-0">
-                <span class="badge" [ngClass]="d.isBan || d.isBanned ? 'bg-danger' : 'bg-success bg-opacity-20 text-success border border-success border-opacity-30'">
-                  {{ d.isBan || d.isBanned ? 'Banned' : 'Active' }}
-                </span>
-                <i class="bi bi-check-circle-fill text-primary fs-5 ms-1" *ngIf="(d.uid || d.id) === selectedDriverId"></i>
-              </div>
-            </div>
-
-            <div class="text-center text-muted py-4" *ngIf="filteredDrivers.length === 0">
-              <i class="bi bi-person-x fs-3 d-block mb-1 opacity-50"></i>
-              No drivers match search.
-            </div>
-          </div>
-
-          <!-- Driver Telemetry Info Card -->
-          <div class="p-3 rounded-3 bg-subtle border border-subtle mb-3" *ngIf="selectedDriver">
-            <div class="d-flex justify-content-between align-items-center mb-1.5">
-              <span class="text-muted fs-8">Selected Driver:</span>
-              <strong class="text-white fs-8">{{ selectedDriver.name }}</strong>
-            </div>
-            <div class="d-flex justify-content-between align-items-center mb-1.5">
-              <span class="text-muted fs-8">Vehicle Type:</span>
-              <span class="badge bg-secondary text-uppercase fs-9">{{ vehicleType }}</span>
-            </div>
-            <div class="d-flex justify-content-between align-items-center mb-1.5">
-              <span class="text-muted fs-8">RTDB Status:</span>
-              <span class="badge" [ngClass]="selectedDriverLocation.isOnline ? 'bg-success text-white' : 'bg-secondary'">
-                {{ selectedDriverLocation.isOnline ? 'ONLINE 🟢' : 'DEFAULT ⚪' }}
+        <div class="bg-subtle border border-subtle rounded-3 p-3 mt-3" *ngIf="selectedDriver">
+          <div class="row g-2 fs-8">
+            <div class="col-6 col-md-3"><span class="text-muted d-block fs-9">Driver</span><strong>{{ selectedDriver.name }}</strong></div>
+            <div class="col-6 col-md-3"><span class="text-muted d-block fs-9">Vehicle</span><span class="text-uppercase">{{ vehicleType }}</span></div>
+            <div class="col-6 col-md-3"><span class="text-muted d-block fs-9">Live status</span>
+              <span class="status-pill fs-9" [ngClass]="selectedDriverLocation.isOnline ? 'success' : 'warning'">
+                {{ selectedDriverLocation.isOnline ? 'Online' : 'Offline' }}
               </span>
             </div>
-            <div class="d-flex justify-content-between align-items-center">
-              <span class="text-muted fs-8">Distance to Pickup:</span>
-              <strong class="font-monospace text-warning fs-7">{{ calculatedDistanceToPickup }} km</strong>
-            </div>
-          </div>
-
-          <!-- Customer User ID Selector -->
-          <div>
-            <label class="form-label text-muted fs-8 fw-semibold">Order Customer (<code class="text-info">userID</code>):</label>
-            <select class="form-select form-select-sm bg-dark text-white border-secondary" [(ngModel)]="selectedUserId">
-              <option value="ADMIN_CONSOLE">Console Admin (Default)</option>
-              <option *ngFor="let u of customerUsers" [value]="u.uid || u.id">
-                {{ u.name || 'User' }} ({{ u.email || u.phone }})
-              </option>
-            </select>
+            <div class="col-6 col-md-3"><span class="text-muted d-block fs-9">To pickup</span><strong class="text-brand">{{ calculatedDistanceToPickup }} km</strong></div>
           </div>
         </div>
-      </div>
 
-      <!-- Tunisian Quick Area Selection Card -->
-      <div class="card border-0 shadow-sm saas-card">
-        <div class="card-header bg-transparent border-bottom border-subtle p-3">
-          <h6 class="card-title text-warning mb-0 font-heading fs-7 d-flex align-items-center">
-            <i class="bi bi-compass-fill me-2"></i>Human Admin Quick Area Selection
-          </h6>
-          <small class="text-muted fs-8">1-click area presets for instant location & coordinates setup</small>
-        </div>
-        <div class="card-body p-3">
-          <div class="d-flex flex-wrap gap-2 pe-1" style="max-height: 220px; overflow-y: auto;">
-            <div *ngFor="let area of presetAreas" class="preset-chip-box p-2 rounded-3 bg-subtle border border-subtle w-100 d-flex justify-content-between align-items-center">
-              <div>
-                <strong class="text-white fs-8 d-block">{{ area.name }}</strong>
-                <small class="text-muted fs-9">{{ area.region }} ({{ area.lat }}, {{ area.lng }})</small>
-              </div>
-              <div class="d-flex gap-1 flex-shrink-0">
-                <button type="button" class="btn btn-xs btn-outline-success rounded-pill" (click)="applyPresetArea(area, 'pickup')">
-                  📍 Pickup
-                </button>
-                <button type="button" class="btn btn-xs btn-outline-warning rounded-pill" (click)="applyPresetArea(area, 'dropoff')">
-                  🎯 Dropoff
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
+        <div class="mt-3" style="max-width: 460px;">
+          <label class="form-label fs-8 text-muted">Customer on the order (optional)</label>
 
-    <!-- Top Right Column: Interactive Map -->
-    <div class="col-12 col-lg-7 col-xl-8 d-flex flex-column gap-4">
-      <!-- Human Location Picker Map Card -->
-      <div class="card border-0 shadow-sm saas-card">
-        <div class="card-header bg-transparent border-bottom border-subtle p-3 d-flex flex-wrap justify-content-between align-items-center gap-2">
-          <div>
-            <h5 class="card-title text-white mb-0 font-heading fs-6 d-flex align-items-center">
-              <i class="bi bi-geo-alt-fill me-2 text-success fs-5"></i>2. Interactive Map & Area Picker
-            </h5>
-            <small class="text-muted fs-8">Click map or drag pins to set Pickup 📍 & Dropoff 🎯 areas without manual Lat/Lng typing</small>
-          </div>
-          <div class="btn-group btn-group-sm" role="group">
-            <button
-              type="button"
-              class="btn"
-              [ngClass]="mapSelectTarget === 'pickup' ? 'btn-success fw-bold' : 'btn-outline-secondary'"
-              (click)="mapSelectTarget = 'pickup'">
-              📍 Click Map for Pickup
-            </button>
-            <button
-              type="button"
-              class="btn"
-              [ngClass]="mapSelectTarget === 'dropoff' ? 'btn-warning text-dark fw-bold' : 'btn-outline-secondary'"
-              (click)="mapSelectTarget = 'dropoff'">
-              🎯 Click Map for Dropoff
-            </button>
-          </div>
-        </div>
-        <div class="card-body p-3">
-          <!-- Leaflet Interactive Map -->
-          <div #dispatchMapElement class="dispatch-map-container rounded-3 mb-3 shadow-inner" style="height: 310px; width: 100%; border: 1px solid rgba(255,255,255,0.12);"></div>
-
-          <!-- Pickup & Dropoff Address Autocomplete & Details -->
-          <div class="row g-3">
-            <!-- Pickup Field & Search -->
-            <div class="col-12 col-md-6">
-              <div class="p-3 rounded-3 bg-subtle border border-success border-opacity-50">
-                <label class="form-label text-success fw-bold fs-8 text-uppercase mb-1">
-                  📍 Pickup Area / Location Name (<code class="text-light">namePickUp</code>):
-                </label>
-                <div class="input-group input-group-sm mb-2">
-                  <input
-                    type="text"
-                    class="form-control bg-dark text-white border-secondary"
-                    [(ngModel)]="searchQueryPickup"
-                    placeholder="Search area (e.g. Ariana, Lac 2)..."
-                    (keyup.enter)="searchAddress('pickup')"
-                  />
-                  <button class="btn btn-outline-success" type="button" (click)="searchAddress('pickup')">
-                    <i class="bi bi-search"></i>
-                  </button>
-                </div>
-
-                <!-- Pickup Geocode Search Results -->
-                <div class="list-group list-group-flush mb-2 rounded border border-secondary" *ngIf="geocodePickupResults.length > 0">
-                  <button
-                    *ngFor="let item of geocodePickupResults"
-                    type="button"
-                    class="list-group-item list-group-item-action bg-dark text-white fs-8 py-1"
-                    (click)="selectSearchResult(item, 'pickup')">
-                    <i class="bi bi-geo-alt me-1 text-success"></i>{{ item.display_name }}
-                  </button>
-                </div>
-
-                <input type="text" class="form-control bg-dark text-white border-secondary fw-semibold mb-2 fs-7" [(ngModel)]="pickupName" placeholder="Pickup Address Name" />
-                <div class="d-flex gap-2">
-                  <div class="flex-fill">
-                    <small class="text-muted fs-9 d-block">Lat:</small>
-                    <input type="number" step="0.000001" class="form-control form-control-sm bg-dark text-white border-secondary font-monospace" [(ngModel)]="pickupLat" (change)="updateDeliveryDistance()" />
-                  </div>
-                  <div class="flex-fill">
-                    <small class="text-muted fs-9 d-block">Lng:</small>
-                    <input type="number" step="0.000001" class="form-control form-control-sm bg-dark text-white border-secondary font-monospace" [(ngModel)]="pickupLng" (change)="updateDeliveryDistance()" />
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- Dropoff Field & Search -->
-            <div class="col-12 col-md-6">
-              <div class="p-3 rounded-3 bg-subtle border border-warning border-opacity-50">
-                <label class="form-label text-warning fw-bold fs-8 text-uppercase mb-1">
-                  🎯 Dropoff Destination (<code class="text-light">DropOffData.destinationName</code>):
-                </label>
-                <div class="input-group input-group-sm mb-2">
-                  <input
-                    type="text"
-                    class="form-control bg-dark text-white border-secondary"
-                    [(ngModel)]="searchQueryDropoff"
-                    placeholder="Search destination (e.g. Sousse, Sfax)..."
-                    (keyup.enter)="searchAddress('dropoff')"
-                  />
-                  <button class="btn btn-outline-warning" type="button" (click)="searchAddress('dropoff')">
-                    <i class="bi bi-search"></i>
-                  </button>
-                </div>
-
-                <!-- Dropoff Geocode Search Results -->
-                <div class="list-group list-group-flush mb-2 rounded border border-secondary" *ngIf="geocodeDropoffResults.length > 0">
-                  <button
-                    *ngFor="let item of geocodeDropoffResults"
-                    type="button"
-                    class="list-group-item list-group-item-action bg-dark text-white fs-8 py-1"
-                    (click)="selectSearchResult(item, 'dropoff')">
-                    <i class="bi bi-geo-alt me-1 text-warning"></i>{{ item.display_name }}
-                  </button>
-                </div>
-
-                <input type="text" class="form-control bg-dark text-white border-secondary fw-semibold mb-2 fs-7" [(ngModel)]="dropoffName" placeholder="Dropoff Destination Name" />
-                <div class="d-flex gap-2">
-                  <div class="flex-fill">
-                    <small class="text-muted fs-9 d-block">Lat:</small>
-                    <input type="number" step="0.000001" class="form-control form-control-sm bg-dark text-white border-secondary font-monospace" [(ngModel)]="dropoffLat" (change)="updateDeliveryDistance()" />
-                  </div>
-                  <div class="flex-fill">
-                    <small class="text-muted fs-9 d-block">Lng:</small>
-                    <input type="number" step="0.000001" class="form-control form-control-sm bg-dark text-white border-secondary font-monospace" [(ngModel)]="dropoffLng" (change)="updateDeliveryDistance()" />
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div> <!-- Close Top Right Column -->
-
-    <!-- Bottom Full Width Row: Specs Form -->
-    <div class="col-12">
-      <!-- Order Specifications & Flutter Model Optional Fields Card -->
-      <div class="card border-0 shadow-sm saas-card">
-        <div class="card-header bg-transparent border-bottom border-subtle p-3 d-flex justify-content-between align-items-center">
-          <h5 class="card-title text-white mb-0 font-heading fs-6 d-flex align-items-center">
-            <i class="bi bi-sliders me-2 text-warning fs-5"></i>3. Configure Order Specifications & Equipment
-          </h5>
-          <span class="badge bg-warning text-dark font-monospace fw-bold">PRO & ECO TIER</span>
-        </div>
-        <div class="card-body p-3 p-md-4">
-          <!-- Category Selector (Eco vs Pro) -->
-          <div class="mb-4">
-            <label class="form-label text-white fw-bold fs-8 text-uppercase mb-2">Order Tier & Category:</label>
-            <div class="d-flex gap-3">
-              <label class="flex-fill cursor-pointer">
-                <input type="radio" class="btn-check" name="orderCategory" value="pro" [(ngModel)]="category" id="catPro" />
-                <div class="p-3 rounded-3 border text-center transition-all" [class.border-warning]="category === 'pro'" [class.bg-subtle]="category === 'pro'" [class.border-subtle]="category !== 'pro'">
-                  <div class="fw-bold text-warning fs-6"><i class="bi bi-star-fill me-1"></i> PRO ORDER</div>
-                  <small class="text-muted fs-8 d-block">Premium priority assignment with extra specs</small>
-                </div>
-              </label>
-
-              <label class="flex-fill cursor-pointer">
-                <input type="radio" class="btn-check" name="orderCategory" value="eco" [(ngModel)]="category" id="catEco" />
-                <div class="p-3 rounded-3 border text-center transition-all" [class.border-info]="category === 'eco'" [class.bg-subtle]="category === 'eco'" [class.border-subtle]="category !== 'eco'">
-                  <div class="fw-bold text-info fs-6"><i class="bi bi-leaf-fill me-1"></i> ECO ORDER</div>
-                  <small class="text-muted fs-8 d-block">Standard economy dispatch assignment</small>
-                </div>
-              </label>
-            </div>
+          <!-- selected chip -->
+          <div class="selected-customer" *ngIf="selectedCustomer">
+            <span class="loc-badge loc-badge--stop">{{ selectedCustomer.name ? selectedCustomer.name.charAt(0).toUpperCase() : 'U' }}</span>
+            <span class="flex-grow-1 overflow-hidden">
+              <strong class="d-block text-truncate">{{ selectedCustomer.name || 'User' }}</strong>
+              <span class="fs-9 text-muted d-block text-truncate">{{ selectedCustomer.phone || selectedCustomer.email }} · {{ selectedCustomer.uid || selectedCustomer.id }}</span>
+            </span>
+            <button type="button" class="btn btn-xs text-danger p-1" (click)="selectCustomer(null)" title="Clear"><i class="bi bi-x-circle-fill"></i></button>
           </div>
 
-          <!-- Vehicle, Price, Distance -->
-          <div class="row g-3 mb-4">
-            <div class="col-6 col-md-4">
-              <label class="form-label text-muted fs-8 fw-semibold">Vehicle Type:</label>
-              <select class="form-select fs-7" [(ngModel)]="vehicleType">
-                <option *ngFor="let vt of vehicleTypeList" [value]="vt">{{ vt | titlecase }}</option>
-              </select>
+          <!-- search -->
+          <ng-container *ngIf="!selectedCustomer">
+            <div class="input-group input-group-sm">
+              <span class="input-group-text bg-subtle border-subtle text-muted"><i class="bi bi-search"></i></span>
+              <input type="text" class="form-control" placeholder="Search customer by name, phone, UID…" [(ngModel)]="customerSearch" />
             </div>
-            <div class="col-6 col-md-4">
-              <label class="form-label text-muted fs-8 fw-semibold">Price (TND):</label>
-              <input type="number" class="form-control fw-bold text-success fs-7" [(ngModel)]="price" />
-            </div>
-            <div class="col-6 col-md-4">
-              <label class="form-label text-muted fs-8 fw-semibold">Distance (km):</label>
-              <input type="number" class="form-control fs-7" [(ngModel)]="distance" />
-            </div>
-          </div>
-
-          <!-- Optional Assets Multi-Select Chips (Defaults to []) -->
-          <div class="mb-4">
-            <label class="form-label text-white fw-bold fs-8 text-uppercase mb-1">
-              Optional Assets Equipment (<code class="text-info">optionalAssets</code> - Non-Null Default []):
-            </label>
-            <div class="d-flex flex-wrap gap-2">
-              <button
-                *ngFor="let asset of availableOptionalAssets"
-                type="button"
-                class="btn btn-sm rounded-pill px-3 transition-all"
-                [ngClass]="isAssetSelected(asset) ? 'btn-info text-dark fw-bold' : 'btn-outline-secondary text-light'"
-                (click)="toggleOptionalAsset(asset)">
-                <i class="bi" [ngClass]="isAssetSelected(asset) ? 'bi-check-circle-fill me-1' : 'bi-plus-circle me-1'"></i>
-                {{ asset }}
+            <div class="geo-results" *ngIf="customerSearch.trim().length">
+              <button type="button" class="geo-result" (click)="selectCustomer(null)">
+                <i class="bi bi-terminal me-1 text-muted"></i>Admin console (no customer)
               </button>
+              <button type="button" class="geo-result" *ngFor="let u of filteredCustomers" (click)="selectCustomer(u)">
+                <strong>{{ u.name || 'User' }}</strong>
+                <span class="fs-9 text-muted"> · {{ u.phone || u.email }} · {{ u.uid || u.id }}</span>
+              </button>
+              <div class="geo-result text-muted fs-9" *ngIf="filteredCustomers.length === 0">No customer matches “{{ customerSearch }}”.</div>
             </div>
-            <small class="text-muted fs-9 d-block mt-1">If none selected, field is stored as empty array <code class="text-success">[]</code> in Firestore.</small>
-          </div>
+            <div class="fs-9 text-muted mt-1" *ngIf="!customerSearch.trim().length">Leave empty to file the order under the admin console.</div>
+          </ng-container>
+        </div>
 
-          <!-- Budget & Scheduled At (Optional Fields with Non-Null Defaults) -->
-          <div class="row g-3 mb-4">
-            <div class="col-12 col-md-6">
-              <label class="form-label text-muted fs-8 fw-semibold">
-                Optional Budget (<code class="text-info">budget</code> - Defaults to 0):
-              </label>
-              <input type="number" class="form-control bg-dark text-white border-secondary fs-7" [(ngModel)]="budget" placeholder="0" />
-            </div>
-
-            <div class="col-12 col-md-6">
-              <label class="form-label text-muted fs-8 fw-semibold">
-                Schedule At (<code class="text-info">scheduleAt</code> - Defaults to Now):
-              </label>
-              <input type="datetime-local" class="form-control bg-dark text-white border-secondary fs-7" [(ngModel)]="scheduleAt" />
-            </div>
-          </div>
-
-          <!-- Notes Field (Optional Field with Non-Null Default "") -->
-          <div class="mb-4">
-            <label class="form-label text-muted fs-8 fw-semibold">
-              Special Instructions / Notes (<code class="text-info">notes</code> - Defaults to ""):
-            </label>
-            <textarea class="form-control bg-dark text-white border-secondary fs-7" rows="2" [(ngModel)]="notes" placeholder="Enter special instructions or leave blank..."></textarea>
-          </div>
-
-          <!-- Pre-Dispatch Live Summary Box -->
-          <div class="summary-preview-card p-3 mb-4">
-            <div class="d-flex align-items-center justify-content-between mb-2">
-              <h6 class="text-info fw-bold mb-0 fs-8 d-flex align-items-center gap-1.5">
-                <i class="bi bi-shield-check"></i> LIVE DISPATCH PREVIEW & SUMMARY
-              </h6>
-              <span class="badge bg-success bg-opacity-20 text-success border border-success border-opacity-30 fs-9">AUTO DEAL & ORDER ACCEPTANCE</span>
-            </div>
-            <div class="row g-2 text-light fs-8">
-              <div class="col-6 col-md-3">
-                <span class="text-muted d-block fs-9">Chauffeur:</span>
-                <strong class="text-white">{{ selectedDriver?.name || 'Not Selected' }}</strong>
-              </div>
-              <div class="col-6 col-md-3">
-                <span class="text-muted d-block fs-9">Price & Distance:</span>
-                <strong class="text-success">{{ price }} TND</strong> ({{ distance }} km)
-              </div>
-              <div class="col-6 col-md-3">
-                <span class="text-muted d-block fs-9">Order Status:</span>
-                <span class="badge bg-success">isAcepted: true</span>
-              </div>
-              <div class="col-6 col-md-3">
-                <span class="text-muted d-block fs-9">Deals Collection Record:</span>
-                <span class="badge bg-info text-dark">status: 'accepted'</span>
-              </div>
-            </div>
-          </div>
-
-          <!-- Submit Dispatch Button -->
-          <button
-            class="btn btn-saas-primary w-100 rounded-pill py-3 fw-bold fs-6 shadow"
-            [disabled]="isSubmitting || !selectedDriverId || !pickupName || !dropoffName"
-            (click)="createAndAssignOrder()">
-            <span *ngIf="isSubmitting" class="spinner-border spinner-border-sm me-2" role="status"></span>
-            <i class="bi bi-send-check-fill me-2" *ngIf="!isSubmitting"></i>
-            {{ isSubmitting ? 'DISPATCHING ORDER & CREATING DEAL RECORD...' : 'DISPATCH ORDER & CREATE ACCEPTED DEAL' }}
+        <div class="d-flex justify-content-end mt-4">
+          <button class="btn btn-sm btn-saas-primary rounded-pill px-4" [disabled]="!canLeave(1)" (click)="next()">
+            Next <i class="bi bi-arrow-right ms-1"></i>
           </button>
         </div>
       </div>
     </div>
-  </div>
+
+    <!-- ================= STEP 2 · ROUTE & STOPS ================= -->
+    <div class="card saas-card" [hidden]="currentStep !== 2">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <h6 class="mb-0 fw-bold"><i class="bi bi-geo-alt-fill me-2 text-brand"></i>Route &amp; stops</h6>
+        <span class="fs-9 text-muted">Total route ≈ <strong class="text-brand">{{ distance }} km</strong></span>
+      </div>
+      <div class="card-body p-0">
+        <div class="row g-0">
+          
+          <!-- LEFT SIDE: MAP -->
+          <div class="col-lg-6 border-end border-subtle">
+            <div #dispatchMapElement class="dispatch-map w-100" style="height: 600px; border: none; border-bottom-left-radius: var(--sh-r-md);"></div>
+          </div>
+
+          <!-- RIGHT SIDE: FORMS -->
+          <div class="col-lg-6 p-4" style="max-height: 600px; overflow-y: auto;">
+            <div class="map-hint fs-9 mb-3">
+              <i class="bi bi-hand-index-thumb me-1"></i>
+              Click the map to place <strong>{{ locTarget.kind === 'pickup' ? 'the pickup' : ('stop ' + (locTarget.index + 1)) }}</strong>, or drag any pin.
+            </div>
+
+            <!-- Pickup -->
+            <div class="loc-card" [class.is-armed]="isArmed({ kind: 'pickup' })">
+              <div class="loc-card__head">
+                <span class="loc-badge loc-badge--pickup">A</span>
+                <strong class="flex-grow-1">Pickup</strong>
+                <button type="button" class="btn btn-xs btn-icon-soft rounded-pill px-2" (click)="armTarget({ kind: 'pickup' })">
+                  <i class="bi bi-geo-alt"></i> Place on map
+                </button>
+              </div>
+              <div class="input-group input-group-sm mt-2">
+                <input type="text" class="form-control" placeholder="Search address…" [(ngModel)]="pickupSearch" (keyup.enter)="searchAddress('pickup')" />
+                <button class="btn btn-icon-soft" type="button" (click)="searchAddress('pickup')"><i class="bi bi-search"></i></button>
+              </div>
+              <div class="geo-results" *ngIf="pickupResults.length">
+                <button type="button" class="geo-result" *ngFor="let r of pickupResults" (click)="pickResult(r, 'pickup')">
+                  <i class="bi bi-geo-alt me-1 text-brand"></i>{{ r.display_name }}
+                </button>
+              </div>
+              <input type="text" class="form-control form-control-sm mt-2" [(ngModel)]="pickupName" placeholder="Pickup name" />
+              <div class="d-flex gap-2 mt-2">
+                <input type="number" step="0.000001" class="form-control form-control-sm font-monospace" [(ngModel)]="pickupLat" (change)="recalcDistance()" placeholder="lat" />
+                <input type="number" step="0.000001" class="form-control form-control-sm font-monospace" [(ngModel)]="pickupLng" (change)="recalcDistance()" placeholder="lng" />
+              </div>
+            </div>
+
+            <!-- Stops -->
+            <div class="loc-card mt-3" *ngFor="let s of stops; let i = index" [class.is-armed]="isArmed({ kind: 'stop', index: i })">
+              <div class="loc-card__head">
+                <span class="loc-badge loc-badge--stop">{{ i + 1 }}</span>
+                <strong class="flex-grow-1">Stop {{ i + 1 }}</strong>
+                <button type="button" class="btn btn-xs btn-icon-soft rounded-pill px-2" (click)="armTarget({ kind: 'stop', index: i })">
+                  <i class="bi bi-geo-alt"></i> Place on map
+                </button>
+                <button type="button" class="btn btn-xs text-danger p-1" *ngIf="stops.length > 1" (click)="removeStop(i)" title="Remove stop">
+                  <i class="bi bi-x-circle-fill"></i>
+                </button>
+              </div>
+              <div class="input-group input-group-sm mt-2">
+                <input type="text" class="form-control" placeholder="Search address…" [(ngModel)]="s.searchQuery" (keyup.enter)="searchAddress('stop', i)" />
+                <button class="btn btn-icon-soft" type="button" (click)="searchAddress('stop', i)"><i class="bi bi-search"></i></button>
+              </div>
+              <div class="geo-results" *ngIf="s.results.length">
+                <button type="button" class="geo-result" *ngFor="let r of s.results" (click)="pickResult(r, 'stop', i)">
+                  <i class="bi bi-geo-alt me-1 text-brand"></i>{{ r.display_name }}
+                </button>
+              </div>
+              <input type="text" class="form-control form-control-sm mt-2" [(ngModel)]="s.name" placeholder="Stop name" />
+              <div class="d-flex gap-2 mt-2">
+                <input type="number" step="0.000001" class="form-control form-control-sm font-monospace" [(ngModel)]="s.lat" (change)="recalcDistance()" placeholder="lat" />
+                <input type="number" step="0.000001" class="form-control form-control-sm font-monospace" [(ngModel)]="s.lng" (change)="recalcDistance()" placeholder="lng" />
+              </div>
+              <div class="input-group input-group-sm mt-2">
+                <span class="input-group-text bg-subtle border-subtle text-muted"><i class="bi bi-telephone"></i></span>
+                <input type="tel" class="form-control" placeholder="Contact phone for this stop (optional)" [(ngModel)]="s.phone" />
+              </div>
+            </div>
+
+            <button type="button" class="btn btn-sm btn-icon-soft rounded-pill px-3 mt-3" (click)="addStop()">
+              <i class="bi bi-plus-lg me-1"></i> Add stop
+            </button>
+
+            <div class="d-flex justify-content-between mt-4">
+              <button class="btn btn-sm btn-icon-soft rounded-pill px-4" (click)="prev()"><i class="bi bi-arrow-left me-1"></i> Back</button>
+              <button class="btn btn-sm btn-saas-primary rounded-pill px-4" [disabled]="!canLeave(2)" (click)="next()">Next <i class="bi bi-arrow-right ms-1"></i></button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ================= STEP 3 · DETAILS ================= -->
+    <div class="card saas-card" [hidden]="currentStep !== 3">
+      <div class="card-header"><h6 class="mb-0 fw-bold"><i class="bi bi-sliders me-2 text-brand"></i>Order details</h6></div>
+      <div class="card-body">
+        <div class="row g-3 mb-3">
+          <div class="col-6 col-md-4">
+            <label class="form-label fs-8 text-muted">Vehicle type</label>
+            <select class="form-select form-select-sm" [(ngModel)]="vehicleType">
+              <option *ngFor="let vt of vehicleTypeList" [value]="vt">{{ vt | titlecase }}</option>
+            </select>
+          </div>
+          <div class="col-6 col-md-4">
+            <label class="form-label fs-8 text-muted">Price (TND)</label>
+            <input type="number" class="form-control form-control-sm fw-bold text-success" [(ngModel)]="price" />
+          </div>
+          <div class="col-6 col-md-4">
+            <label class="form-label fs-8 text-muted">Distance (km) · from route</label>
+            <input type="number" class="form-control form-control-sm" [(ngModel)]="distance" />
+          </div>
+          <div class="col-6 col-md-4">
+            <label class="form-label fs-8 text-muted">Schedule at (optional)</label>
+            <input type="datetime-local" class="form-control form-control-sm" [(ngModel)]="scheduleAt" />
+          </div>
+          <div class="col-6 col-md-4">
+            <label class="form-label fs-8 text-muted">Budget (optional)</label>
+            <input type="number" class="form-control form-control-sm" [(ngModel)]="budget" placeholder="0" />
+          </div>
+        </div>
+
+
+
+        <label class="form-label fs-8 text-muted">Notes (optional)</label>
+        <textarea class="form-control form-control-sm" rows="2" [(ngModel)]="notes" placeholder="Special instructions…"></textarea>
+
+        <div class="d-flex justify-content-between mt-4">
+          <button class="btn btn-sm btn-icon-soft rounded-pill px-4" (click)="prev()"><i class="bi bi-arrow-left me-1"></i> Back</button>
+          <button class="btn btn-sm btn-saas-primary rounded-pill px-4" (click)="next()">Review <i class="bi bi-arrow-right ms-1"></i></button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ================= STEP 4 · REVIEW ================= -->
+    <div class="card saas-card" [hidden]="currentStep !== 4">
+      <div class="card-header"><h6 class="mb-0 fw-bold"><i class="bi bi-clipboard-check me-2 text-brand"></i>Review &amp; dispatch</h6></div>
+      <div class="card-body">
+        <div class="review-grid">
+          <div><span class="fs-9 text-muted d-block">Driver</span><strong>{{ selectedDriver?.name || '—' }}</strong></div>
+          <div><span class="fs-9 text-muted d-block">Vehicle</span><strong class="text-uppercase">{{ vehicleType }}</strong></div>
+          <div><span class="fs-9 text-muted d-block">Price</span><strong class="text-success">{{ price }} TND</strong></div>
+          <div><span class="fs-9 text-muted d-block">Route distance</span><strong>{{ distance }} km</strong></div>
+          <div><span class="fs-9 text-muted d-block">Schedule</span><strong>{{ scheduleAt ? (scheduleAt | date:'short') : 'Now' }}</strong></div>
+          <div><span class="fs-9 text-muted d-block">Category</span><strong>eco</strong></div>
+        </div>
+
+        <div class="route-review mt-3">
+          <div class="route-review__row"><span class="loc-badge loc-badge--pickup">A</span><span>{{ pickupName }}</span></div>
+          <div class="route-review__row" *ngFor="let s of stops; let i = index">
+            <span class="loc-badge loc-badge--stop">{{ i + 1 }}</span>
+            <span>{{ s.name }}<span class="fs-9 text-muted" *ngIf="s.phone"> · {{ s.phone }}</span></span>
+          </div>
+        </div>
+
+        <p class="fs-9 text-muted mt-3 mb-0">
+          <i class="bi bi-info-circle me-1"></i>
+          Marked <code>isAdministrative: true</code> — the driver app hides in-app call / video for this order.
+        </p>
+
+        <div class="d-flex justify-content-between mt-4">
+          <button class="btn btn-sm btn-icon-soft rounded-pill px-4" (click)="prev()"><i class="bi bi-arrow-left me-1"></i> Back</button>
+          <button class="btn btn-saas-primary rounded-pill px-4 fw-bold" [disabled]="!canDispatch" (click)="createAndAssignOrder()">
+            <span *ngIf="isSubmitting" class="spinner-border spinner-border-sm me-2"></span>
+            <i class="bi bi-send-check-fill me-2" *ngIf="!isSubmitting"></i>
+            {{ isSubmitting ? 'Dispatching…' : 'Dispatch order' }}
+          </button>
+        </div>
+      </div>
+    </div>
+  </ng-container>
 </div>

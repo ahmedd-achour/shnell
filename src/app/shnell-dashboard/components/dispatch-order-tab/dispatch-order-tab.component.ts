@@ -2,17 +2,26 @@ import { Component, Input, Output, EventEmitter, OnInit, AfterViewInit, OnDestro
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Firestore, collection, addDoc, doc, setDoc, serverTimestamp, Timestamp } from '@angular/fire/firestore';
-import * as L from 'leaflet';
+import mapboxgl from 'mapbox-gl';
 import { ShnellUser, Vehicle, DriverRTDBLocation } from '../../models/dashboard.models';
+import {
+  MAPBOX_TOKEN, MAPBOX_STYLE_STREET, makePinEl, tnLngLat,
+  mapboxForwardGeocode, mapboxReverseGeocode,
+} from '../../../shared/mapbox';
 import { CrossTabSyncService } from '../../../services/cross-tab-sync.service';
 import { NotificationService } from '../../services/notification.service';
+import { toastSuccess, toastError } from '../../../shared/swal';
 
-export interface AreaPreset {
+interface StopRow {
   name: string;
   lat: number;
   lng: number;
-  region: string;
+  phone: string;          // optional -> written as receiverPhone
+  searchQuery: string;
+  results: any[];
 }
+
+type LocTarget = { kind: 'pickup' } | { kind: 'stop'; index: number };
 
 @Component({
   selector: 'app-dispatch-order-tab',
@@ -31,82 +40,52 @@ export class DispatchOrderTabComponent implements OnInit, AfterViewInit, OnDestr
 
   @ViewChild('dispatchMapElement') mapElementRef!: ElementRef<HTMLDivElement>;
 
-  // Form Model State (Flutter Orders model identical structure)
-  selectedUserId: string = 'ADMIN_CONSOLE';
-  selectedDriverId: string = '';
-  category: 'eco' | 'pro' = 'pro';
-  vehicleType: string = 'camion';
+  readonly steps = ['Driver', 'Route & stops', 'Order details', 'Review'];
+  currentStep = 1;
 
-  // Pickup Specs
-  pickupName: string = 'Avenue Habib Bourguiba, Tunis';
-  pickupLat: number = 36.8065;
-  pickupLng: number = 10.1815;
-
-  // Dropoff Specs
-  dropoffName: string = 'Les Berges du Lac 2, Tunis';
-  dropoffLat: number = 36.8350;
-  dropoffLng: number = 10.2400;
-
-  // Additional Flutter Model Specs
+  // Order model
+  selectedUserId = 'ADMIN_CONSOLE';
+  customerSearch = '';
+  selectedDriverId = '';
+  vehicleType = 'camion';
   price: number = 45;
-  distance: number = 8.5;
-  isAcepted: boolean = true;
-  scheduleAt: string | null = null; // datetime-local input string
-
-  // Optional fields (Saved with non-null defaults in Firestore when unset)
-  selectedOptionalAssets: string[] = [];
+  distance: number = 0;
+  scheduleAt: string | null = null;
   budget: number | null = null;
   notes: string | null = null;
+  selectedOptionalAssets: string[] = [];
 
-  // Step Stepper Workflow State (Wizard Stepper Architecture)
-  currentStep: number = 1; // 1: Chauffeur & Customer, 2: Locations & Map, 3: Specs & Equipment, 4: Review & Dispatch
+  // Pickup
+  pickupName = 'Avenue Habib Bourguiba, Tunis';
+  pickupLat = 36.8065;
+  pickupLng = 10.1815;
+  pickupSearch = '';
+  pickupResults: any[] = [];
 
-  // Map & Location Picker state
-  mapSelectTarget: 'pickup' | 'dropoff' = 'pickup';
-  isSearchingGeocode: boolean = false;
-  searchQueryPickup: string = '';
-  searchQueryDropoff: string = '';
-  geocodePickupResults: any[] = [];
-  geocodeDropoffResults: any[] = [];
-
-  private map: L.Map | null = null;
-  private pickupMarker: L.Marker | null = null;
-  private dropoffMarker: L.Marker | null = null;
-  private routePolyline: L.Polyline | null = null;
-  private driverMarker: L.Marker | null = null;
-
-  // Preset Tunisian Areas for rapid 1-click human admin assignment
-  presetAreas: AreaPreset[] = [
-    { name: 'Avenue Habib Bourguiba, Tunis', lat: 36.8065, lng: 10.1815, region: 'Tunis Centre' },
-    { name: 'Les Berges du Lac 1, Tunis', lat: 36.8300, lng: 10.2250, region: 'Tunis Lac' },
-    { name: 'Les Berges du Lac 2, Tunis', lat: 36.8350, lng: 10.2400, region: 'Tunis Lac' },
-    { name: 'La Marsa, Tunis', lat: 36.8782, lng: 10.3247, region: 'Banlieue Nord' },
-    { name: 'Ennasr 2, Ariana', lat: 36.8570, lng: 10.1580, region: 'Ariana' },
-    { name: 'El Ghazala Technopark, Ariana', lat: 36.8940, lng: 10.1870, region: 'Ariana' },
-    { name: 'Zone Industrielle Megrine, Ben Arous', lat: 36.7720, lng: 10.2310, region: 'Ben Arous' },
-    { name: 'Sousse Centre Ville', lat: 35.8256, lng: 10.6411, region: 'Sousse' },
-    { name: 'Port El Kantaoui, Sousse', lat: 35.8942, lng: 10.5973, region: 'Sousse' },
-    { name: 'Sfax Ville', lat: 34.7406, lng: 10.7603, region: 'Sfax' },
-    { name: 'Hammamet Sud, Nabeul', lat: 36.3860, lng: 10.5730, region: 'Nabeul' },
-    { name: 'Bizerte Centre', lat: 37.2746, lng: 9.8739, region: 'Bizerte' },
-    { name: 'Monastir Marina', lat: 35.7770, lng: 10.8260, region: 'Monastir' }
+  // Stops (>=1)
+  stops: StopRow[] = [
+    { name: 'Les Berges du Lac 2, Tunis', lat: 36.8350, lng: 10.2400, phone: '', searchQuery: '', results: [] }
   ];
+
+  // Which location the next map click places
+  locTarget: LocTarget = { kind: 'pickup' };
+  isSearchingGeocode = false;
+
+  private map: mapboxgl.Map | null = null;
+  private mapLoaded = false;
+  private pickupMarker: mapboxgl.Marker | null = null;
+  private stopMarkers: mapboxgl.Marker[] = [];
+  private driverMarker: mapboxgl.Marker | null = null;
 
   availableOptionalAssets: string[] = [
-    'Heavy Straps',
-    'Moving Blankets',
-    'Hand Truck / Trolley',
-    'Extra Helper / Loader',
-    'Packaging Boxes',
-    'Disassembly Tools'
+    'Heavy Straps', 'Moving Blankets', 'Hand Truck / Trolley',
+    'Extra Helper / Loader', 'Packaging Boxes', 'Disassembly Tools'
   ];
-
   vehicleTypeList: string[] = ['super_light', 'light', 'medium', 'medium_heavy', 'heavy', 'super_heavy', 'popular'];
 
-  // Driver Search & UI state
-  driverSearchQuery: string = '';
-  isSubmitting: boolean = false;
-  successOrderInfo: { orderId: string; driverName: string; distanceToPickup: number; stopId: string; dealId: string } | null = null;
+  driverSearchQuery = '';
+  isSubmitting = false;
+  successOrderInfo: { orderId: string; driverName: string; distanceToPickup: number; stopIds: string[]; dealId: string } | null = null;
   errorMessage: string | null = null;
 
   constructor(
@@ -117,466 +96,401 @@ export class DispatchOrderTabComponent implements OnInit, AfterViewInit, OnDestr
 
   ngOnInit(): void {
     const firstDriver = this.driverUsers[0];
-    if (firstDriver) {
-      this.selectedDriverId = firstDriver.uid || firstDriver.id || '';
-    }
+    if (firstDriver) this.selectedDriverId = firstDriver.uid || firstDriver.id || '';
+    this.recalcDistance();
   }
 
   ngAfterViewInit(): void {
-    setTimeout(() => {
-      this.initLeafletMap();
-    }, 150);
+    setTimeout(() => this.initMap(), 150);
   }
 
   ngOnDestroy(): void {
-    if (this.map) {
-      this.map.remove();
-      this.map = null;
-    }
+    if (this.map) { this.map.remove(); this.map = null; }
   }
 
-  get driverUsers(): ShnellUser[] {
-    return this.users.filter(u => u.role === 'driver');
+  // ---------- Stepper ----------
+  goToStep(n: number): void {
+    if (n < 1 || n > this.steps.length) return;
+    if (n > this.currentStep && !this.canLeave(this.currentStep)) return;
+    this.currentStep = n;
+    if (n === 2) setTimeout(() => { this.map?.resize(); this.drawMap(); }, 150);
+  }
+  next(): void { this.goToStep(this.currentStep + 1); }
+  prev(): void { this.goToStep(this.currentStep - 1); }
+
+  canLeave(step: number): boolean {
+    if (step === 1) return !!this.selectedDriverId;
+    if (step === 2) return !!this.pickupName.trim() && this.stops.every(s => !!s.name.trim());
+    return true;
+  }
+  get canDispatch(): boolean {
+    return !!this.selectedDriverId && !!this.pickupName.trim()
+      && this.stops.length > 0 && this.stops.every(s => !!s.name.trim())
+      && !this.isSubmitting;
   }
 
-  get customerUsers(): ShnellUser[] {
-    return this.users.filter(u => u.role !== 'driver');
+  // ---------- Drivers / customers ----------
+  get driverUsers(): ShnellUser[] { return this.users.filter(u => u.role === 'driver'); }
+  get customerUsers(): ShnellUser[] { return this.users.filter(u => u.role !== 'driver'); }
+
+  /** Searchable customer list — name / phone / uid / email, capped. */
+  get filteredCustomers(): ShnellUser[] {
+    const q = this.customerSearch.toLowerCase().trim();
+    const base = this.customerUsers;
+    if (!q) return base.slice(0, 20);
+    return base.filter(u =>
+      u.name?.toLowerCase().includes(q) || u.phone?.includes(q) ||
+      u.email?.toLowerCase().includes(q) || (u.uid || u.id || '').toLowerCase().includes(q)
+    ).slice(0, 25);
+  }
+  get selectedCustomer(): ShnellUser | undefined {
+    if (!this.selectedUserId || this.selectedUserId === 'ADMIN_CONSOLE') return undefined;
+    return this.users.find(u => (u.uid || u.id) === this.selectedUserId);
+  }
+  selectCustomer(u: ShnellUser | null): void {
+    this.selectedUserId = u ? (u.uid || u.id || 'ADMIN_CONSOLE') : 'ADMIN_CONSOLE';
+    this.customerSearch = '';
   }
 
   get filteredDrivers(): ShnellUser[] {
     const q = this.driverSearchQuery.toLowerCase().trim();
     if (!q) return this.driverUsers;
     return this.driverUsers.filter(d =>
-      d.name?.toLowerCase().includes(q) ||
-      d.phone?.includes(q) ||
-      d.email?.toLowerCase().includes(q) ||
-      (d.uid || d.id || '').toLowerCase().includes(q)
-    );
+      d.name?.toLowerCase().includes(q) || d.phone?.includes(q) ||
+      d.email?.toLowerCase().includes(q) || (d.uid || d.id || '').toLowerCase().includes(q));
   }
-
   get selectedDriver(): ShnellUser | undefined {
     return this.users.find(u => (u.uid || u.id) === this.selectedDriverId);
   }
-
   get selectedDriverVehicle(): Vehicle | undefined {
     if (!this.selectedDriverId) return undefined;
     return this.vehicles.find(v => v.idDriver === this.selectedDriverId);
   }
-
   get selectedDriverLocation(): { lat: number; lng: number; isOnline: boolean } {
-    if (!this.selectedDriverId) {
-      return { lat: 36.8065, lng: 10.1815, isOnline: false };
-    }
     const rtdbLoc = this.driverLocations.find(l => l.driverId === this.selectedDriverId);
-    if (rtdbLoc && rtdbLoc.coordinates && rtdbLoc.coordinates.length >= 2) {
-      return {
-        lat: rtdbLoc.coordinates[1],
-        lng: rtdbLoc.coordinates[0],
-        isOnline: !!rtdbLoc.isOnline
-      };
-    }
+    const ll = tnLngLat(rtdbLoc?.coordinates);
+    if (ll) return { lat: ll[1], lng: ll[0], isOnline: !!rtdbLoc?.isOnline };
     return { lat: 36.8065, lng: 10.1815, isOnline: false };
   }
-
   isDriverOnline(driverId?: string): boolean {
     if (!driverId) return false;
-    const rtdbLoc = this.driverLocations.find(l => l.driverId === driverId);
-    return !!(rtdbLoc && rtdbLoc.isOnline);
-  }
-
-  get calculatedDistanceToPickup(): number {
-    const driverLoc = this.selectedDriverLocation;
-    return this.calculateHaversineDistanceKm(
-      driverLoc.lat,
-      driverLoc.lng,
-      Number(this.pickupLat),
-      Number(this.pickupLng)
-    );
-  }
-
-  calculateHaversineDistanceKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
-    if (!lat1 || !lon1 || !lat2 || !lon2) return 0;
-    const R = 6371; // Earth radius in kilometers
-    const dLat = (lat2 - lat1) * Math.PI / 180;
-    const dLon = (lon2 - lon1) * Math.PI / 180;
-    const a =
-      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-      Math.sin(dLon / 2) * Math.sin(dLon / 2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    return Number((R * c).toFixed(2));
-  }
-
-  // Auto calculate order delivery distance whenever pickup or dropoff changes
-  updateDeliveryDistance(): void {
-    this.distance = this.calculateHaversineDistanceKm(
-      Number(this.pickupLat),
-      Number(this.pickupLng),
-      Number(this.dropoffLat),
-      Number(this.dropoffLng)
-    );
-    this.updateMapElements();
+    return !!this.driverLocations.find(l => l.driverId === driverId && l.isOnline);
   }
 
   selectDriver(driverId: string): void {
     this.selectedDriverId = driverId;
     const v = this.selectedDriverVehicle;
-    if (v && v.type) {
-      this.vehicleType = v.type;
-    }
-    this.updateMapElements();
+    if (v?.type) this.vehicleType = v.type;
+    this.drawMap();
   }
 
-  // --- Leaflet Map Engine ---
-  private initLeafletMap(): void {
+  get calculatedDistanceToPickup(): number {
+    const d = this.selectedDriverLocation;
+    return this.haversine(d.lat, d.lng, Number(this.pickupLat), Number(this.pickupLng));
+  }
+
+  // ---------- Distance ----------
+  haversine(lat1: number, lon1: number, lat2: number, lon2: number): number {
+    if (!lat1 || !lon1 || !lat2 || !lon2) return 0;
+    const R = 6371;
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a = Math.sin(dLat / 2) ** 2 +
+      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon / 2) ** 2;
+    return Number((R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))).toFixed(2));
+  }
+
+  recalcDistance(): void {
+    let total = 0;
+    let prev = { lat: Number(this.pickupLat), lng: Number(this.pickupLng) };
+    for (const s of this.stops) {
+      total += this.haversine(prev.lat, prev.lng, Number(s.lat), Number(s.lng));
+      prev = { lat: Number(s.lat), lng: Number(s.lng) };
+    }
+    this.distance = Number(total.toFixed(2));
+    this.drawMap();
+  }
+
+  // ---------- Stops ----------
+  addStop(): void {
+    const last = this.stops[this.stops.length - 1];
+    this.stops.push({
+      name: '', phone: '', searchQuery: '', results: [],
+      lat: last ? last.lat : this.pickupLat,
+      lng: last ? last.lng : this.pickupLng
+    });
+    this.locTarget = { kind: 'stop', index: this.stops.length - 1 };
+  }
+  removeStop(i: number): void {
+    if (this.stops.length <= 1) return;
+    this.stops.splice(i, 1);
+    if (this.locTarget.kind === 'stop' && this.locTarget.index >= this.stops.length) {
+      this.locTarget = { kind: 'pickup' };
+    }
+    this.recalcDistance();
+  }
+  armTarget(t: LocTarget): void { this.locTarget = t; }
+  isArmed(t: LocTarget): boolean {
+    if (t.kind === 'pickup') return this.locTarget.kind === 'pickup';
+    return this.locTarget.kind === 'stop' && this.locTarget.index === t.index;
+  }
+
+  // ---------- Map (Mapbox GL) ----------
+  private initMap(): void {
     if (!this.mapElementRef?.nativeElement) return;
 
-    this.map = L.map(this.mapElementRef.nativeElement, {
-      center: [36.8150, 10.2100],
-      zoom: 12,
-      zoomControl: true
+    mapboxgl.accessToken = MAPBOX_TOKEN;
+    this.map = new mapboxgl.Map({
+      container: this.mapElementRef.nativeElement,
+      style: MAPBOX_STYLE_STREET,
+      center: [10.21, 36.815],
+      zoom: 11,
+      attributionControl: false,
+    });
+    this.map.addControl(new mapboxgl.NavigationControl({ showCompass: false }), 'top-right');
+    this.map.addControl(new mapboxgl.AttributionControl({ compact: true }));
+
+    this.map.on('load', () => {
+      this.mapLoaded = true;
+      this.map!.addSource('route', {
+        type: 'geojson',
+        data: { type: 'Feature', properties: {}, geometry: { type: 'LineString', coordinates: [] } },
+      });
+      this.map!.addLayer({
+        id: 'route',
+        type: 'line',
+        source: 'route',
+        layout: { 'line-cap': 'round', 'line-join': 'round' },
+        paint: { 'line-color': '#2563EB', 'line-width': 4, 'line-opacity': 0.85 },
+      });
+      this.map!.resize();
+      this.drawMap();
     });
 
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-      attribution: '&copy; OpenStreetMap contributors &copy; CARTO'
-    }).addTo(this.map);
-
-    // Click map to set active target location (pickup or dropoff)
-    this.map.on('click', (e: L.LeafletMouseEvent) => {
-      const lat = Number(e.latlng.lat.toFixed(6));
-      const lng = Number(e.latlng.lng.toFixed(6));
-
-      if (this.mapSelectTarget === 'pickup') {
-        this.pickupLat = lat;
-        this.pickupLng = lng;
-        this.reverseGeocode(lat, lng, 'pickup');
+    this.map.on('click', (e) => {
+      const lat = Number(e.lngLat.lat.toFixed(6));
+      const lng = Number(e.lngLat.lng.toFixed(6));
+      if (this.locTarget.kind === 'pickup') {
+        this.pickupLat = lat; this.pickupLng = lng;
+        this.reverseGeocode(lat, lng, this.locTarget);
       } else {
-        this.dropoffLat = lat;
-        this.dropoffLng = lng;
-        this.reverseGeocode(lat, lng, 'dropoff');
+        const s = this.stops[this.locTarget.index];
+        if (s) { s.lat = lat; s.lng = lng; this.reverseGeocode(lat, lng, this.locTarget); }
       }
-      this.updateDeliveryDistance();
+      this.recalcDistance();
     });
-
-    this.updateMapElements();
   }
 
-  private updateMapElements(): void {
-    if (!this.map) return;
+  private drawMap(): void {
+    if (!this.map || !this.mapLoaded) return;
 
-    // 1. Pickup Marker
-    const pickupIcon = L.divIcon({
-      className: 'custom-leaflet-marker pickup-marker',
-      html: `<div style="background:#10b981; color:white; padding:6px 10px; border-radius:20px; font-weight:bold; font-size:12px; box-shadow:0 3px 8px rgba(0,0,0,0.4); border:2px solid white;">📍 Pickup</div>`,
-      iconSize: [80, 32],
-      iconAnchor: [40, 16]
-    });
-
-    if (this.pickupMarker) {
-      this.pickupMarker.setLatLng([this.pickupLat, this.pickupLng]);
-    } else {
-      this.pickupMarker = L.marker([this.pickupLat, this.pickupLng], { icon: pickupIcon, draggable: true }).addTo(this.map);
-      this.pickupMarker.on('dragend', (e: any) => {
-        const pos = e.target.getLatLng();
-        this.pickupLat = Number(pos.lat.toFixed(6));
-        this.pickupLng = Number(pos.lng.toFixed(6));
-        this.reverseGeocode(this.pickupLat, this.pickupLng, 'pickup');
-        this.updateDeliveryDistance();
+    // pickup
+    if (this.pickupMarker) this.pickupMarker.setLngLat([this.pickupLng, this.pickupLat]);
+    else {
+      this.pickupMarker = new mapboxgl.Marker({ element: makePinEl('A', '#0E7A5F', 30), draggable: true, anchor: 'bottom' })
+        .setLngLat([this.pickupLng, this.pickupLat])
+        .addTo(this.map);
+      this.pickupMarker.on('dragend', () => {
+        const p = this.pickupMarker!.getLngLat();
+        this.pickupLat = Number(p.lat.toFixed(6));
+        this.pickupLng = Number(p.lng.toFixed(6));
+        this.reverseGeocode(this.pickupLat, this.pickupLng, { kind: 'pickup' });
+        this.recalcDistance();
       });
     }
 
-    // 2. Dropoff Marker
-    const dropoffIcon = L.divIcon({
-      className: 'custom-leaflet-marker dropoff-marker',
-      html: `<div style="background:#f59e0b; color:white; padding:6px 10px; border-radius:20px; font-weight:bold; font-size:12px; box-shadow:0 3px 8px rgba(0,0,0,0.4); border:2px solid white;">🎯 Dropoff</div>`,
-      iconSize: [80, 32],
-      iconAnchor: [40, 16]
+    // stops — rebuild markers to keep numbering correct
+    this.stopMarkers.forEach(m => m.remove());
+    this.stopMarkers = this.stops.map((s, i) => {
+      const m = new mapboxgl.Marker({ element: makePinEl(String(i + 1), '#FFA000', 28), draggable: true, anchor: 'bottom' })
+        .setLngLat([s.lng, s.lat])
+        .addTo(this.map!);
+      m.on('dragend', () => {
+        const p = m.getLngLat();
+        s.lat = Number(p.lat.toFixed(6));
+        s.lng = Number(p.lng.toFixed(6));
+        this.reverseGeocode(s.lat, s.lng, { kind: 'stop', index: i });
+        this.recalcDistance();
+      });
+      return m;
     });
 
-    if (this.dropoffMarker) {
-      this.dropoffMarker.setLatLng([this.dropoffLat, this.dropoffLng]);
-    } else {
-      this.dropoffMarker = L.marker([this.dropoffLat, this.dropoffLng], { icon: dropoffIcon, draggable: true }).addTo(this.map);
-      this.dropoffMarker.on('dragend', (e: any) => {
-        const pos = e.target.getLatLng();
-        this.dropoffLat = Number(pos.lat.toFixed(6));
-        this.dropoffLng = Number(pos.lng.toFixed(6));
-        this.reverseGeocode(this.dropoffLat, this.dropoffLng, 'dropoff');
-        this.updateDeliveryDistance();
-      });
-    }
-
-    // 3. Polyline between pickup and dropoff
-    const latlngs: L.LatLngExpression[] = [
-      [this.pickupLat, this.pickupLng],
-      [this.dropoffLat, this.dropoffLng]
+    // route
+    const coords: [number, number][] = [
+      [this.pickupLng, this.pickupLat],
+      ...this.stops.map(s => [s.lng, s.lat] as [number, number]),
     ];
+    const src = this.map.getSource('route') as mapboxgl.GeoJSONSource | undefined;
+    src?.setData({ type: 'Feature', properties: {}, geometry: { type: 'LineString', coordinates: coords } });
 
-    if (this.routePolyline) {
-      this.routePolyline.setLatLngs(latlngs);
-    } else {
-      this.routePolyline = L.polyline(latlngs, { color: '#3b82f6', weight: 4, dashArray: '6, 8', opacity: 0.8 }).addTo(this.map);
-    }
+    // driver
+    const d = this.selectedDriverLocation;
+    if (this.driverMarker) this.driverMarker.setLngLat([d.lng, d.lat]);
+    else this.driverMarker = new mapboxgl.Marker({ element: makePinEl('🚚', '#1D4ED8', 32), anchor: 'bottom' })
+      .setLngLat([d.lng, d.lat])
+      .addTo(this.map);
 
-    // 4. Driver Marker if selected
-    const dLoc = this.selectedDriverLocation;
-    if (dLoc) {
-      const driverIcon = L.divIcon({
-        className: 'custom-leaflet-marker driver-marker',
-        html: `<div style="background:#6366f1; color:white; padding:4px 8px; border-radius:16px; font-weight:bold; font-size:11px; box-shadow:0 2px 6px rgba(0,0,0,0.4); border:2px solid white;">🚚 ${this.selectedDriver?.name || 'Driver'}</div>`,
-        iconSize: [90, 28],
-        iconAnchor: [45, 14]
-      });
-
-      if (this.driverMarker) {
-        this.driverMarker.setLatLng([dLoc.lat, dLoc.lng]);
-      } else {
-        this.driverMarker = L.marker([dLoc.lat, dLoc.lng], { icon: driverIcon }).addTo(this.map);
-      }
-    }
+    try {
+      const b = new mapboxgl.LngLatBounds();
+      coords.forEach(c => b.extend(c));
+      b.extend([d.lng, d.lat]);
+      if (!b.isEmpty()) this.map.fitBounds(b, { padding: 70, animate: false, maxZoom: 15 });
+    } catch { /* single point */ }
   }
 
-  // --- Human Area & Geocoding Helpers ---
-  applyPresetArea(area: AreaPreset, target: 'pickup' | 'dropoff'): void {
-    if (target === 'pickup') {
-      this.pickupName = area.name;
-      this.pickupLat = area.lat;
-      this.pickupLng = area.lng;
-    } else {
-      this.dropoffName = area.name;
-      this.dropoffLat = area.lat;
-      this.dropoffLng = area.lng;
-    }
-
-    if (this.map) {
-      this.map.panTo([area.lat, area.lng]);
-    }
-    this.updateDeliveryDistance();
-  }
-
-  async searchAddress(target: 'pickup' | 'dropoff'): Promise<void> {
-    const query = target === 'pickup' ? this.searchQueryPickup : this.searchQueryDropoff;
-    if (!query || query.trim().length < 3) return;
-
+  // ---------- Geocoding (Mapbox) ----------
+  async searchAddress(kind: 'pickup' | 'stop', index = 0): Promise<void> {
+    const q = kind === 'pickup' ? this.pickupSearch : this.stops[index]?.searchQuery;
+    if (!q || q.trim().length < 3) return;
     this.isSearchingGeocode = true;
     try {
-      const resp = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5`);
-      const data = await resp.json();
-      if (target === 'pickup') {
-        this.geocodePickupResults = data;
-      } else {
-        this.geocodeDropoffResults = data;
-      }
+      const data = await mapboxForwardGeocode(q, 5);
+      if (kind === 'pickup') this.pickupResults = data;
+      else if (this.stops[index]) this.stops[index].results = data;
     } catch (e) {
-      console.warn('Geocoding search failed:', e);
+      console.warn('Geocoding failed:', e);
     } finally {
       this.isSearchingGeocode = false;
     }
   }
 
-  selectSearchResult(item: any, target: 'pickup' | 'dropoff'): void {
+  pickResult(item: any, kind: 'pickup' | 'stop', index = 0): void {
     const lat = Number(parseFloat(item.lat).toFixed(6));
     const lng = Number(parseFloat(item.lon).toFixed(6));
-    const name = item.display_name.split(',').slice(0, 3).join(', ');
-
-    if (target === 'pickup') {
-      this.pickupName = name;
-      this.pickupLat = lat;
-      this.pickupLng = lng;
-      this.geocodePickupResults = [];
-      this.searchQueryPickup = '';
-    } else {
-      this.dropoffName = name;
-      this.dropoffLat = lat;
-      this.dropoffLng = lng;
-      this.geocodeDropoffResults = [];
-      this.searchQueryDropoff = '';
+    const name = String(item.display_name).split(',').slice(0, 3).join(', ');
+    if (kind === 'pickup') {
+      this.pickupName = name; this.pickupLat = lat; this.pickupLng = lng;
+      this.pickupResults = []; this.pickupSearch = '';
+    } else if (this.stops[index]) {
+      const s = this.stops[index];
+      s.name = name; s.lat = lat; s.lng = lng; s.results = []; s.searchQuery = '';
     }
-
-    if (this.map) {
-      this.map.panTo([lat, lng]);
-    }
-    this.updateDeliveryDistance();
+    this.map?.panTo([lng, lat]);
+    this.recalcDistance();
   }
 
-  private async reverseGeocode(lat: number, lng: number, target: 'pickup' | 'dropoff'): Promise<void> {
+  private async reverseGeocode(lat: number, lng: number, t: LocTarget): Promise<void> {
     try {
-      const resp = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`);
-      const data = await resp.json();
-      if (data && data.display_name) {
-        const formatted = data.display_name.split(',').slice(0, 3).join(', ');
-        if (target === 'pickup') {
-          this.pickupName = formatted;
-        } else {
-          this.dropoffName = formatted;
-        }
-      }
+      const formatted = await mapboxReverseGeocode(lat, lng);
+      if (!formatted) return;
+      if (t.kind === 'pickup') this.pickupName = formatted;
+      else if (this.stops[t.index]) this.stops[t.index].name = formatted;
     } catch (e) {
       console.warn('Reverse geocode error:', e);
     }
   }
 
-  toggleOptionalAsset(asset: string): void {
-    const idx = this.selectedOptionalAssets.indexOf(asset);
-    if (idx >= 0) {
-      this.selectedOptionalAssets.splice(idx, 1);
-    } else {
-      this.selectedOptionalAssets.push(asset);
-    }
+  // ---------- Optional assets ----------
+  toggleOptionalAsset(a: string): void {
+    const i = this.selectedOptionalAssets.indexOf(a);
+    if (i >= 0) this.selectedOptionalAssets.splice(i, 1);
+    else this.selectedOptionalAssets.push(a);
   }
+  isAssetSelected(a: string): boolean { return this.selectedOptionalAssets.includes(a); }
 
-  isAssetSelected(asset: string): boolean {
-    return this.selectedOptionalAssets.includes(asset);
-  }
-
-  // --- Order Dispatch Action (100% Flutter Models Compliant) ---
+  // ---------- Dispatch ----------
   async createAndAssignOrder(): Promise<void> {
     this.errorMessage = null;
     this.successOrderInfo = null;
-
-    if (!this.selectedDriverId) {
-      this.errorMessage = 'Please select a driver to assign this order to.';
-      return;
-    }
-
-    if (!this.pickupName.trim()) {
-      this.errorMessage = 'Please enter or select a pickup location area.';
-      return;
-    }
-
-    if (!this.dropoffName.trim()) {
-      this.errorMessage = 'Please enter or select a dropoff destination area.';
+    if (!this.canDispatch) {
+      this.errorMessage = 'Select a driver, a pickup and at least one named stop.';
       return;
     }
 
     this.isSubmitting = true;
-
     try {
       const driver = this.selectedDriver;
-      const driverName = driver?.name || 'Assigned Chauffeur';
+      const driverName = driver?.name || 'Assigned driver';
       const distanceToPickup = this.calculatedDistanceToPickup;
 
-      // STEP 1: Save DropOffData model into 'stops' collection first
-      // Matches DropOffData.toFirestore(): { destination: { latitude, longitude }, destinationName, isdelivered }
-      const stopDocRef = await addDoc(collection(this.firestore, 'stops'), {
-        destination: {
-          latitude: Number(this.dropoffLat),
-          longitude: Number(this.dropoffLng)
-        },
-        destinationName: this.dropoffName.trim(),
-        isdelivered: false
-      });
-      const stopId = stopDocRef.id;
+      // 1. one stop doc per row
+      const stopIds: string[] = [];
+      for (const s of this.stops) {
+        const ref = await addDoc(collection(this.firestore, 'stops'), {
+          destination: { latitude: Number(s.lat), longitude: Number(s.lng) },
+          destinationName: s.name.trim(),
+          receiverPhone: s.phone.trim() ? s.phone.trim() : null,
+          state: 'pending',
+          isDelivered: false   // legacy mirror
+        });
+        stopIds.push(ref.id);
+      }
 
-      // STEP 2: Generate Doc Reference for 'orders' document
+      // 2. order doc — current (slimmed) Orders model + isAdministrative
       const orderDocRef = doc(collection(this.firestore, 'orders'));
       const orderId = orderDocRef.id;
 
-      // Optional fields formatting (Default non-null values to avoid null trap in apps/models)
-      const optionalAssetsVal = (this.selectedOptionalAssets && this.selectedOptionalAssets.length > 0)
-        ? [...this.selectedOptionalAssets]
-        : [];
+      const optionalAssetsVal = [...this.selectedOptionalAssets];
+      const budgetVal = (this.budget != null && !isNaN(Number(this.budget))) ? Number(this.budget) : 0;
+      const notesVal = this.notes?.trim() ? this.notes.trim() : '';
+      const scheduleAtVal = this.scheduleAt?.trim()
+        ? Timestamp.fromDate(new Date(this.scheduleAt)) : Timestamp.now();
 
-      const budgetVal = (this.budget !== null && this.budget !== undefined && !isNaN(Number(this.budget)))
-        ? Number(this.budget)
-        : 0;
-
-      const notesVal = (this.notes && this.notes.trim().length > 0)
-        ? this.notes.trim()
-        : '';
-
-      const scheduleAtVal = (this.scheduleAt && this.scheduleAt.trim().length > 0)
-        ? Timestamp.fromDate(new Date(this.scheduleAt))
-        : Timestamp.now();
-
-      // STEP 3: Create Order document matching 100% of Flutter Orders model fields & toJson() schema
-      const orderData = {
+      await setDoc(orderDocRef, {
         userID: this.selectedUserId || 'ADMIN_CONSOLE',
         price: Number(this.price) || 0,
         distance: Number(this.distance) || 0,
         namePickUp: this.pickupName.trim(),
         id: orderId,
-        pickUpLocation: {
-          coordinates: [Number(this.pickupLng), Number(this.pickupLat)],
-          type: 'Point'
-        },
-        stops: [stopId], // List of stop IDs in 'stops' collection
+        pickUpLocation: { coordinates: [Number(this.pickupLng), Number(this.pickupLat)], type: 'Point' },
+        stops: stopIds,
         timestamp: serverTimestamp(),
         vehicleType: this.vehicleType || 'camion',
-        isAcepted: true, // Explicitly marked true for manual admin assignment
-        scheduleAt: scheduleAtVal, // Non-null default (Timestamp.now()) if unscheduled
-        category: this.category || 'pro',
-        optionalAssets: optionalAssetsVal, // Non-null array default []
-        budget: budgetVal,                 // Non-null number default 0
-        notes: notesVal,                   // Non-null string default ""
+        isAccepted: true,
+        isAcepted: true,
+        scheduleAt: scheduleAtVal,
+        category: 'eco',
+        optionalAssets: optionalAssetsVal,
+        budget: budgetVal,
+        notes: notesVal,
+        currencyCode: 'TND',
+        isBiddingMode: false,
+        isAdministrative: true
+      });
 
-        // Additional admin assignment compatibility attributes:
-        assignedDriverId: this.selectedDriverId,
-        assignedDriverName: driverName,
-        destinationName: this.dropoffName.trim(),
-        dropOffLocation: {
-          latitude: Number(this.dropoffLat),
-          longitude: Number(this.dropoffLng)
-        }
-      };
-
-      await setDoc(orderDocRef, orderData);
-
-      // STEP 4: Create Deal document in 'deals' collection following DealModel schema
-      const dealsCol = collection(this.firestore, 'deals');
-      const vehicleId = this.selectedDriverVehicle?.id || '';
-      const dealDocRef = await addDoc(dealsCol, {
+      // 3. deal
+      const dealDocRef = await addDoc(collection(this.firestore, 'deals'), {
         idOrder: orderId,
         idDriver: this.selectedDriverId,
         idUser: this.selectedUserId || 'ADMIN_CONSOLE',
-        idVehicle: vehicleId,
+        idVehicle: this.selectedDriverVehicle?.id || '',
         status: 'accepted',
         timestamp: serverTimestamp()
       });
       const dealId = dealDocRef.id;
 
-      // STEP 5: Add document under subcollection 'assigned_jobs' of users/{driverId}
-      const assignedJobsCol = collection(this.firestore, 'users', this.selectedDriverId, 'assigned_jobs');
-      await addDoc(assignedJobsCol, {
+      // 4. driver assigned_jobs
+      await addDoc(collection(this.firestore, 'users', this.selectedDriverId, 'assigned_jobs'), {
         assignedAt: serverTimestamp(),
-        category: this.category || 'pro',
-        orderId: orderId,
-        dealId: dealId,
+        category: 'eco',
+        orderId, dealId,
         status: 'accepted',
         distanceToPickup: distanceToPickup || 0
       });
 
-      // STEP 6: Push notification to driver
-      const notifTitle = `🚀 New Direct Job Assigned & Accepted!`;
-      const notifBody = `Admin has assigned you an accepted ${this.category.toUpperCase()} order (#${orderId.slice(0, 8)}) at ${this.pickupName}. Pickup distance: ${distanceToPickup} km.`;
-
+      // 5. notify driver
+      const notifTitle = 'New job assigned';
+      const notifBody = `You've been assigned an order (#${orderId.slice(0, 8)}) at ${this.pickupName}. Pickup is ${distanceToPickup} km away.`;
       try {
         await this.notificationService.sendUserNotification(this.selectedDriverId, notifTitle, notifBody);
       } catch (nErr) {
         console.warn('FCM dispatch warning:', nErr);
       }
-
       this.crossTabSyncService.notifyNotificationSent(this.selectedDriverId, notifTitle, notifBody);
 
-      this.successOrderInfo = {
-        orderId,
-        driverName,
-        distanceToPickup,
-        stopId,
-        dealId
-      };
+      this.successOrderInfo = { orderId, driverName, distanceToPickup, stopIds, dealId };
+      toastSuccess('Order dispatched');
     } catch (err: any) {
       console.error('Error creating & assigning order:', err);
       this.errorMessage = err?.message || 'Failed to create and assign order.';
+      toastError('Dispatch failed');
     } finally {
       this.isSubmitting = false;
     }
   }
 
   onInspectDriverClick(): void {
-    if (this.selectedDriverId) {
-      this.inspectDriver.emit(this.selectedDriverId);
-    }
+    if (this.selectedDriverId) this.inspectDriver.emit(this.selectedDriverId);
   }
 
   resetForm(): void {
@@ -586,5 +500,8 @@ export class DispatchOrderTabComponent implements OnInit, AfterViewInit, OnDestr
     this.budget = null;
     this.scheduleAt = null;
     this.selectedOptionalAssets = [];
+    this.stops = [{ name: '', lat: this.pickupLat, lng: this.pickupLng, phone: '', searchQuery: '', results: [] }];
+    this.currentStep = 1;
+    this.recalcDistance();
   }
 }

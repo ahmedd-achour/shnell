@@ -3,7 +3,6 @@
 .sh-footer {
   background: var(--sh-ink-900);
   color: rgba(255, 255, 255, 0.66);
-  margin-top: clamp(3rem, 8vw, 6rem);
 }
 
 .sh-footer__inner {
@@ -60,9 +59,9 @@
   color: rgba(255, 255, 255, 0.66);
   font-size: 0.92rem;
   margin-bottom: 0.7rem;
-  transition: color var(--sh-t-fast);
+  transition: color var(--sh-t-fast), transform var(--sh-t-fast);
 }
-.sh-footer__col a:hover { color: var(--sh-amber-400); }
+.sh-footer__col a:hover { color: var(--sh-amber-400); transform: translateX(3px); }
 .sh-footer__contact i { color: var(--sh-amber-500); width: 18px; margin-right: 0.4rem; }
 .sh-footer__contact .sh-btn { margin-top: 0.75rem; }
 

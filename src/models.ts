@@ -26,6 +26,14 @@ export interface Deals {
 
 export type Deal = Deals;
 
+/** Lifecycle of a single stop / parcel. Replaces the old `isDelivered` boolean.
+ *  Writers dual-write `state` + a mirror `isDelivered: state === 'delivered'`;
+ *  readers prefer `state` and fall back to the legacy bool for old docs. */
+export type StopState = 'pending' | 'inRoute' | 'delivered' | 'notDelivered';
+
+/** Has the parcel's cash (parcelPrice) been settled with the expeditor yet? */
+export type ExpeditorPayout = 'unpaid' | 'paid';
+
 export interface DropOffData {
   id?: string;
   destination: {
@@ -33,7 +41,23 @@ export interface DropOffData {
     longitude: number;
   };
   destinationName: string;
-  isdelivered: boolean;
+  /** @deprecated legacy mirror — read `state` instead */
+  isdelivered?: boolean;
+  /** @deprecated legacy mirror — read `state` instead */
+  isDelivered?: boolean;
+  state?: StopState;
+  name?: string;           // optional recipient / contact name for this stop
+  receiverPhone?: string;  // optional contact phone for this stop
+  receiverPhone2?: string; // optional second contact phone
+  description?: string;    // free-text note about the parcel / stop
+  parcelPrice?: number;    // "frais de vente du colis" — cash to collect on delivery (TND)
+  /** UID of the professional / company user who created this stop. */
+  definedBy?: string;
+  /** Optional expeditor (sender) reference — enables per-expeditor money analysis. */
+  expeditorId?: string;
+  /** Whether the collected cash has been paid out to the expeditor. Default 'unpaid'. */
+  expeditorPayout?: ExpeditorPayout;
+  paidToExpeditorAt?: any;  // Timestamp set when expeditorPayout flips to 'paid'
 }
 
 export interface CountryServiceArea {
@@ -87,6 +111,9 @@ export interface Orders {
   budget: number | null;
   notes: string | null;
   timestamp?: any;
+  /** True when created from the admin console (no real customer). The driver
+   *  app hides the in-app call / video-call actions for these orders. */
+  isAdministrative?: boolean;
 }
 
 export type Order = Orders;

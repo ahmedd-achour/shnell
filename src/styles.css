@@ -1,5 +1,4 @@
 @import 'bootstrap/dist/css/bootstrap.min.css';
-@import 'leaflet/dist/leaflet.css';
 
 /* ==========================================================================
    SHNELL DESIGN SYSTEM
@@ -56,13 +55,22 @@
   --sh-s-xs: 4px;  --sh-s-s: 8px;  --sh-s-m: 12px;
   --sh-s-l: 16px;  --sh-s-xl: 24px; --sh-s-2xl: 32px; --sh-s-3xl: 48px;
 
-  /* ---- Elevation: soft, warm-tinted ---- */
-  --sh-shadow-xs: 0 1px 2px rgba(23, 20, 13, 0.06);
-  --sh-shadow-sm: 0 2px 8px rgba(23, 20, 13, 0.06), 0 1px 2px rgba(23, 20, 13, 0.05);
-  --sh-shadow-md: 0 8px 24px -6px rgba(23, 20, 13, 0.12), 0 2px 6px rgba(23, 20, 13, 0.06);
-  --sh-shadow-lg: 0 28px 60px -12px rgba(23, 20, 13, 0.20), 0 8px 20px -8px rgba(23, 20, 13, 0.10);
-  --sh-shadow-amber: 0 12px 28px -8px rgba(255, 160, 0, 0.45);
-  --sh-ring: 0 0 0 3px rgba(255, 193, 7, 0.35);
+  /* ---- Elevation: soft, warm-tinted, multi-layer for depth ---- */
+  --sh-shadow-xs: 0 1px 2px rgba(23, 20, 13, 0.05);
+  --sh-shadow-sm:
+    0 1px 2px rgba(23, 20, 13, 0.04),
+    0 3px 10px -3px rgba(23, 20, 13, 0.07);
+  --sh-shadow-md:
+    0 2px 6px -2px rgba(23, 20, 13, 0.06),
+    0 12px 30px -8px rgba(23, 20, 13, 0.13);
+  --sh-shadow-lg:
+    0 4px 12px -4px rgba(23, 20, 13, 0.08),
+    0 32px 64px -16px rgba(23, 20, 13, 0.22);
+  --sh-shadow-xl:
+    0 8px 20px -6px rgba(23, 20, 13, 0.10),
+    0 48px 96px -24px rgba(23, 20, 13, 0.28);
+  --sh-shadow-amber: 0 10px 26px -8px rgba(255, 160, 0, 0.42), 0 2px 6px -2px rgba(255, 160, 0, 0.30);
+  --sh-ring: 0 0 0 3px rgba(255, 193, 7, 0.32);
 
   /* ---- Motion ---- */
   --sh-ease: cubic-bezier(0.16, 1, 0.3, 1);
@@ -166,6 +174,7 @@
   --sh-shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.4);
   --sh-shadow-md: 0 10px 28px -8px rgba(0, 0, 0, 0.55);
   --sh-shadow-lg: 0 30px 60px -12px rgba(0, 0, 0, 0.7);
+  --sh-shadow-xl: 0 40px 90px -20px rgba(0, 0, 0, 0.78);
 
   color-scheme: dark;
 }
@@ -204,7 +213,10 @@ body.mat-typography h4, body.mat-typography h5, body.mat-typography h6 {
   color: var(--sh-ink-900);
   margin: 0 0 0.5em;
   text-wrap: balance;
+  font-optical-sizing: auto;
 }
+h1, body.mat-typography h1 { letter-spacing: -0.038em; }
+h2, body.mat-typography h2 { letter-spacing: -0.032em; }
 
 /* Angular Material's mat-typography forces Roboto/32px line-height on the
    whole document. Re-assert the Shnell type system with higher specificity. */
@@ -216,13 +228,22 @@ body.mat-typography p, body.mat-typography .mat-body, body.mat-typography .mat-b
   font-family: var(--sh-font-body);
   letter-spacing: -0.006em;
 }
-h1 { font-size: clamp(2rem, 4.4vw, 3.4rem); }
-h2 { font-size: clamp(1.6rem, 3.2vw, 2.4rem); }
-h3 { font-size: clamp(1.2rem, 2vw, 1.5rem); }
+h1 { font-size: clamp(2.05rem, 4.6vw, 3.6rem); }
+h2 { font-size: clamp(1.65rem, 3.4vw, 2.55rem); }
+h3 { font-size: clamp(1.2rem, 2vw, 1.55rem); }
 
 p { margin: 0 0 1rem; }
 a { color: var(--sh-amber-900); text-decoration: none; transition: color var(--sh-t-fast); }
 a:hover { color: var(--sh-amber-800); }
+
+/* Editorial lead paragraph */
+.sh-lead {
+  font-size: clamp(1.05rem, 1.6vw, 1.25rem);
+  line-height: 1.65;
+  color: var(--sh-ink-700);
+  max-width: 60ch;
+}
+[data-tone="dark"] .sh-lead, .sh-on-dark .sh-lead { color: rgba(255, 255, 255, 0.78); }
 
 .mono, .font-mono, code, kbd, samp {
   font-family: var(--sh-font-mono);
@@ -253,8 +274,12 @@ section:not([data-tone="dark"]) > .container .text-white:not([data-tone-ok]) { }
 .sh-on-dark, [data-tone="dark"] {
   color: rgba(255, 255, 255, 0.92);
 }
-.sh-on-dark h1, .sh-on-dark h2, .sh-on-dark h3, .sh-on-dark h4,
-[data-tone="dark"] h1, [data-tone="dark"] h2, [data-tone="dark"] h3, [data-tone="dark"] h4 {
+.sh-on-dark h1, .sh-on-dark h2, .sh-on-dark h3, .sh-on-dark h4, .sh-on-dark h5, .sh-on-dark h6,
+[data-tone="dark"] h1, [data-tone="dark"] h2, [data-tone="dark"] h3, [data-tone="dark"] h4, [data-tone="dark"] h5, [data-tone="dark"] h6,
+body.mat-typography .sh-on-dark h1, body.mat-typography .sh-on-dark h2, body.mat-typography .sh-on-dark h3,
+body.mat-typography .sh-on-dark h4, body.mat-typography .sh-on-dark h5, body.mat-typography .sh-on-dark h6,
+body.mat-typography [data-tone="dark"] h1, body.mat-typography [data-tone="dark"] h2, body.mat-typography [data-tone="dark"] h3,
+body.mat-typography [data-tone="dark"] h4, body.mat-typography [data-tone="dark"] h5, body.mat-typography [data-tone="dark"] h6 {
   color: #fff;
 }
 .sh-on-dark .sh-muted, [data-tone="dark"] .sh-muted { color: rgba(255, 255, 255, 0.66); }
@@ -323,12 +348,17 @@ section:not([data-tone="dark"]) > .container .text-white:not([data-tone-ok]) { }
   transition: transform var(--sh-t-fast), box-shadow var(--sh-t-fast),
               background-color var(--sh-t-fast), border-color var(--sh-t-fast);
 }
-.sh-btn:hover { transform: translateY(-2px); color: var(--_fg); }
-.sh-btn:active { transform: translateY(0); }
-.sh-btn--primary { box-shadow: var(--sh-shadow-amber); }
-.sh-btn--primary:hover { --_bg: var(--sh-amber-400); }
+.sh-btn:hover { transform: translateY(-1px); color: var(--_fg); }
+.sh-btn:active { transform: translateY(0); transition-duration: 60ms; }
+.sh-btn--primary {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.28), rgba(255, 255, 255, 0) 46%),
+    var(--_bg);
+  box-shadow: var(--sh-shadow-amber);
+}
+.sh-btn--primary:hover { --_bg: var(--sh-amber-400); box-shadow: 0 14px 32px -8px rgba(255, 160, 0, 0.5), 0 2px 6px -2px rgba(255, 160, 0, 0.34); }
 .sh-btn--dark { --_bg: var(--sh-ink-900); --_fg: #fff; box-shadow: var(--sh-shadow-sm); }
-.sh-btn--dark:hover { --_bg: #000; }
+.sh-btn--dark:hover { --_bg: #000; box-shadow: var(--sh-shadow-md); }
 .sh-btn--ghost {
   --_bg: transparent;
   --_fg: var(--sh-ink-900);
@@ -422,7 +452,35 @@ label, .form-label { font-weight: 600; color: var(--sh-ink-700); font-size: 0.88
 /* ==========================================================================
    DATA TABLES  (legacy .table + new .sh-table)
    ========================================================================== */
-.table-responsive { border-radius: var(--sh-r-md); overflow: hidden; }
+/* Bootstrap's .table-responsive must scroll horizontally, not clip — a hard
+   `overflow:hidden` here was hiding the right-hand Actions column on wide
+   tables when the sidebar was expanded. */
+.table-responsive {
+  border-radius: var(--sh-r-md);
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Vehicle-type cell used in data tables (deals, unhandled orders) — real
+   fleet artwork instead of a generic truck glyph. */
+.veh-cell {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.veh-cell__img {
+  width: 30px;
+  height: 22px;
+  object-fit: contain;
+  flex-shrink: 0;
+  border-radius: var(--sh-r-xs);
+  background: var(--sh-card-2);
+  border: 1px solid var(--sh-line);
+  padding: 1px;
+}
+/* The type name next to the fleet artwork is redundant noise in dense tables. */
+.veh-cell__label { display: none; }
 .table.saas-table, .table, .sh-table {
   color: var(--sh-ink-700) !important;
   margin-bottom: 0 !important;
@@ -433,21 +491,29 @@ label, .form-label { font-weight: 600; color: var(--sh-ink-700); font-size: 0.88
 .table.saas-table thead th, .table thead th, .sh-table thead th {
   background: var(--sh-card-2) !important;
   color: var(--sh-ink-500) !important;
-  font-size: 0.7rem;
+  font-size: 0.68rem;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.07em;
-  padding: 0.9rem 1.1rem !important;
+  letter-spacing: 0.06em;
+  padding: 0.55rem 0.7rem !important;
   border-bottom: 1px solid var(--sh-line) !important;
   border-top: none !important;
+  white-space: nowrap;
 }
 .table.saas-table tbody td, .table tbody td, .sh-table tbody td {
-  padding: 0.9rem 1.1rem !important;
+  padding: 0.55rem 0.7rem !important;
   border-bottom: 1px solid var(--sh-line) !important;
   border-top: none !important;
   color: var(--sh-ink-900) !important;
   vertical-align: middle;
-  font-size: 0.9rem;
+  font-size: 0.8rem;
+}
+/* Dashboard data tables should fit their card without a horizontal drag. */
+.dash-tab-viewport .table-responsive { overflow-x: visible; }
+.dash-tab-viewport table.table { table-layout: auto; width: 100%; }
+.dash-tab-viewport table.table td { overflow-wrap: anywhere; }
+@media (max-width: 1200px) {
+  .dash-tab-viewport .table-responsive { overflow-x: auto; }
 }
 .table tbody tr, .sh-table tbody tr { transition: background-color var(--sh-t-fast); }
 .table tbody tr:hover, .sh-table tbody tr:hover { background-color: var(--sh-card-2) !important; }
@@ -757,11 +823,13 @@ body.no-scroll { overflow: hidden; }
 /* No black / near-black grounds inside the panel */
 .dashboard-root .bg-dark,
 .dashboard-root .bg-black,
+.dashboard-root .bg-darker,
 .dashboard-root .bg-body-tertiary,
 .dashboard-root [class*="bg-dark"] {
   background-color: var(--sh-card) !important;
   color: var(--sh-ink-900) !important;
 }
+.dashboard-root .bg-darker { background-color: var(--sh-card-2) !important; }
 .dashboard-root .bg-secondary {
   background-color: var(--sh-card-2) !important;
   color: var(--sh-ink-900) !important;
@@ -804,3 +872,548 @@ body.no-scroll { overflow: hidden; }
   border-color: var(--color-brand-border) !important;
   color: var(--sh-ink-900) !important;
 }
+
+/* ==========================================================================
+   ADMIN DASHBOARD — PREMIUM FINISH
+   Bring the console up to the marketing site's finish: warm brand hues in
+   place of leftover Bootstrap blue/indigo, Manrope on titles, real pill
+   segmented controls, softer card elevation, calmer chart chrome.
+   ========================================================================== */
+
+/* Card & section titles → display type, like the public pages */
+.dash-tab-viewport .card-title,
+.dash-tab-viewport .card h4,
+.dash-tab-viewport .card h5,
+.dash-tab-viewport .card h6,
+.dash-tab-viewport .section-title,
+.dash-header h2 {
+  font-family: var(--sh-font-display);
+  letter-spacing: -0.02em;
+}
+
+/* Gentle lift so cards feel like objects, not boxes */
+.dash-tab-viewport .card,
+.dash-tab-viewport .dashboard-card,
+.dash-tab-viewport .saas-card {
+  transition: box-shadow var(--sh-t-base), transform var(--sh-t-base), border-color var(--sh-t-base);
+}
+.dash-tab-viewport .card:hover,
+.dash-tab-viewport .dashboard-card:hover {
+  box-shadow: var(--sh-shadow-md) !important;
+}
+
+/* Leftover Bootstrap blue → warm brand (subtle tints + accent text) */
+.dashboard-root .bg-primary-subtle,
+.dashboard-root .bg-info-subtle {
+  background-color: var(--color-brand-subtle) !important;
+}
+.dashboard-root .text-primary-emphasis,
+.dashboard-root .link-primary {
+  color: var(--sh-amber-900) !important;
+}
+.dashboard-root .bg-primary {
+  background-color: var(--sh-amber-500) !important;
+  color: var(--sh-ink-900) !important;
+}
+.dashboard-root .btn-primary {
+  background: var(--sh-amber-500);
+  border-color: transparent;
+  color: var(--sh-ink-900);
+  font-weight: 700;
+}
+.dashboard-root .btn-primary:hover { background: var(--sh-amber-400); color: var(--sh-ink-900); }
+.dashboard-root .btn-outline-primary {
+  color: var(--sh-amber-900);
+  border-color: var(--color-brand-border);
+}
+.dashboard-root .btn-outline-primary:hover {
+  background: var(--sh-amber-500);
+  border-color: var(--sh-amber-500);
+  color: var(--sh-ink-900);
+}
+
+/* Segmented pill controls (chart range switchers, tier switchers) — Bootstrap
+   .btn-group zeroes the inner radii, so `rounded-pill` alone looked rectangular. */
+.dash-tab-viewport .btn-group.rounded-pill,
+.dash-tab-viewport .tier-switcher-pill {
+  background: var(--sh-card-2);
+  border: 1px solid var(--sh-line) !important;
+  gap: 2px;
+}
+.dash-tab-viewport .btn-group.rounded-pill > .btn {
+  border-radius: var(--sh-r-pill) !important;
+  border: 0 !important;
+  color: var(--sh-ink-500);
+  font-weight: 700;
+  transition: color var(--sh-t-fast), background-color var(--sh-t-fast);
+}
+.dash-tab-viewport .btn-group.rounded-pill > .btn:hover { color: var(--sh-ink-900); }
+.dash-tab-viewport .btn-group.rounded-pill > .btn.active,
+.dash-tab-viewport .btn-group.rounded-pill > .btn.btn-saas-primary {
+  color: var(--sh-ink-900);
+}
+
+/* Badges never render as a flat block inside the panel */
+.dash-tab-viewport .badge {
+  border-radius: var(--sh-r-pill);
+  font-weight: 700;
+  padding: 0.32em 0.75em;
+}
+
+/* KPI / stat numbers → display type for weight */
+.dash-tab-viewport .kpi-card .h3,
+.dash-tab-viewport .kpi-card h3,
+.dash-tab-viewport .stat-value,
+.dash-tab-viewport .kpi-value {
+  font-family: var(--sh-font-display);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+}
+
+/* Chart.js canvases sit a touch inset so they don't crowd the card edge */
+.dash-tab-viewport .card canvas { padding-top: 0.25rem; }
+
+/* ==========================================================================
+   MARKETING SITE LAYER
+   Editorial, warm-light building blocks for the public pages (about,
+   service, contact, blog). Replaces the old Bootstrap-4 "jumbotron" theme
+   (blue brand, white-on-white headers, muddy translucent cards) with the
+   Shnell amber / warm-ink system. Also quietly retints the legacy Bootstrap
+   utilities those templates still carry — scoped to .mkt so the dashboard
+   and Material screens are untouched.
+   ========================================================================== */
+
+/* ---- Editorial page header (drop-in for .jumbotron) ---- */
+.mkt-head {
+  position: relative;
+  overflow: hidden;
+  background: var(--sh-card);
+  border-bottom: 1px solid var(--sh-line);
+  padding-block: clamp(2.75rem, 7vw, 5rem);
+  margin-bottom: clamp(2.5rem, 6vw, 4.5rem);
+}
+.mkt-head::before {
+  content: "";
+  position: absolute;
+  inset: -40% -10% auto auto;
+  width: 620px; height: 620px;
+  background: radial-gradient(circle at 70% 30%, rgba(255, 160, 0, 0.16), transparent 62%);
+  pointer-events: none;
+}
+.mkt-head__inner {
+  position: relative;
+  max-width: var(--sh-maxw);
+  margin-inline: auto;
+  padding-inline: clamp(1rem, 4vw, 2rem);
+}
+.mkt-head h1 {
+  margin: 0.7rem 0 0;
+  font-size: clamp(2.1rem, 5vw, 3.4rem);
+}
+.mkt-head__crumb {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  margin-top: 0.9rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--sh-ink-500);
+}
+.mkt-head__crumb a { color: var(--sh-ink-500); }
+.mkt-head__crumb a:hover { color: var(--sh-amber-900); }
+.mkt-head__crumb span[aria-current] { color: var(--sh-amber-900); }
+.mkt-head__crumb i { font-size: 0.4rem; opacity: 0.6; }
+
+/* ---- Section rhythm ---- */
+.mkt-section { padding-block: clamp(2.5rem, 6vw, 4.5rem); }
+.mkt-section--alt { background: var(--sh-card-2); }
+.mkt-sec-head { max-width: 640px; margin: 0 auto clamp(2rem, 5vw, 3rem); text-align: center; }
+.mkt-sec-head .sh-eyebrow { justify-content: center; }
+.mkt-sec-head h2 { margin: 0.6rem 0 0.6rem; }
+.mkt-sec-head p { color: var(--sh-ink-500); font-size: 1.02rem; margin: 0; }
+
+/* ---- Grid ---- */
+.mkt-grid { display: grid; gap: clamp(1rem, 2.4vw, 1.6rem); }
+.mkt-grid--3 { grid-template-columns: repeat(3, 1fr); }
+.mkt-grid--4 { grid-template-columns: repeat(4, 1fr); }
+.mkt-grid--2 { grid-template-columns: repeat(2, 1fr); }
+@media (max-width: 900px) {
+  .mkt-grid--3, .mkt-grid--4 { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 560px) {
+  .mkt-grid--2, .mkt-grid--3, .mkt-grid--4 { grid-template-columns: 1fr; }
+}
+
+/* ---- Feature card ---- */
+.mkt-feature {
+  background: var(--sh-card);
+  border: 1px solid var(--sh-line);
+  border-radius: var(--sh-r-lg);
+  padding: clamp(1.4rem, 3vw, 1.9rem);
+  box-shadow: var(--sh-shadow-xs);
+  transition: transform var(--sh-t-base), box-shadow var(--sh-t-base), border-color var(--sh-t-base);
+}
+.mkt-feature:hover {
+  transform: translateY(-4px);
+  border-color: var(--color-brand-border);
+  box-shadow: var(--sh-shadow-md);
+}
+.mkt-feature__icon {
+  width: 48px; height: 48px;
+  display: grid; place-items: center;
+  border-radius: var(--sh-r-md);
+  background: var(--color-brand-subtle);
+  color: var(--sh-amber-900);
+  font-size: 1.25rem;
+  margin-bottom: 1rem;
+}
+.mkt-feature h3 { font-size: 1.12rem; margin: 0 0 0.4rem; }
+.mkt-feature p { margin: 0; color: var(--sh-ink-500); font-size: 0.94rem; line-height: 1.65; }
+
+/* ---- Stat card (number-forward) ---- */
+.mkt-stat {
+  background: var(--sh-card);
+  border: 1px solid var(--sh-line);
+  border-radius: var(--sh-r-lg);
+  padding: 1.6rem 1.4rem;
+  text-align: center;
+  box-shadow: var(--sh-shadow-xs);
+  transition: transform var(--sh-t-base), box-shadow var(--sh-t-base);
+}
+.mkt-stat:hover { transform: translateY(-3px); box-shadow: var(--sh-shadow-sm); }
+.mkt-stat__value {
+  font-family: var(--sh-font-display);
+  font-weight: 800;
+  font-size: clamp(1.7rem, 3vw, 2.2rem);
+  line-height: 1;
+  color: var(--sh-amber-900);
+  letter-spacing: -0.03em;
+}
+.mkt-stat__label { display: block; margin-top: 0.5rem; font-weight: 700; color: var(--sh-ink-900); font-size: 0.9rem; }
+.mkt-stat small { display: block; margin-top: 0.35rem; color: var(--sh-ink-500); font-size: 0.82rem; line-height: 1.5; }
+
+/* ---- Pricing ---- */
+.mkt-price {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: clamp(1rem, 3vw, 1.75rem);
+  max-width: 880px;
+  margin-inline: auto;
+}
+@media (max-width: 720px) { .mkt-price { grid-template-columns: 1fr; } }
+.mkt-price__card {
+  display: flex;
+  flex-direction: column;
+  background: var(--sh-card);
+  border: 1px solid var(--sh-line);
+  border-radius: var(--sh-r-xl);
+  padding: clamp(1.6rem, 4vw, 2.4rem);
+  box-shadow: var(--sh-shadow-sm);
+}
+.mkt-price__card--featured {
+  background:
+    radial-gradient(600px 300px at 100% 0%, rgba(255, 160, 0, 0.16), transparent 60%),
+    var(--sh-ink-900);
+  border-color: var(--sh-ink-900);
+  box-shadow: var(--sh-shadow-lg);
+}
+.mkt-price__card--featured :is(h3, h4, .mkt-price__amount) { color: #fff; }
+.mkt-price__card--featured p { color: rgba(255, 255, 255, 0.72); }
+.mkt-price__card--featured li { color: rgba(255, 255, 255, 0.88); }
+.mkt-price__card--featured li::before { color: var(--sh-amber-400); }
+.mkt-price__tag {
+  font-size: 0.74rem; font-weight: 700; letter-spacing: 0.12em;
+  text-transform: uppercase; color: var(--sh-amber-900);
+}
+.mkt-price__card--featured .mkt-price__tag { color: var(--sh-amber-400); }
+.mkt-price__amount {
+  font-family: var(--sh-font-display);
+  font-weight: 800;
+  font-size: clamp(1.8rem, 4vw, 2.4rem);
+  letter-spacing: -0.03em;
+  color: var(--sh-ink-900);
+  margin: 0.5rem 0 0.15rem;
+}
+.mkt-price__note { font-size: 0.9rem; color: var(--sh-ink-500); margin: 0 0 1.25rem; }
+.mkt-price__list { list-style: none; padding: 0; margin: 0 0 1.75rem; display: grid; gap: 0.6rem; }
+.mkt-price__list li {
+  position: relative;
+  padding-left: 1.7rem;
+  font-size: 0.92rem;
+  line-height: 1.5;
+  color: var(--sh-ink-700);
+}
+.mkt-price__list li::before {
+  content: "\2713";
+  position: absolute; left: 0; top: 0;
+  font-weight: 800;
+  color: var(--sh-success);
+}
+.mkt-price__card .sh-btn { margin-top: auto; }
+
+/* ---- Contact form card ---- */
+.mkt-form {
+  background: var(--sh-card);
+  border: 1px solid var(--sh-line);
+  border-radius: var(--sh-r-xl);
+  padding: clamp(1.5rem, 4vw, 2.25rem);
+  box-shadow: var(--sh-shadow-sm);
+}
+.mkt-form .control-group { margin-bottom: 1rem; }
+.mkt-form .help-block { margin: 0.25rem 0 0; font-size: 0.8rem; }
+
+/* ---- Contact detail tiles ---- */
+.mkt-contact-tile {
+  display: flex;
+  gap: 0.9rem;
+  align-items: flex-start;
+  background: var(--sh-card);
+  border: 1px solid var(--sh-line);
+  border-radius: var(--sh-r-lg);
+  padding: 1.1rem 1.25rem;
+  box-shadow: var(--sh-shadow-xs);
+}
+.mkt-contact-tile i {
+  width: 40px; height: 40px; flex-shrink: 0;
+  display: grid; place-items: center;
+  border-radius: var(--sh-r-sm);
+  background: var(--color-brand-subtle);
+  color: var(--sh-amber-900);
+  font-size: 1rem;
+}
+.mkt-contact-tile strong { display: block; color: var(--sh-ink-900); font-size: 0.92rem; }
+.mkt-contact-tile span, .mkt-contact-tile a { color: var(--sh-ink-500); font-size: 0.9rem; }
+.mkt-contact-tile a:hover { color: var(--sh-amber-900); }
+
+.mkt-map {
+  width: 100%;
+  min-height: 340px;
+  border: 1px solid var(--sh-line);
+  border-radius: var(--sh-r-lg);
+  overflow: hidden;
+  box-shadow: var(--sh-shadow-sm);
+}
+.mkt-map iframe { display: block; width: 100%; height: 100%; min-height: 340px; border: 0; }
+
+/* ---- Prose block (about copy) ---- */
+.mkt-prose {
+  max-width: 760px;
+  margin-inline: auto;
+  font-size: 1.02rem;
+  line-height: 1.8;
+  color: var(--sh-ink-700);
+}
+.mkt-prose p { margin: 0 0 1.2rem; }
+.mkt-prose strong { color: var(--sh-ink-900); }
+.mkt-prose__kicker {
+  display: block;
+  font-family: var(--sh-font-display);
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--sh-amber-900);
+  margin-bottom: 0.75rem;
+}
+
+/* ---- Split (image + copy) ---- */
+.mkt-split {
+  display: grid;
+  grid-template-columns: 1fr 1.1fr;
+  gap: clamp(1.75rem, 5vw, 3.5rem);
+  align-items: center;
+}
+.mkt-split--flip { grid-template-columns: 1.1fr 1fr; }
+@media (max-width: 900px) { .mkt-split, .mkt-split--flip { grid-template-columns: 1fr; } }
+
+/* Equal-height columns (contact: form card matches the details+map column) */
+.mkt-split--stretch { align-items: stretch; }
+.mkt-split--stretch > * { display: flex; flex-direction: column; }
+.mkt-split--stretch .mkt-map { flex: 1 1 auto; min-height: 320px; }
+.mkt-split--stretch .mkt-form { justify-content: center; }
+@media (max-width: 900px) {
+  .mkt-split--stretch .mkt-map { min-height: 300px; flex-basis: 300px; }
+}
+.mkt-split__media img {
+  width: 100%;
+  border-radius: var(--sh-r-xl);
+  border: 1px solid var(--sh-line);
+  box-shadow: var(--sh-shadow-md);
+}
+.mkt-split__body ul { list-style: none; padding: 0; margin: 1.25rem 0 0; display: grid; gap: 0.7rem; }
+.mkt-split__body li {
+  position: relative;
+  padding-left: 1.8rem;
+  font-weight: 600;
+  color: var(--sh-ink-700);
+}
+.mkt-split__body li::before {
+  content: "\2713";
+  position: absolute; left: 0; top: 0;
+  width: 20px; height: 20px;
+  display: grid; place-items: center;
+  border-radius: 50%;
+  background: var(--color-brand-subtle);
+  color: var(--sh-amber-900);
+  font-size: 0.7rem; font-weight: 800;
+}
+
+/* ---- Legacy Bootstrap retint — ONLY inside .mkt pages ---- */
+.mkt .text-primary { color: var(--sh-amber-900) !important; }
+.mkt .bg-primary { background-color: var(--sh-amber-500) !important; color: var(--sh-ink-900) !important; }
+.mkt .bg-secondary { background-color: var(--sh-card-2) !important; color: var(--sh-ink-700) !important; }
+.mkt .bg-light { background-color: var(--sh-card-2) !important; }
+.mkt .text-dark { color: var(--sh-ink-900) !important; }
+.mkt .text-muted { color: var(--sh-ink-500) !important; }
+.mkt .btn-primary {
+  background: var(--sh-amber-500); border-color: transparent; color: var(--sh-ink-900);
+  border-radius: var(--sh-r-pill); font-weight: 700; box-shadow: var(--sh-shadow-amber);
+}
+.mkt .btn-primary:hover { background: var(--sh-amber-400); color: var(--sh-ink-900); }
+.mkt .btn-light {
+  background: var(--sh-card); border-color: var(--sh-line-2); color: var(--sh-ink-900);
+  border-radius: var(--sh-r-pill); font-weight: 700;
+}
+.mkt .border-primary { border-color: var(--color-brand-border) !important; }
+.mkt .badge-secondary, .mkt .badge.badge-pill {
+  background: var(--color-brand-subtle); color: var(--sh-amber-900);
+}
+.mkt a.border-bottom { border-color: var(--sh-amber-700) !important; color: var(--sh-amber-900); font-weight: 700; }
+
+/* ==========================================================================
+   MAPBOX GL — shared map chrome + compact fleet markers
+   ========================================================================== */
+.mapboxgl-map { font: inherit; }
+.mapboxgl-ctrl-logo { opacity: 0.55; }
+.mapboxgl-ctrl-bottom-right .mapboxgl-ctrl-attrib { font-size: 10px; }
+.mapboxgl-popup-content {
+  border-radius: var(--sh-r-md);
+  border: 1px solid var(--sh-line);
+  box-shadow: var(--sh-shadow-lg);
+  padding: 12px 14px;
+  font-family: var(--sh-font-body);
+}
+.mapboxgl-popup-close-button { font-size: 1.1rem; color: var(--sh-ink-400); padding: 2px 6px; }
+
+/* Mapbox rewrites this element's `transform` every frame while panning/zooming.
+   Any inherited CSS transition on it makes the marker lag then overshoot the
+   real position ("drifts into the sea" on fast zoom) — so pin it down. */
+.mapboxgl-marker {
+  transition: none !important;
+  animation: none !important;
+  will-change: transform;
+}
+/* Neutral wrapper actually handed to `new mapboxgl.Marker({ element })` — it
+   must carry no transform/transition of its own; visuals live on the child. */
+.mbx-marker { line-height: 0; transform: none; }
+
+/* ---- Compact vehicle marker (default 26px) ---- */
+.mbx-truck {
+  position: relative;
+  width: var(--mbx-size, 26px);
+  height: var(--mbx-size, 26px);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+}
+.mbx-truck__core {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: grid;
+  place-items: center;
+  background: var(--sh-card);
+  border: 1.5px solid var(--sh-amber-600);
+  border-radius: 50%;
+  box-shadow: 0 2px 6px rgba(23, 20, 13, 0.28);
+  overflow: hidden;
+}
+.mbx-truck__core img {
+  width: 74%;
+  height: 74%;
+  object-fit: contain;
+  pointer-events: none;
+}
+.mbx-truck__pulse {
+  position: absolute;
+  inset: -6px;
+  border-radius: 50%;
+  background: rgba(255, 179, 0, 0.28);
+  animation: mbx-pulse 1.9s ease-out infinite;
+}
+.mbx-truck--live .mbx-truck__core { border-color: var(--sh-success); }
+@keyframes mbx-pulse {
+  0%   { transform: scale(0.6); opacity: 0.9; }
+  70%  { transform: scale(1.6); opacity: 0; }
+  100% { transform: scale(1.6); opacity: 0; }
+}
+
+/* ---- Lettered / numbered route pin ---- */
+.mbx-pin {
+  display: grid;
+  place-items: center;
+  border-radius: 50% 50% 50% 2px;
+  transform: rotate(45deg);
+  color: #fff;
+  font: 700 0.72rem/1 var(--sh-font-mono);
+  box-shadow: 0 2px 6px rgba(23, 20, 13, 0.3);
+  border: 1.5px solid rgba(255, 255, 255, 0.85);
+  cursor: pointer;
+}
+.mbx-pin { text-align: center; }
+.mbx-pin::first-line { line-height: 1; }
+/* keep the label upright inside the rotated pin */
+.mbx-pin { writing-mode: horizontal-tb; }
+.mbx-pin > * { transform: rotate(-45deg); }
+
+/* ---- Tiny dot marker (dense parcel layer) ---- */
+.mbx-dot {
+  border-radius: 50%;
+  border: 2px solid #fff;
+  box-shadow: 0 1px 4px rgba(23, 20, 13, 0.4);
+  cursor: pointer;
+}
+.mbx-dot.is-sel {
+  outline: 2px solid var(--sh-ink-900);
+  outline-offset: 1px;
+}
+
+/* ---- Anchor marker (k-nearest origin) ---- */
+.mbx-anchor {
+  width: 30px; height: 30px;
+  display: grid; place-items: center;
+  color: #fff; font-size: 0.9rem;
+  background: var(--sh-ink-900);
+  border: 2px solid #fff;
+  border-radius: 50%;
+  box-shadow: 0 2px 8px rgba(23, 20, 13, 0.45);
+  cursor: grab;
+}
+
+/* ---- Live-map driver popup (Mapbox popups render at document level) ---- */
+.map-driver-popup { min-width: 190px; color: var(--sh-ink-700); }
+.map-driver-popup__veh {
+  width: 100%;
+  height: 54px;
+  object-fit: contain;
+  background: var(--sh-card-2);
+  border: 1px solid var(--sh-line);
+  border-radius: var(--sh-r-xs);
+  padding: 4px;
+  margin-bottom: 0.5rem;
+}
+.map-driver-popup h6 { color: var(--sh-ink-900); font-weight: 800; }
+.map-driver-popup .muted { color: var(--sh-ink-400); }
+.map-driver-popup hr { border-color: var(--sh-line); }
+.map-driver-popup__btn {
+  width: 100%;
+  margin-top: 0.4rem;
+  padding: 0.4rem 0.6rem;
+  border-radius: var(--sh-r-pill);
+  border: 1px solid var(--sh-line-2);
+  background: var(--sh-card-2);
+  color: var(--sh-ink-900);
+  font-size: 0.72rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+.map-driver-popup__btn:hover { background: var(--sh-amber-500); border-color: var(--sh-amber-500); }
+

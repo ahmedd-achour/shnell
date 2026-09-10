@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { Orders, Deals, Commission, ShnellUser, Bid, CallLog, Vehicle } from '../../models/dashboard.models';
 import { DashboardDataService } from '../../services/dashboard-data.service';
 import { confirmAction, toastSuccess, toastError } from '../../../shared/swal';
+import { vehicleImage, onVehicleImgError } from '../../../shared/vehicle-assets';
 
 @Component({
   selector: 'app-deals-tab',
@@ -30,6 +31,9 @@ export class DealsTabComponent implements OnInit {
   
   expandedOrderId: string | null = null;
   assigningDriverId: string | null = null;
+
+  vehicleImage = vehicleImage;
+  onVehicleImgError = onVehicleImgError;
 
   toggleExpand(orderId: string): void {
     if (this.expandedOrderId === orderId) {
@@ -135,17 +139,46 @@ export class DealsTabComponent implements OnInit {
     return { label: 'Pending Matching', badgeClass: 'bg-secondary text-white' };
   }
 
+  private tsToMs(ts: any): number {
+    if (!ts) return 0;
+    if (ts.seconds) return ts.seconds * 1000;
+    if (ts.toDate) return ts.toDate().getTime();
+    const n = new Date(ts).getTime();
+    return isNaN(n) ? 0 : n;
+  }
+
+  /** An order with no deal is "expired" once its scheduled time has passed
+   *  or it's been sitting unmatched for > 72h. */
+  isOrderExpired(o: Orders): boolean {
+    if (this.getDealForOrder(o.id)) return false;
+    const now = Date.now();
+    const sched = this.tsToMs(o.scheduleAt);
+    const created = this.tsToMs(o.timestamp);
+    if (sched && sched < now) return true;
+    if (created && (now - created) > 72 * 3600 * 1000) return true;
+    return false;
+  }
+
+  /** Sub-status shown on rows with no matched deal:
+   *  Driver matched · No driver matching yet · Expired · no driver. */
+  getPendingSubStatus(o: Orders): { label: string; badgeClass: string } {
+    if (this.getDealForOrder(o.id)) {
+      return { label: 'Driver matched', badgeClass: 'bg-primary text-white' };
+    }
+    if (this.isOrderExpired(o)) {
+      return { label: 'Expired · no driver', badgeClass: 'bg-danger text-white' };
+    }
+    const bids = this.getOrderBids(o.id).length;
+    return {
+      label: bids > 0 ? `Awaiting match · ${bids} bid(s)` : 'No driver matching yet',
+      badgeClass: 'bg-warning text-dark'
+    };
+  }
+
   getUserName(userId?: string): string {
     if (!userId) return 'Unknown User';
     const u = this.users.find(x => x.uid === userId || x.id === userId);
     return u ? u.name : userId;
-  }
-
-  getCommission(orderId: string): number {
-    const comm = this.commissions.find(c => c.orderId === orderId);
-    if (comm) return comm.commissionDeducted;
-    const order = this.orders.find(o => o.id === orderId);
-    return order?.price ? Number((order.price * 0.15).toFixed(2)) : 0;
   }
 
   async softDeleteOrder(order: Orders): Promise<void> {

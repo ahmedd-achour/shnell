@@ -5,10 +5,10 @@
       <div class="row g-3 align-items-center">
         <div class="col-12 col-md-5">
           <div class="input-group">
-            <span class="input-group-text bg-dark border-secondary text-muted"><i class="bi bi-search"></i></span>
+            <span class="input-group-text"><i class="bi bi-search"></i></span>
             <input
               type="text"
-              class="form-control bg-dark text-white border-secondary"
+              class="form-control"
               placeholder="Search by order ID, pickup location, vehicle type or user..."
               [(ngModel)]="searchQuery"
             />
@@ -37,11 +37,11 @@
     </div>
   </div>
 
-  <!-- Orders & Commissions Table Card -->
+  <!-- Orders Table Card -->
   <div class="card border-0 shadow-sm dashboard-card">
     <div class="card-body p-0">
       <div class="table-responsive">
-        <table class="table table-dark table-striped table-hover align-middle">
+        <table class="table table-hover align-middle">
           <thead>
             <tr>
               <th class="ps-4">Order ID & Pickup Location</th>
@@ -50,10 +50,8 @@
               <th>Vehicle Requested</th>
               <th class="numeric">Distance</th>
               <th class="numeric">Order Price</th>
-              <th class="numeric">Platform Commission</th>
               <th>Deal Status & Record</th>
               <th class="pe-4 text-end">Admin Actions</th>
-              <th></th>
             </tr>
           </thead>
           <tbody>
@@ -84,8 +82,9 @@
                 </div>
               </td>
               <td>
-                <span class="badge bg-subtle text-warning border border-warning fs-8">
-                  <i class="bi bi-truck me-1"></i> {{ o.vehicleType || 'Standard' }}
+                <span class="veh-cell">
+                  <img class="veh-cell__img" [src]="vehicleImage(o.vehicleType)" (error)="onVehicleImgError($event)" [alt]="o.vehicleType || 'Standard'">
+                  <span class="veh-cell__label">{{ o.vehicleType || 'Standard' }}</span>
                 </span>
               </td>
               <td class="numeric font-mono">
@@ -94,29 +93,29 @@
               <td class="numeric font-mono">
                 <span class="fw-bold text-success fs-6">{{ (o.price || 0) | number:'1.2-2' }} TND</span>
               </td>
-              <td class="numeric font-mono">
-                <span class="fw-bold text-primary fs-6">+ {{ getCommission(o.id) | number:'1.2-2' }} TND</span>
-              </td>
               <td>
-                <ng-container *let="getDealForOrder(o.id) as deal">
-                  <ng-container *let="getNormalizedStatus(deal?.status) as st">
-                    <span class="badge {{ st.badgeClass }} px-2 py-1 fs-8 mb-1 d-inline-block">
-                      {{ st.label }}
-                    </span>
-                  </ng-container>
-                  <div class="small text-info fs-8 mt-1" *ngIf="deal">
+                <ng-container *ngIf="getDealForOrder(o.id) as deal; else noDeal">
+                  <span class="badge {{ getNormalizedStatus(deal.status).badgeClass }} px-2 py-1 fs-8 mb-1 d-inline-block">
+                    {{ getNormalizedStatus(deal.status).label }}
+                  </span>
+                  <div class="small text-info fs-8 mt-1">
                     <i class="bi bi-person-check-fill me-1"></i>Driver: {{ getUserName(deal.idDriver) }}
                     <div class="text-muted mt-1" style="font-size: 10px;">{{ deal.timestamp?.seconds ? (deal.timestamp.seconds * 1000 | date:'short') : (deal.timestamp | date:'short') }}</div>
                   </div>
-                  <div class="small text-warning fs-8 mt-1" *ngIf="!deal">
-                    <i class="bi bi-hourglass-split me-1"></i>No deal yet
-                  </div>
                 </ng-container>
+                <ng-template #noDeal>
+                  <span class="badge {{ getPendingSubStatus(o).badgeClass }} px-2 py-1 fs-8 d-inline-block">
+                    <i class="bi bi-hourglass-split me-1"></i>{{ getPendingSubStatus(o).label }}
+                  </span>
+                </ng-template>
                 <div class="small text-muted mt-1" *ngIf="o.isAcepted">
                   <i class="bi bi-archive-fill me-1 text-secondary"></i>Soft-Deleted
                 </div>
               </td>
-              <td class="pe-4 text-end">
+              <td class="pe-4 text-end text-nowrap">
+                <button class="btn btn-sm btn-icon-soft rounded-pill me-1" (click)="toggleExpand(o.id!)" title="Expand details">
+                  <i class="bi" [ngClass]="expandedOrderId === o.id ? 'bi-chevron-up' : 'bi-chevron-down'"></i>
+                </button>
                 <button
                   class="btn btn-sm btn-outline-danger rounded-pill px-3 py-1 fs-8"
                   [disabled]="processingDeleteId === o.id"
@@ -126,13 +125,10 @@
                   <i *ngIf="processingDeleteId !== o.id" class="bi bi-trash3-fill me-1"></i>Soft Delete
                 </button>
               </td>
-              <td>
-                <button class="btn btn-sm btn-outline-light" (click)="toggleExpand(o.id!)"><i class="bi" [ngClass]="expandedOrderId === o.id ? 'bi-chevron-up' : 'bi-chevron-down'"></i></button>
-              </td>
             </tr>
             <!-- Expanded Details Row -->
             <tr *ngIf="expandedOrderId === o.id" class="bg-darker">
-              <td colspan="9" class="p-4 border-bottom border-secondary">
+              <td colspan="8" class="p-4 border-bottom border-secondary">
                 <div class="row g-4">
                   <!-- Bids Section -->
                   <div class="col-md-4">

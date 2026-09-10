@@ -60,8 +60,9 @@ export class OverviewTabComponent implements OnInit, OnChanges, OnDestroy {
   private avgBidsCategoryChart: Chart | null = null;
   private avgPriceKmChart: Chart | null = null;
 
-  /** Categorical series palette — Shnell brand hues, ordered for first-glance clarity. */
-  private readonly palette = ['#FFC107', '#0E7A5F', '#2563EB', '#B7791F', '#7C5CE0', '#15AABB'];
+  /** Categorical series palette — Shnell warm brand hues (amber-forward, no primary
+      blue / violet), ordered for first-glance clarity. Matches the marketing site. */
+  private readonly palette = ['#FFB300', '#0E7A5F', '#946200', '#C05621', '#1F7A8C', '#5B8A00'];
 
   /** Reads the live design tokens so chart chrome tracks the dashboard theme. */
   private chartTheme(): { text: string; grid: string; border: string; font: string } {

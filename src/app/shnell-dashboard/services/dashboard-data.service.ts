@@ -102,8 +102,13 @@ export class DashboardDataService {
       map(([usersList, walletsList]) => {
         return usersList.map(u => {
           const w = walletsList.find(wallet => wallet.uid === u.uid);
+          // Normalise legacy role strings so the whole admin sees one vocabulary:
+          // platform roles are 'user' / 'driver' ('admin'/'company' console-only).
+          const rawRole = (u['role'] || '').toString().trim().toLowerCase();
+          const role = (rawRole === 'customer' || rawRole === 'client' || rawRole === '') ? 'user' : rawRole;
           return {
             ...u,
+            role,
             id: u.uid || u['__id'] || u['id'],
             balance: w ? w['balance'] : u['balance']
           } as ShnellUser;

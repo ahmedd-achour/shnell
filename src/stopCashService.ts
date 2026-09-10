@@ -1,6 +1,6 @@
 // stops-cache.service.ts
 import { Injectable } from '@angular/core';
-import * as L from 'leaflet';
+import { LatLng, latLng } from './app/shared/latlng';
 import { DropOffDataModel } from './Models/dropoffdata.model';
 
 @Injectable({
@@ -8,7 +8,7 @@ import { DropOffDataModel } from './Models/dropoffdata.model';
 })
 export class StopsCacheService {
   pickupAddress: string | null = null;
-  pickupLatLng: L.LatLng | null = null;
+  pickupLatLng: LatLng | null = null;
   dropOffs: DropOffDataModel[] = [];
   selectedDriverId: string | null = null;
   selectedDriverIndex: number | null = null;
@@ -30,7 +30,7 @@ export class StopsCacheService {
     if (pickup) this.pickupAddress = pickup;
 
     const latlng = localStorage.getItem('pickupLatLng');
-    if (latlng) this.pickupLatLng = L.latLng(JSON.parse(latlng));
+    if (latlng) this.pickupLatLng = latLng(JSON.parse(latlng));
 
     const drops = localStorage.getItem('dropOffs');
     if (drops) this.dropOffs = JSON.parse(drops);

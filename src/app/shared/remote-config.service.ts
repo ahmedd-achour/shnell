@@ -1,5 +1,5 @@
-import { Injectable, inject } from '@angular/core';
-import { RemoteConfig, fetchAndActivate, getValue } from '@angular/fire/remote-config';
+import { Injectable, Injector } from '@angular/core';
+import { RemoteConfig, fetchAndActivate, getValue, isSupported } from '@angular/fire/remote-config';
 import { setMapboxToken } from './mapbox';
 
 /**
@@ -7,12 +7,23 @@ import { setMapboxToken } from './mapbox';
  * hardcoded in the bundle — values can be rotated from the Firebase console
  * without a rebuild/redeploy. `init()` is awaited by an APP_INITIALIZER
  * (see app.module.ts) before the app finishes bootstrapping.
+ *
+ * `RemoteConfig` is resolved lazily via `Injector.get` (not `inject()` in a
+ * field initializer) because AngularFire itself needs to `await isSupported()`
+ * before the `RemoteConfig` token can be provided; injecting it eagerly here
+ * races that check and throws "APP_INITIALIZER ... has not resolved".
  */
 @Injectable({ providedIn: 'root' })
 export class RemoteConfigService {
-  private readonly rc = inject(RemoteConfig);
+  private rc: RemoteConfig | undefined;
+
+  constructor(private readonly injector: Injector) {}
 
   async init(): Promise<void> {
+    if (!(await isSupported())) {
+      return;
+    }
+    this.rc = this.injector.get(RemoteConfig);
     this.rc.settings.minimumFetchIntervalMillis = 3600000;
     this.rc.defaultConfig = {
       mapbox_access_token: '',
@@ -30,7 +41,7 @@ export class RemoteConfigService {
   }
 
   private value(key: string): string {
-    return getValue(this.rc, key).asString();
+    return this.rc ? getValue(this.rc, key).asString() : '';
   }
 
   get mapboxAccessToken(): string { return this.value('mapbox_access_token'); }

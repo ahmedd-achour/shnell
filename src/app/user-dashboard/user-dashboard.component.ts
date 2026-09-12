@@ -19,7 +19,7 @@ import {
   MAPBOX_TOKEN, MAPBOX_STYLE_STREET, MAPBOX_STYLE_SATELLITE,
   mapboxForwardGeocode, mapboxReverseGeocode, mapboxGeocodeOne, makeDotEl, tnLngLat,
 } from '../shared/mapbox';
-import { environment } from '../../environments/environment';
+import { RemoteConfigService } from '../shared/remote-config.service';
 import * as XLSX from 'xlsx';
 
 const MAX_JOBS = 10;
@@ -144,7 +144,11 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit,
   private auth = inject(Auth);
   private functions = inject(Functions);
   private router = inject(Router);
+  private remoteConfig = inject(RemoteConfigService);
 
+
+
+  
   @ViewChild('pinMapEl') pinMapRef!: ElementRef<HTMLDivElement>;
   @ViewChild('statusChartEl') statusChartRef?: ElementRef<HTMLCanvasElement>;
   @ViewChild('stopsChartEl') stopsChartRef?: ElementRef<HTMLCanvasElement>;
@@ -999,8 +1003,8 @@ print(res.json())  # { success, orderId, price, currency, distanceKm, stopIds }`
   /** Runs the raw rows through Gemini in chunks, mapping arbitrary column
    *  names/languages/typos onto our stop schema. */
   private async aiMapRows(rawRows: any[]): Promise<ImportedStop[]> {
-    const key = (environment as any).geminiApiKey;
-    if (!key) throw new Error('Clé Gemini absente (environment.geminiApiKey).');
+    const key = this.remoteConfig.geminiApiKey;
+    if (!key) throw new Error('Clé Gemini absente (Remote Config: gemini_api_key).');
     const out: ImportedStop[] = [];
     for (let i = 0; i < rawRows.length; i += this.AI_CHUNK) {
       const chunk = rawRows.slice(i, i + this.AI_CHUNK);
@@ -1013,8 +1017,8 @@ print(res.json())  # { success, orderId, price, currency, distanceKm, stopIds }`
   }
 
   private async geminiMapChunk(rows: any[]): Promise<any[]> {
-    const model = (environment as any).geminiModel || 'gemini-2.0-flash';
-    const key = (environment as any).geminiApiKey;
+    const model = this.remoteConfig.geminiModel;
+    const key = this.remoteConfig.geminiApiKey;
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(key)}`;
 
     const prompt =

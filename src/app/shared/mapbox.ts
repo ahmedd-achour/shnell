@@ -4,10 +4,16 @@
  *
  * Only the PUBLIC (`pk.`) token is ever used here; it is safe to ship in the
  * bundle. Never place a secret (`sk.`) token in front-end code.
+ *
+ * The token itself comes from Firebase Remote Config (not hardcoded here) so
+ * it can be rotated without a rebuild — `RemoteConfigService` sets it via
+ * `setMapboxToken()` once the initial fetch completes.
  */
-import { environment } from '../../environments/environment';
+export let MAPBOX_TOKEN = '';
 
-export const MAPBOX_TOKEN = environment.mapboxAccessToken;
+export function setMapboxToken(token: string): void {
+  MAPBOX_TOKEN = token;
+}
 
 /** Vector base styles used across the dashboards. */
 export const MAPBOX_STYLE_STREET = 'mapbox://styles/mapbox/light-v11';

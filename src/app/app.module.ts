@@ -32,11 +32,13 @@ import { SignUpComponent } from './components/auth/sign-up/sign-up.component';
 import { PublicLayoutComponent } from './public-layout/public-layout.component';
 import { getDatabase, provideDatabase } from '@angular/fire/database';
 import { getFunctions, provideFunctions } from '@angular/fire/functions';
+import { getRemoteConfig, provideRemoteConfig } from '@angular/fire/remote-config';
 import { DragDropModule } from '@angular/cdk/drag-drop';
 import { AdminDriverManagementComponent } from './admin-driver-management/admin-driver-management.component';
 import { ExpiredOrdersComponent } from './expired-orders/expired-orders.component';
 import { UpdateStopLocationComponent } from './update-stop-location/update-stop-location.component';
-import { NgModule } from '@angular/core';
+import { APP_INITIALIZER, NgModule } from '@angular/core';
+import { RemoteConfigService } from './shared/remote-config.service';
 import { ShnellDashboardComponent } from './shnell-dashboard/shnell-dashboard.component';
 import { LottieComponent, provideLottieOptions } from 'ngx-lottie';
 import player from 'lottie-web';
@@ -106,6 +108,13 @@ AuthModule,
     provideFirestore(() => getFirestore()),
     provideDatabase(() => getDatabase()),
     provideFunctions(() => getFunctions()),
+    provideRemoteConfig(() => getRemoteConfig()),
+    {
+      provide: APP_INITIALIZER,
+      useFactory: (rc: RemoteConfigService) => () => rc.init(),
+      deps: [RemoteConfigService],
+      multi: true,
+    },
     provideAnimationsAsync(),
     provideLottieOptions({ player: playerFactory })
   ],

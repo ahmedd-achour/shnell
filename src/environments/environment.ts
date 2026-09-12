@@ -1,3 +1,9 @@
+/**
+ * Firebase project config only. Secrets (Mapbox, Gemini, Google Maps, Brevo)
+ * live in Firebase Remote Config instead — see
+ * `src/app/shared/remote-config.service.ts`. They can be rotated from the
+ * Firebase console without a rebuild/redeploy, and never touch source control.
+ */
 export const environment = {
   production: false,
   firebaseConfig: {
@@ -10,11 +16,4 @@ export const environment = {
     appId: "1:217120837439:web:bf8efa57bd6d30294e0d8a",
     measurementId: "G-7H2GZ2YM6V"
   },
-  googleMapsApiKey: 'REDACTED' ,// legacy — no longer used by the app maps
-  mapboxAccessToken: 'REDACTED',
-  // Gemini — smart column-mapping for the Parcels Excel import (Parcels tab).
-  // NOTE: this ships in the browser bundle; restrict the key to the
-  // Generative Language API + your domains, or proxy it via a Cloud Function.
-  geminiApiKey: 'REDACTED',
-  geminiModel: 'gemini-2.0-flash',
 };

@@ -27,13 +27,12 @@ import { UserDashboardComponent } from './user-dashboard/user-dashboard.componen
 
 const routes: Routes = [
   // Default route
-
   {
     path: 'download',
-    component: DownloadRedirectComponent
+    component: DownloadRedirectComponent 
   },
 
-  { path: 'home', redirectTo: '', pathMatch: 'full' },
+  { path: 'home', redirectTo: '', pathMatch: 'full' }, 
 
   // Authenticated user dashboard (web port of the mobile client order flow).
   { path: 'app', component: UserDashboardComponent, canActivate: [AuthedGuard] },
@@ -53,7 +52,6 @@ const routes: Routes = [
     { path: 'update-stop', component: UpdateStopLocationComponent },
     { path: 'home', component: HomeComponent },
     { path: '', component: HomeComponent },
-
     { path: 'about', component: AboutComponent },
     { path: 'service', component: ServiceComponent },
     { path: 'contact', component: ContactComponent },

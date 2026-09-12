@@ -1,6 +1,7 @@
-import { Component } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
+import { RemoteConfigService } from '../../shared/remote-config.service';
 
 @Component({
   selector: 'app-contact',
@@ -8,11 +9,13 @@ import { firstValueFrom } from 'rxjs';
   styleUrls: ['./contact.component.css']
 })
 export class ContactComponent {
+  private remoteConfig = inject(RemoteConfigService);
+
   name = '';
   email = '';
   subject = '';
   message = '';
-  
+
   isSending = false;
   successMessage = '';
   errorMessage = '';
@@ -29,7 +32,6 @@ export class ContactComponent {
     this.errorMessage = '';
     this.successMessage = '';
 
-    const apiKey = 'REDACTED';
     const senderEmail = 'service@xschnell.com';
     const recipientEmail = 'achour.space@gmail.com';
 
@@ -52,7 +54,7 @@ export class ContactComponent {
 
     const headers = new HttpHeaders({
       'accept': 'application/json',
-      'api-key': apiKey,
+      'api-key': this.remoteConfig.brevoApiKey,
       'content-type': 'application/json'
     });
 

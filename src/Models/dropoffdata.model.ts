@@ -43,6 +43,16 @@ export interface DropOffData {
   definedBy?: string;
   /** Whether the collected cash has been paid out to the expeditor. */
   expeditorPayout?: ExpeditorPayout;
+  /** Position of this stop within its mission's optimized route (0-based). */
+  sequence?: number;
+  /** Reason selected by the driver when `state` is 'notDelivered'. */
+  failureReason?: string;
+  proofOfDelivery?: {
+    photoUrl?: string;
+    signatureUrl?: string;
+    deliveredAt?: any;
+    note?: string;
+  };
 }
 
 export class DropOffDataModel implements DropOffData {
@@ -64,7 +74,10 @@ export class DropOffDataModel implements DropOffData {
     public parcelPrice?: number,
     state?: StopState,
     public definedBy?: string,
-    public expeditorPayout: ExpeditorPayout = 'unpaid'
+    public expeditorPayout: ExpeditorPayout = 'unpaid',
+    public sequence?: number,
+    public failureReason?: string,
+    public proofOfDelivery?: { photoUrl?: string; signatureUrl?: string; deliveredAt?: any; note?: string }
   ) {
     // Accept an explicit `state`, or an old-style `isdelivered` (bool | 'delivered' string).
     if (state && STOP_STATES.includes(state)) {
@@ -117,6 +130,9 @@ export class DropOffDataModel implements DropOffData {
       definedBy: this.definedBy,
       productName: this.productName,
       quantity: this.quantity,
+      sequence: this.sequence,
+      failureReason: this.failureReason,
+      proofOfDelivery: this.proofOfDelivery,
       date: Timestamp.now()  // FIXED: Use Timestamp for Firestore compatibility
     };
   }
@@ -152,7 +168,10 @@ export class DropOffDataModel implements DropOffData {
       typeof data.parcelPrice === 'number' ? data.parcelPrice : Number(data.parcelPrice) || undefined,
       stopStateFromDoc(data),
       data.definedBy ?? data.createdBy ?? data.companyId,
-      expeditorPayoutFromDoc(data)
+      expeditorPayoutFromDoc(data),
+      typeof data.sequence === 'number' ? data.sequence : undefined,
+      data.failureReason,
+      data.proofOfDelivery
     );
   }
 }

@@ -1,0 +1,35 @@
+.pending-approval {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f4f7fa;
+  padding: 1.5rem;
+}
+
+.pending-approval__card {
+  max-width: 480px;
+  width: 100%;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1), 0 4px 12px rgba(0, 0, 0, 0.05);
+  padding: 2.5rem 2rem;
+  text-align: center;
+}
+
+.pending-approval__icon {
+  font-size: 2.5rem;
+  color: #ffb300;
+  margin-bottom: 1rem;
+}
+
+.pending-approval__card h1 {
+  font-size: 1.4rem;
+  margin-bottom: 1rem;
+}
+
+.pending-approval__card p {
+  color: #555;
+  margin-bottom: 1.5rem;
+  line-height: 1.5;
+}

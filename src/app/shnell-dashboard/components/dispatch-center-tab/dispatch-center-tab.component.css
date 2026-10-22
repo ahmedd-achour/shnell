@@ -1,0 +1,39 @@
+/* .dashboard-card, .btn-saas-primary come from the global admin layer */
+
+.dispatch-queue-list {
+  max-height: 68vh;
+  overflow-y: auto;
+}
+
+.dispatch-queue-row {
+  background: var(--sh-card);
+  border: 1px solid transparent;
+  transition: border-color 0.15s ease, background 0.15s ease;
+  cursor: pointer;
+}
+.dispatch-queue-row:hover {
+  border-color: var(--sh-brand, #2563EB);
+}
+.dispatch-queue-row.active {
+  border-color: var(--sh-brand, #2563EB);
+  background: color-mix(in srgb, var(--sh-brand, #2563EB) 8%, var(--sh-card));
+}
+
+.metric-tile {
+  background: var(--sh-card);
+  border-radius: 0.75rem;
+  padding: 0.6rem 0.8rem;
+  text-align: center;
+}
+
+.route-order-list {
+  max-height: 220px;
+  overflow-y: auto;
+  padding-left: 1.1rem;
+}
+
+.price-breakdown {
+  background: var(--sh-card);
+  border-radius: 0.75rem;
+  padding: 0.75rem 1rem;
+}

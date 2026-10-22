@@ -1,0 +1,54 @@
+<div class="hub-head">
+  <div>
+    <h3>Activity log</h3>
+    <p>Who did what, and when. Written by the server for every admin action, money movement and automatic correction. Nobody can edit or delete an entry, admins included.</p>
+  </div>
+  <div class="hub-actions">
+    <select class="hub-select" [(ngModel)]="adminFilter" aria-label="Admin">
+      <option value="all">All admins</option>
+      <option *ngFor="let a of admins" [value]="a">{{ name(a) }}</option>
+    </select>
+    <button class="hub-btn" (click)="exportCsv()" [disabled]="!filtered.length"><i class="bi bi-download"></i> CSV</button>
+  </div>
+</div>
+
+<div class="hub-card">
+  <div class="hub-card__body">
+    <div class="hub-toolbar">
+      <div class="hub-seg">
+        <button *ngFor="let g of groups" [class.on]="group === g.id" (click)="group = g.id">
+          <i class="bi" [ngClass]="g.icon"></i> {{ g.label }}<span class="n">{{ groupCount(g.id) }}</span>
+        </button>
+      </div>
+      <input class="hub-input hub-input--search" [(ngModel)]="search" placeholder="Search account, receipt, order, admin…" aria-label="Search the activity log">
+    </div>
+  </div>
+
+  <div class="hub-card__body--flush">
+    <ng-container *ngFor="let d of days">
+      <div class="px-3 py-2 fs-9 fw-bold text-uppercase hub-dim" style="background: var(--sh-card-2); border-block: 1px solid var(--sh-line); letter-spacing: .06em">
+        {{ d.day | date:'EEEE dd MMMM yyyy' }} · {{ d.rows.length }}
+      </div>
+      <ul class="hub-tl">
+        <li *ngFor="let a of d.rows" (click)="expanded = expanded === a.id ? null : a.id" style="cursor: pointer">
+          <span class="hub-ico" [ngClass]="'tone-' + auditMeta(a.action).tone"><i class="bi" [ngClass]="auditMeta(a.action).icon"></i></span>
+          <div class="hub-tl__main">
+            <div class="hub-tl__title">
+              {{ auditMeta(a.action).label }}
+              <a *ngIf="a.targetUid" class="hub-link fw-semibold" (click)="$event.stopPropagation(); openAccount.emit(a.targetUid)">{{ name(a.targetUid) }}</a>
+            </div>
+            <div class="hub-tl__text">{{ describe(a) }}</div>
+            <div class="hub-tl__meta"><i class="bi bi-person-badge"></i> {{ name(a.adminUid) }} · {{ a.at | date:'HH:mm:ss' }}</div>
+            <pre *ngIf="expanded === a.id" class="mt-2 mb-0 p-2 rounded-3 fs-9" style="background: var(--sh-card-2); border: 1px solid var(--sh-line); white-space: pre-wrap">{{ detailsJson(a) }}</pre>
+          </div>
+          <div class="hub-tl__side"><i class="bi hub-dim" [ngClass]="expanded === a.id ? 'bi-chevron-up' : 'bi-chevron-down'"></i></div>
+        </li>
+      </ul>
+    </ng-container>
+    <div class="hub-empty" *ngIf="loading"><span class="spinner-border spinner-border-sm"></span> Loading activity…</div>
+    <div class="hub-empty" *ngIf="!loading && !filtered.length"><i class="bi bi-journal"></i>No entry matches.</div>
+    <div class="text-center p-3" *ngIf="!loading && rows.length >= 300">
+      <button class="hub-btn hub-btn--sm" (click)="loadMore()">Load older entries</button>
+    </div>
+  </div>
+</div>

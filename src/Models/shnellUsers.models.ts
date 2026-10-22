@@ -3,8 +3,6 @@ export class ShnellUser {
   name: string;
   phone: string;
   role: string;
-  fcmToken: string | null;
-  balance: number;
   isActive: boolean;
   darkMode: boolean;
   platform: string;
@@ -26,8 +24,6 @@ export class ShnellUser {
       if (r === 'customer' || r === 'client' || r === '') return 'user';
       return r;
     })();
-    this.fcmToken = data.fcmToken || null;
-    this.balance = Number(data.balance ?? 0);
     this.isActive = data.isActive ?? true;
     this.darkMode = data.darkMode ?? true;
     this.platform = data.platform || 'unknown';
@@ -49,8 +45,6 @@ export class ShnellUser {
       name: this.name,
       phone: this.phone,
       role: this.role,
-      fcmToken: this.fcmToken,
-      balance: this.balance,
       isActive: this.isActive,
       darkMode: this.darkMode,
       platform: this.platform,

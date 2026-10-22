@@ -198,7 +198,7 @@
                     <span class="status-pill success fs-8"><i class="bi bi-check-circle-fill me-1"></i>{{ item.dealCount }} deals</span>
                   </td>
                   <td class="numeric">
-                    <span class="fw-bold text-success font-mono">{{ item.earnings | number:'1.2-2' }} TND</span>
+                    <span *ngFor="let b of walletBalances(item.driver)" class="d-block fw-bold font-mono" [ngClass]="b.amount < 0 ? 'text-danger' : 'text-success'">{{ b.amount | number:'1.2-2' }} {{ b.currency }}</span>
                   </td>
                   <td class="pe-4 text-end">
                     <button class="btn btn-sm btn-saas-primary rounded-pill px-3 fs-8" (click)="onSendNotification(item.driver)">

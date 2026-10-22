@@ -1,0 +1,72 @@
+<div class="modal-overlay" (click)="closed.emit(false)">
+  <div class="modal-box" style="max-width: 560px" (click)="$event.stopPropagation()" role="dialog" aria-modal="true" aria-label="Record a wallet movement">
+    <div class="d-flex justify-content-between align-items-start mb-3 gap-3">
+      <div>
+        <h5 class="mb-0 fw-bold">Record a wallet movement</h5>
+        <small class="hub-dim">Written by the server with a ledger line and an audit entry. A receipt number can be used once per currency.</small>
+      </div>
+      <button class="hub-btn hub-btn--icon" (click)="closed.emit(false)" aria-label="Close"><i class="bi bi-x-lg"></i></button>
+    </div>
+
+    <label class="form-label fs-8 fw-bold">Account</label>
+    <div *ngIf="user; else pickTpl" class="d-flex align-items-center justify-content-between gap-2 p-2 mb-3 rounded-3" style="background: var(--sh-card-2); border: 1px solid var(--sh-line)">
+      <div class="text-truncate"><b>{{ user.name }}</b> <span class="hub-dim fs-8">{{ user.role }} · {{ user.phone || user.email }}</span>
+        <div class="fs-8 hub-dim"><span *ngFor="let c of currencies().slice(0, 3); let last = last">{{ c }} {{ (user.balances?.[c] || 0) | number:'1.2-2' }}<span *ngIf="!last"> · </span></span></div>
+      </div>
+      <button class="hub-btn hub-btn--sm" (click)="user = null">Change</button>
+    </div>
+    <ng-template #pickTpl>
+      <div class="position-relative mb-3">
+        <input class="hub-input w-100" [(ngModel)]="query" placeholder="Name, phone, e-mail or uid" aria-label="Find the account">
+        <div class="hub-card position-absolute w-100 mt-1" style="z-index: 5" *ngIf="matches.length">
+          <ul class="hub-tl">
+            <li *ngFor="let u of matches" (click)="pick(u)" style="cursor: pointer">
+              <div class="hub-tl__main"><div class="hub-tl__title">{{ u.name || u.uid }}</div><div class="hub-tl__meta">{{ u.role }} · {{ u.phone || u.email }}</div></div>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </ng-template>
+
+    <div class="row g-2 mb-3">
+      <div class="col-12">
+        <div class="hub-seg w-100">
+          <button class="flex-fill" [class.on]="direction === 'credit'" (click)="direction = 'credit'"><i class="bi bi-plus-circle text-success"></i> Credit (recharge)</button>
+          <button class="flex-fill" [class.on]="direction === 'debit'" (click)="direction = 'debit'"><i class="bi bi-dash-circle text-danger"></i> Debit (correction)</button>
+        </div>
+      </div>
+      <div class="col-7">
+        <label class="form-label fs-8 fw-bold" for="wm-amount">Amount</label>
+        <input id="wm-amount" class="hub-input w-100" type="number" min="0.01" step="0.01" [(ngModel)]="amount" placeholder="0.00">
+      </div>
+      <div class="col-5">
+        <label class="form-label fs-8 fw-bold" for="wm-cur">Currency</label>
+        <select id="wm-cur" class="hub-select w-100" [(ngModel)]="currency">
+          <option *ngFor="let c of currencies()" [value]="c">{{ c }}</option>
+        </select>
+      </div>
+      <div class="col-12">
+        <label class="form-label fs-8 fw-bold" for="wm-ref">Office receipt number</label>
+        <input id="wm-ref" class="hub-input w-100" [(ngModel)]="reference" placeholder="e.g. REC-2026-00412" maxlength="64">
+      </div>
+      <div class="col-12">
+        <label class="form-label fs-8 fw-bold" for="wm-reason">Reason <span class="hub-dim fw-normal">{{ direction === 'debit' ? '(required for a debit)' : '(optional)' }}</span></label>
+        <input id="wm-reason" class="hub-input w-100" [(ngModel)]="reason" maxlength="300" placeholder="Cash deposit at the office, correction of…">
+      </div>
+    </div>
+
+    <div class="p-3 rounded-3 mb-3 fs-8" style="background: var(--sh-card-2); border: 1px solid var(--sh-line)" *ngIf="user && delta">
+      {{ currency }} balance: {{ balance() | number:'1.2-2' }} → <b>{{ balance() + delta | number:'1.2-2' }}</b>
+      <div class="text-warning mt-1" *ngIf="needsApproval"><i class="bi bi-shield-lock"></i> Above {{ threshold }} {{ currency }}: another admin must approve before the money moves.</div>
+      <div class="hub-dim mt-1">Each currency is its own balance; nothing is converted.</div>
+    </div>
+
+    <div class="d-flex justify-content-end gap-2">
+      <button class="hub-btn" (click)="closed.emit(false)">Cancel</button>
+      <button class="hub-btn" [ngClass]="direction === 'credit' ? 'hub-btn--primary' : 'hub-btn--danger'" [disabled]="saving || !user || !delta" (click)="submit()">
+        <span *ngIf="saving" class="spinner-border spinner-border-sm"></span>
+        {{ direction === 'credit' ? 'Credit' : 'Debit' }} {{ delta ? (delta | number:'1.2-2') : '' }} {{ currency }}
+      </button>
+    </div>
+  </div>
+</div>

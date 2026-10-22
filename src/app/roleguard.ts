@@ -89,3 +89,38 @@ export class AuthedGuard implements CanActivate {
     return true;
   }
 }
+
+/**
+ * Partner console guard (stops-management). A professional account starts as
+ * `company-onheld` at sign-up (see SignUpComponent) and only becomes `company`
+ * once an admin approves its companies/{uid} verification doc — so this route
+ * is unreachable until that happens, closing what was previously a completely
+ * unguarded path (no canActivate at all) to the bulk-dispatch console.
+ */
+@Injectable({ providedIn: 'root' })
+export class ApprovedCompanyGuard implements CanActivate {
+  constructor(private auth: Auth, private firestore: Firestore, private router: Router) {}
+
+  async canActivate(): Promise<boolean | UrlTree> {
+    const user = await currentUserOrWait(this.auth);
+    if (!user) return this.router.createUrlTree(['/sign-in']);
+
+    if (await accountBanned(this.firestore, user.uid)) {
+      await signOut(this.auth).catch(() => {});
+      return this.router.createUrlTree(['/sign-in'], { queryParams: { banned: 1 } });
+    }
+
+    try {
+      const snap = await getDoc(doc(this.firestore, 'users', user.uid));
+      const role = (snap.exists() ? (snap.data() as any)?.role : '')
+        ?.toString().trim().toLowerCase();
+
+      if (role === 'admin' || role === 'company') return true;
+      if (role === 'company-onheld') return this.router.createUrlTree(['/pending-approval']);
+      return this.router.createUrlTree(['/app']);
+    } catch (err) {
+      console.error('ApprovedCompanyGuard error:', err);
+      return this.router.createUrlTree(['/app']);
+    }
+  }
+}

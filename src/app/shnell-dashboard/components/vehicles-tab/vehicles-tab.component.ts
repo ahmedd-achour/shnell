@@ -297,8 +297,7 @@ export class VehiclesTabComponent implements OnInit {
     try {
       const currentStatus = this.selectedDriverVerification.isVerified === true;
       const newStatus = !currentStatus;
-      const verifyRef = doc(this.firestore, `drivers/${driverId}`);
-      await updateDoc(verifyRef, { isVerified: newStatus });
+      await this.dashboardDataService.setDriverVerified(driverId, newStatus);
       this.selectedDriverVerification.isVerified = newStatus;
       toastSuccess(newStatus ? 'Vérification approuvée' : 'Vérification révoquée');
     } catch (e) {

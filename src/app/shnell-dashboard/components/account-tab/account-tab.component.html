@@ -1,0 +1,272 @@
+<!-- Account picker (no account selected yet) -->
+<div *ngIf="!uid" class="hub-card" style="max-width: 640px; margin: 40px auto">
+  <div class="hub-card__body text-center py-4">
+    <i class="bi bi-person-bounding-box" style="font-size: 2.4rem; color: var(--sh-amber-700)"></i>
+    <h4 class="fw-bold mt-2 mb-1">Account 360</h4>
+    <p class="hub-dim fs-7 mb-3">Open any driver, customer or partner to see their wallet, every transaction, the admin log, trips, devices and notifications.</p>
+    <div class="position-relative text-start">
+      <input class="hub-input w-100" [(ngModel)]="pickQuery" placeholder="Search by name, phone, e-mail or uid" aria-label="Find an account">
+      <ul class="hub-tl hub-card mt-1" *ngIf="pickMatches.length">
+        <li *ngFor="let u of pickMatches" (click)="openAccount.emit(u.uid || u.id || '')" style="cursor: pointer">
+          <div class="hub-tl__main"><div class="hub-tl__title">{{ u.name || u.uid }}</div><div class="hub-tl__meta">{{ u.role }} · {{ u.phone || u.email }}</div></div>
+          <i class="bi bi-chevron-right hub-dim"></i>
+        </li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<ng-container *ngIf="uid">
+  <div class="hub-empty" *ngIf="!user"><span class="spinner-border spinner-border-sm"></span> Loading the account…</div>
+
+  <ng-container *ngIf="user">
+    <!-- Identity -->
+    <div class="hub-card">
+      <div class="hub-card__body d-flex flex-wrap gap-3 align-items-center">
+        <div class="hub-avatar"><img *ngIf="photo" [src]="photo" alt=""><span *ngIf="!photo">{{ initial }}</span></div>
+        <div class="flex-grow-1" style="min-width: 220px">
+          <div class="d-flex flex-wrap align-items-center gap-2">
+            <h3 class="mb-0 fw-bold" style="font-family: var(--sh-font-display); letter-spacing: -.02em">{{ user.name || 'Unnamed account' }}</h3>
+            <span class="hub-tag tone-info">{{ roleLabel }}</span>
+            <span class="hub-tag" *ngIf="user.accType" [ngClass]="user.accType === 'pro' ? 'tone-warning' : 'tone-muted'">{{ user.accType | uppercase }}</span>
+            <span class="hub-tag tone-danger" *ngIf="banned"><i class="bi bi-slash-circle"></i> Banned</span>
+            <span class="hub-tag tone-success" *ngIf="isDriver && verified"><i class="bi bi-patch-check"></i> Verified</span>
+            <span class="hub-tag tone-warning" *ngIf="isDriver && !verified"><i class="bi bi-patch-exclamation"></i> Not verified</span>
+          </div>
+          <div class="hub-dim fs-8 mt-1 d-flex flex-wrap gap-3">
+            <span *ngIf="user.phone"><i class="bi bi-telephone"></i> {{ user.phone }}</span>
+            <span *ngIf="user.email"><i class="bi bi-envelope"></i> {{ user.email }}</span>
+            <span class="hub-mono" style="cursor: pointer" (click)="copy(uid)" title="Copy uid"><i class="bi bi-copy"></i> {{ uid }}</span>
+            <span *ngIf="createdAt"><i class="bi bi-calendar"></i> since {{ createdAt | date:'dd MMM yyyy' }}</span>
+            <span *ngIf="lastSeen"><i class="bi bi-activity"></i> seen {{ lastSeen | date:'dd MMM, HH:mm' }}</span>
+          </div>
+        </div>
+        <div class="hub-actions">
+          <button class="hub-btn hub-btn--primary" (click)="openMovement('credit')"><i class="bi bi-plus-lg"></i> Recharge</button>
+          <button class="hub-btn" (click)="openMovement('debit')"><i class="bi bi-dash-lg"></i> Debit</button>
+          <button class="hub-btn" (click)="notifyUser.emit(asShnellUser)"><i class="bi bi-send"></i> Notify</button>
+          <div class="dropdown">
+            <button class="hub-btn" (click)="menuOpen = !menuOpen" [attr.aria-expanded]="menuOpen" aria-label="More actions"><i class="bi bi-three-dots"></i></button>
+            <ul class="dropdown-menu dropdown-menu-end shadow-sm" [class.show]="menuOpen" style="right: 0; left: auto" (click)="menuOpen = false">
+              <li *ngIf="isDriver"><button class="dropdown-item" [disabled]="busy" (click)="toggleVerified()"><i class="bi me-2" [ngClass]="verified ? 'bi-patch-exclamation' : 'bi-patch-check'"></i>{{ verified ? 'Revoke verification' : 'Mark as verified' }}</button></li>
+              <li><button class="dropdown-item" [disabled]="busy" (click)="setTier(user.accType === 'pro' ? 'standard' : 'pro')"><i class="bi bi-award me-2"></i>Switch to {{ user.accType === 'pro' ? 'STANDARD' : 'PRO' }}</button></li>
+              <li><button class="dropdown-item" [disabled]="busy" (click)="resetPassword()"><i class="bi bi-shield-lock me-2"></i>Set a new password</button></li>
+              <li><hr class="dropdown-divider"></li>
+              <li><button class="dropdown-item" [class.text-danger]="!banned" [disabled]="busy" (click)="toggleBan()"><i class="bi me-2" [ngClass]="banned ? 'bi-unlock' : 'bi-slash-circle'"></i>{{ banned ? 'Unban account' : 'Ban account' }}</button></li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Wallet -->
+    <div class="hub-kpis">
+      <div class="hub-kpi" *ngFor="let b of balances" [class.hub-kpi--alert]="b.amount < floorIn(b.currency)">
+        <div class="hub-kpi__label"><i class="bi bi-wallet2"></i> {{ b.currency }} balance</div>
+        <div class="hub-kpi__value" [class.amt-neg]="b.amount < 0">{{ b.amount | number:'1.2-2' }}</div>
+        <div class="hub-kpi__sub" *ngIf="isDriver">
+          <span *ngIf="b.amount < floorIn(b.currency)" class="text-danger fw-bold"><i class="bi bi-pause-circle"></i> Paused · </span>pause line {{ floorIn(b.currency) }} {{ b.currency }}
+        </div>
+      </div>
+      <div class="hub-kpi" *ngIf="!balances.length">
+        <div class="hub-kpi__label"><i class="bi bi-wallet2"></i> Wallet</div>
+        <div class="hub-kpi__value">0.00</div>
+        <div class="hub-kpi__sub">No money yet. Accounts start at 0.</div>
+      </div>
+      <div class="hub-kpi" *ngFor="let s of walletSummary">
+        <div class="hub-kpi__label"><i class="bi bi-graph-up"></i> {{ s.currency }} lifetime</div>
+        <div class="fs-8 mt-2">
+          <div>Recharged <b class="amt-pos">{{ s.recharged | number:'1.2-2' }}</b></div>
+          <div>Commissions <b class="amt-neg">{{ s.commissions | number:'1.2-2' }}</b></div>
+          <div *ngIf="s.other">Other <b>{{ s.other | number:'1.2-2' }}</b></div>
+        </div>
+        <div class="hub-kpi__sub">{{ s.lines }} ledger lines</div>
+      </div>
+      <div class="hub-kpi hub-kpi--click" (click)="section = 'trips'">
+        <div class="hub-kpi__label"><i class="bi bi-truck"></i> Trips</div>
+        <div class="hub-kpi__value">{{ tripCount }}</div>
+        <div class="hub-kpi__sub">{{ dealsAsDriver.length }} driven · {{ orders.length }} ordered</div>
+      </div>
+    </div>
+
+    <!-- Sections -->
+    <div class="hub-card">
+      <div class="hub-card__body pb-2">
+        <div class="hub-seg">
+          <ng-container *ngFor="let s of sections">
+            <button *ngIf="!s.driverOnly || isDriver" [class.on]="section === s.id" (click)="section = s.id">
+              <i class="bi" [ngClass]="s.icon"></i> {{ s.label }}<span class="n" *ngIf="sectionCount(s.id) !== null">{{ sectionCount(s.id) }}</span>
+            </button>
+          </ng-container>
+        </div>
+      </div>
+
+      <!-- Timeline -->
+      <ng-container *ngIf="section === 'timeline'">
+        <ul class="hub-tl" *ngIf="timeline.length; else emptyTl">
+          <li *ngFor="let t of timeline">
+            <span class="hub-ico" [ngClass]="'tone-' + t.tone"><i class="bi" [ngClass]="t.icon"></i></span>
+            <div class="hub-tl__main">
+              <div class="hub-tl__title">{{ t.title }}</div>
+              <div class="hub-tl__text">{{ t.text }}</div>
+              <div class="hub-tl__meta">{{ t.at | date:'EEE dd MMM yyyy, HH:mm' }}</div>
+            </div>
+            <div class="hub-tl__side" *ngIf="t.amount !== undefined && t.amount !== null">
+              <b [class.amt-pos]="t.source === 'wallet' && t.amount > 0" [class.amt-neg]="t.source === 'wallet' && t.amount < 0">
+                {{ t.source === 'wallet' && t.amount > 0 ? '+' : '' }}{{ t.amount | number:'1.2-2' }}</b>
+              <div class="hub-dim fs-9">{{ t.currency }}</div>
+            </div>
+          </li>
+        </ul>
+        <ng-template #emptyTl><div class="hub-empty"><i class="bi bi-clock"></i>Nothing recorded for this account yet.</div></ng-template>
+      </ng-container>
+
+      <!-- Wallet ledger -->
+      <ng-container *ngIf="section === 'wallet'">
+        <div class="hub-card__body pt-0 hub-toolbar justify-content-between">
+          <select class="hub-select" [(ngModel)]="ledgerCurrency" aria-label="Currency">
+            <option value="all">All currencies</option>
+            <option *ngFor="let c of ledgerCurrencies" [value]="c">{{ c }}</option>
+          </select>
+          <button class="hub-btn hub-btn--sm" (click)="exportLedger()" [disabled]="!ledgerView.length"><i class="bi bi-download"></i> CSV</button>
+        </div>
+        <div class="hub-table-wrap">
+          <table class="hub-table">
+            <thead><tr><th>When</th><th>Type</th><th class="num">Amount</th><th class="num">Balance</th><th>Receipt / order</th><th>Recorded by</th></tr></thead>
+            <tbody>
+              <tr *ngFor="let r of ledgerView">
+                <td class="nowrap">{{ r.time | date:'dd MMM yy, HH:mm' }}</td>
+                <td><span class="hub-tag" [ngClass]="'tone-' + ledgerMeta(r.kind).tone"><i class="bi" [ngClass]="ledgerMeta(r.kind).icon"></i>{{ ledgerMeta(r.kind).label }}</span></td>
+                <td class="num" [class.amt-pos]="r.delta > 0" [class.amt-neg]="r.delta < 0">{{ r.delta > 0 ? '+' : '' }}{{ r.delta | number:'1.2-2' }} {{ r.currencyCode }}</td>
+                <td class="num"><span *ngIf="r.balanceAfter !== null"><span class="hub-dim">{{ r.balanceBefore | number:'1.2-2' }} →</span> {{ r.balanceAfter | number:'1.2-2' }}</span></td>
+                <td><span class="hub-mono">{{ r.reference || (r.orderId ? 'order ' + short(r.orderId) : '') }}</span><div class="hub-dim fs-9" *ngIf="r.reason">{{ r.reason }}</div></td>
+                <td>{{ r.adminUid ? name(r.adminUid) : 'auto' }}<div class="fs-9 text-success" *ngIf="r.approvedBy"><i class="bi bi-check2-all"></i> {{ name(r.approvedBy) }}</div></td>
+              </tr>
+            </tbody>
+          </table>
+          <div class="hub-empty" *ngIf="!ledgerView.length"><i class="bi bi-wallet"></i>No transaction. The account started at 0.</div>
+        </div>
+      </ng-container>
+
+      <!-- Trips -->
+      <ng-container *ngIf="section === 'trips'">
+        <div class="hub-table-wrap" *ngIf="dealsAsDriver.length">
+          <div class="px-3 pt-2 fs-8 fw-bold hub-dim text-uppercase">As driver</div>
+          <table class="hub-table">
+            <thead><tr><th>When</th><th>Order</th><th>Customer</th><th>Status</th><th class="num">Price</th></tr></thead>
+            <tbody>
+              <tr *ngFor="let d of dealsAsDriver">
+                <td class="nowrap">{{ toMillis(d.timestamp) | date:'dd MMM yy, HH:mm' }}</td>
+                <td class="hub-mono" [title]="d.idOrder">{{ short(d.idOrder) }}</td>
+                <td><a class="hub-link" (click)="openAccount.emit(d.idUser)">{{ name(d.idUser) }}</a></td>
+                <td><span class="hub-tag" [ngClass]="'tone-' + dealStatus(d.status).tone">{{ dealStatus(d.status).label }}</span></td>
+                <td class="num">{{ (d.agreedPrice ?? d.price) | number:'1.2-2' }} {{ d.currency || d.currencyCode }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="hub-table-wrap" *ngIf="orders.length">
+          <div class="px-3 pt-2 fs-8 fw-bold hub-dim text-uppercase">Orders placed</div>
+          <table class="hub-table">
+            <thead><tr><th>When</th><th>Order</th><th>Pickup</th><th>Stops</th><th>Status</th><th class="num">Price</th></tr></thead>
+            <tbody>
+              <tr *ngFor="let o of orders">
+                <td class="nowrap">{{ toMillis(o.timestamp) | date:'dd MMM yy, HH:mm' }}</td>
+                <td class="hub-mono" [title]="o.id">{{ short(o.id) }}</td>
+                <td class="text-truncate" style="max-width: 260px">{{ o.namePickUp }}</td>
+                <td>{{ (o.stops || []).length }}</td>
+                <td><span class="hub-tag" [ngClass]="'tone-' + orderStatus(o).tone">{{ orderStatus(o).label }}</span></td>
+                <td class="num">{{ o.price | number:'1.2-2' }} {{ o.currencyCode }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="hub-empty" *ngIf="!tripCount"><i class="bi bi-truck"></i>No trip yet.</div>
+      </ng-container>
+
+      <!-- Admin log -->
+      <ng-container *ngIf="section === 'admin'">
+        <ul class="hub-tl" *ngIf="audit.length; else noAudit">
+          <li *ngFor="let a of audit">
+            <span class="hub-ico" [ngClass]="'tone-' + auditMeta(a.action).tone"><i class="bi" [ngClass]="auditMeta(a.action).icon"></i></span>
+            <div class="hub-tl__main">
+              <div class="hub-tl__title">{{ auditMeta(a.action).label }}</div>
+              <div class="hub-tl__text">{{ hubDescribe(a) }}</div>
+              <div class="hub-tl__meta"><i class="bi bi-person-badge"></i> {{ name(a.adminUid) }} · {{ a.at | date:'dd MMM yyyy, HH:mm:ss' }}</div>
+            </div>
+          </li>
+        </ul>
+        <ng-template #noAudit><div class="hub-empty"><i class="bi bi-shield"></i>No admin action on this account.</div></ng-template>
+      </ng-container>
+
+      <!-- Vehicles -->
+      <ng-container *ngIf="section === 'fleet'">
+        <ul class="hub-tl" *ngIf="vehicles.length; else noVeh">
+          <li *ngFor="let v of vehicles">
+            <span class="hub-ico" [ngClass]="v.isAdminApproved === true || v.isAdminApproved === 'true' ? 'tone-success' : 'tone-warning'"><i class="bi bi-truck"></i></span>
+            <div class="hub-tl__main">
+              <div class="hub-tl__title">{{ v.type || v.vehicleType || 'Vehicle' }} <span class="hub-mono">{{ v.plate || v.matricule || short(v.id) }}</span></div>
+              <div class="hub-tl__meta">{{ v.isAdminApproved === true || v.isAdminApproved === 'true' ? 'Approved' : 'Waiting for approval / suspended' }}</div>
+            </div>
+            <div class="hub-tl__side">
+              <button *ngIf="!(v.isAdminApproved === true || v.isAdminApproved === 'true')" class="hub-btn hub-btn--sm hub-btn--success" [disabled]="busy" (click)="reviewVehicle(v, true)">Approve</button>
+              <button *ngIf="v.isAdminApproved === true || v.isAdminApproved === 'true'" class="hub-btn hub-btn--sm" [disabled]="busy" (click)="reviewVehicle(v, false)">Suspend</button>
+            </div>
+          </li>
+        </ul>
+        <ng-template #noVeh><div class="hub-empty"><i class="bi bi-truck"></i>No vehicle registered.</div></ng-template>
+      </ng-container>
+
+      <!-- Devices -->
+      <ng-container *ngIf="section === 'devices'">
+        <div class="hub-table-wrap" *ngIf="devices.length; else noDev">
+          <table class="hub-table">
+            <thead><tr><th>App</th><th>Platform</th><th>Version</th><th>Last refresh</th><th>Token</th></tr></thead>
+            <tbody>
+              <tr *ngFor="let d of devices">
+                <td><span class="hub-tag" [ngClass]="d.app === 'driver' ? 'tone-warning' : d.app === 'client' ? 'tone-info' : 'tone-muted'">{{ d.app || 'both' }}</span></td>
+                <td>{{ d.platform || '—' }}</td>
+                <td class="hub-mono">{{ d.appVersion || '—' }}</td>
+                <td class="nowrap">{{ toMillis(d.updatedAt) | date:'dd MMM yy, HH:mm' }}</td>
+                <td class="hub-mono" [title]="d.id">{{ d.id | slice:0:18 }}…</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <ng-template #noDev><div class="hub-empty"><i class="bi bi-phone"></i>No registered device: push notifications can't reach this account.</div></ng-template>
+      </ng-container>
+
+      <!-- Inbox -->
+      <ng-container *ngIf="section === 'inbox'">
+        <ul class="hub-tl" *ngIf="inbox.length; else noInbox">
+          <li *ngFor="let n of inbox">
+            <span class="hub-ico" [ngClass]="n.read ? 'tone-muted' : 'tone-info'"><i class="bi bi-bell"></i></span>
+            <div class="hub-tl__main">
+              <div class="hub-tl__title">{{ n.title }} <span class="hub-tag tone-muted">{{ n.type }}</span></div>
+              <div class="hub-tl__text">{{ n.body }}</div>
+              <div class="hub-tl__meta">{{ toMillis(n.createdAt) | date:'dd MMM yyyy, HH:mm' }} · {{ n.read ? 'read' : 'unread' }}</div>
+            </div>
+          </li>
+        </ul>
+        <ng-template #noInbox><div class="hub-empty"><i class="bi bi-bell-slash"></i>No notification in the inbox (items expire after their retention period).</div></ng-template>
+      </ng-container>
+
+      <!-- Calls -->
+      <ng-container *ngIf="section === 'calls'">
+        <ul class="hub-tl" *ngIf="calls.length; else noCalls">
+          <li *ngFor="let c of calls">
+            <span class="hub-ico tone-muted"><i class="bi" [ngClass]="c.type === 'video' ? 'bi-camera-video' : 'bi-telephone'"></i></span>
+            <div class="hub-tl__main">
+              <div class="hub-tl__title">{{ c.callerId === uid || c.callerFirebaseUid === uid ? 'Outgoing' : 'Incoming' }} · {{ c.callStatus || c.status }}</div>
+              <div class="hub-tl__text">with <a class="hub-link" (click)="openAccount.emit(other(c))">{{ name(other(c)) }}</a></div>
+              <div class="hub-tl__meta">{{ toMillis(c.timestamp) | date:'dd MMM yyyy, HH:mm' }}</div>
+            </div>
+          </li>
+        </ul>
+        <ng-template #noCalls><div class="hub-empty"><i class="bi bi-telephone-x"></i>No call.</div></ng-template>
+      </ng-container>
+    </div>
+  </ng-container>
+</ng-container>
+
+<app-wallet-movement *ngIf="showMovement" [users]="users" [user]="asShnellUser" [config]="config" [direction]="movementDirection" (closed)="showMovement = false"></app-wallet-movement>

@@ -114,6 +114,69 @@
       </div>
     </div>
 
+    <!-- ============ DISPATCH & MISSION PRICING ============ -->
+    <div class="col-12 col-xl-6">
+      <div class="card dashboard-card h-100">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <h6 class="mb-0 fw-bold"><i class="bi bi-diagram-3-fill me-2 text-brand"></i>Dispatch &amp; mission pricing</h6>
+          <code class="fs-9 text-muted">settings/dispatch</code>
+        </div>
+        <div class="card-body">
+          <form [formGroup]="dispatchForm" (ngSubmit)="saveDispatchConfig()">
+            <div class="row g-3 mb-3">
+              <div class="col-6">
+                <label class="form-label fs-8">Max stops / mission</label>
+                <input type="number" class="form-control form-control-sm" formControlName="maxStopsPerMission" />
+              </div>
+              <div class="col-6">
+                <label class="form-label fs-8">Max parcels / mission</label>
+                <input type="number" class="form-control form-control-sm" formControlName="maxParcelsPerMission" />
+              </div>
+              <div class="col-6">
+                <label class="form-label fs-8">Max concurrent orders / company (24h)</label>
+                <input type="number" class="form-control form-control-sm" formControlName="maxConcurrentOrders" />
+              </div>
+              <div class="col-6">
+                <label class="form-label fs-8">Base fee</label>
+                <input type="number" step="0.1" class="form-control form-control-sm" formControlName="baseFee" />
+              </div>
+            </div>
+
+            <ng-container *ngFor="let group of [
+              { label: 'Distance bands (km)', bands: distanceBands },
+              { label: 'Stop-count bands', bands: stopBands },
+              { label: 'Parcel-count bands', bands: parcelBands }
+            ]">
+              <div class="d-flex justify-content-between align-items-center mb-2 mt-2">
+                <span class="text-uppercase fw-bold fs-9 text-brand">{{ group.label }}</span>
+                <button type="button" class="btn btn-xs btn-icon-soft rounded-pill px-2" (click)="addBand(group.bands)">
+                  <i class="bi bi-plus-lg"></i>
+                </button>
+              </div>
+              <div class="pricing-row d-flex align-items-center gap-2 mb-1" *ngFor="let band of group.bands; let i = index">
+                <input type="number" class="form-control form-control-sm" style="max-width:110px"
+                       placeholder="up to…" [(ngModel)]="band.upTo" [ngModelOptions]="{standalone: true}" />
+                <span class="fs-9 text-muted">→ fee</span>
+                <input type="number" step="0.1" class="form-control form-control-sm" style="max-width:100px"
+                       [(ngModel)]="band.fee" [ngModelOptions]="{standalone: true}" />
+                <button type="button" class="btn btn-xs text-danger p-0 ms-auto" (click)="removeBand(group.bands, i)" title="Remove">
+                  <i class="bi bi-trash"></i>
+                </button>
+              </div>
+              <div class="fs-9 text-muted mb-2" *ngIf="!group.bands.length">No bands — leave empty to apply the base fee only.</div>
+            </ng-container>
+
+            <div class="mt-3 text-end">
+              <button type="submit" class="btn btn-sm btn-saas-primary rounded-pill px-4" [disabled]="savingDispatch || dispatchForm.invalid">
+                <span *ngIf="savingDispatch" class="spinner-border spinner-border-sm me-2"></span>
+                <i *ngIf="!savingDispatch" class="bi bi-save me-1"></i>Save dispatch config
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
     <!-- ============ VEHICLE CONFIGURATION ============ -->
     <div class="col-12">
       <div class="card dashboard-card">

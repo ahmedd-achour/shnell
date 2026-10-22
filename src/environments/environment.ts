@@ -5,6 +5,9 @@
  * Firebase console without a rebuild/redeploy, and never touch source control.
  */
 export const environment = {
+  // App Check (reCAPTCHA Enterprise site key from Firebase console >
+  // App Check > Apps > web app). Empty = App Check off for the portal.
+  appCheckSiteKey: '',
   production: false,
   firebaseConfig: {
     apiKey: "AIzaSyDWNJDwoOzrOywA98IN288Pc3K81SRwv9k",

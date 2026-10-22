@@ -16,7 +16,7 @@
     }
   ],
   "hosting": {
-    "public": "dist/angular-firebase-auth",
+    "public": "dist/angular-firebase-auth/browser",
     "ignore": [
       "firebase.json",
       "**/.*",

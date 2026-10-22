@@ -1,0 +1,105 @@
+<div class="admin-details-wrapper p-4">
+  <div class="content-header d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
+    <button class="btn btn-outline-secondary rounded-pill px-4 btn-sm d-flex align-items-center gap-2" routerLink="/home-admin">
+      <i class="bi bi-arrow-left"></i> <span>Tableau de Bord</span>
+    </button>
+    <h2 class="mb-0 text-main font-heading fs-4">Comptes Professionnels</h2>
+  </div>
+
+  <!-- Pending applications -->
+  <div class="card saas-card p-4 mb-4">
+    <h4 class="text-main font-heading mb-3">
+      <i class="bi bi-hourglass-split text-warning me-2"></i>En attente de vérification
+    </h4>
+    <div class="table-responsive">
+      <table class="table saas-table align-middle">
+        <thead>
+          <tr>
+            <th>Entreprise</th>
+            <th>Contact</th>
+            <th>CIN</th>
+            <th>Documents</th>
+            <th class="pe-4 text-end">Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let c of (pending$ | async)">
+            <td class="fw-semibold text-main">{{ c.businessName || '—' }}</td>
+            <td>{{ c.email }}<br><small class="text-muted">{{ c.phone }}</small></td>
+            <td>{{ c.cinNumber || '—' }}</td>
+            <td>
+              <a *ngIf="c.cinFileUrl" [href]="c.cinFileUrl" target="_blank" rel="noopener" class="btn btn-sm btn-outline-info rounded-pill me-1">
+                <i class="bi bi-file-earmark-text me-1"></i>CIN
+              </a>
+              <a *ngIf="c.companyPaperUrl" [href]="c.companyPaperUrl" target="_blank" rel="noopener" class="btn btn-sm btn-outline-info rounded-pill">
+                <i class="bi bi-file-earmark-text me-1"></i>Registre
+              </a>
+              <span *ngIf="!c.cinFileUrl && !c.companyPaperUrl" class="text-muted">Aucun document</span>
+            </td>
+            <td class="pe-4 text-end">
+              <button class="btn btn-sm btn-success rounded-pill fw-bold" [disabled]="isUpdating" (click)="approve(c)">
+                <i class="bi bi-check-circle me-1"></i>Approuver
+              </button>
+            </td>
+          </tr>
+          <tr *ngIf="(pending$ | async)?.length === 0">
+            <td colspan="5" class="text-center py-4 text-muted">Aucune demande en attente.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Approved companies -->
+  <div class="card saas-card p-4">
+    <h4 class="text-main font-heading mb-3">
+      <i class="bi bi-patch-check-fill text-success me-2"></i>Comptes approuvés
+    </h4>
+    <div class="table-responsive">
+      <table class="table saas-table align-middle">
+        <thead>
+          <tr>
+            <th>Entreprise</th>
+            <th>Contact</th>
+            <th>Plan</th>
+            <th>Fin d'abonnement</th>
+            <th>Commission</th>
+            <th class="pe-4 text-end">Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let c of (approved$ | async)">
+            <td class="fw-semibold text-main">{{ c.businessName || '—' }}</td>
+            <td>{{ c.email }}<br><small class="text-muted">{{ c.phone }}</small></td>
+            <td>
+              <select class="form-select form-select-sm" style="min-width:90px" #planSel [value]="c.plan || 'payg'">
+                <option value="payg">PAYG</option>
+                <option value="pro">PRO</option>
+              </select>
+            </td>
+            <td>
+              <input type="date" class="form-control form-control-sm" style="min-width:150px" #subEnd
+                     [value]="subscriptionEndInputValue(c)" />
+            </td>
+            <td>
+              <input type="number" step="0.01" class="form-control form-control-sm" style="max-width:90px" #commRate
+                     [value]="c.commissionRate ?? ''" placeholder="global" />
+            </td>
+            <td class="pe-4 text-end">
+              <button class="btn btn-sm btn-outline-primary rounded-pill me-1" [disabled]="isUpdating"
+                      (click)="setPlan(c, $any(planSel.value), subEnd.value, commRate.value ? +commRate.value : undefined)">
+                <i class="bi bi-save me-1"></i>Plan
+              </button>
+              <button class="btn btn-sm btn-outline-danger rounded-pill" [disabled]="isUpdating" (click)="revoke(c)">
+                <i class="bi bi-slash-circle me-1"></i>Révoquer
+              </button>
+            </td>
+          </tr>
+          <tr *ngIf="(approved$ | async)?.length === 0">
+            <td colspan="6" class="text-center py-4 text-muted">Aucun compte approuvé pour le moment.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>

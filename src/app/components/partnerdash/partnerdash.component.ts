@@ -3,8 +3,9 @@ import Chart from 'chart.js/auto';
 import { LatLng } from '../../shared/latlng';
 import { mapboxGeocodeOne } from '../../shared/mapbox';
 import { DropOffDataModel } from '../../../Models/dropoffdata.model';
-import { getFirestore, collection, addDoc, doc, setDoc, docData, Timestamp, serverTimestamp, runTransaction, query, where, getDocs, deleteDoc } from '@angular/fire/firestore';
+import { getFirestore, collection, addDoc, doc, setDoc, updateDoc, docData, Timestamp, serverTimestamp, runTransaction, query, where, getDocs, getCountFromServer, deleteDoc } from '@angular/fire/firestore';
 import { getAuth } from '@angular/fire/auth';
+import { getFunctions, httpsCallable } from '@angular/fire/functions';
 import { firstValueFrom } from 'rxjs';
 import { ShnellUser } from '../../../Models/shnellUsers.models';
 import { StopsCacheService } from '../../../stopCashService';
@@ -32,6 +33,12 @@ export class PartnerdashComponent implements OnInit, AfterViewInit, AfterViewChe
   dropOffs: DropOffDataModel[] = [];
   orderedDropOffs: DropOffDataModel[] = [];
   maxStops: number = 250;
+  /** Max orders a partner can have dispatched at the same time (was 10). Measured
+   *  as orders created in the last 24h, since orders/deals carry no clean
+   *  "delivered" flag to count true in-flight state against — a rolling window
+   *  is the safe proxy: it can't permanently lock an account out the way an
+   *  ever-growing "active" count that never decrements would. */
+  maxConcurrentOrders: number = 50;
   excelFile: File | null = null;
   isProcessingExcel = false;
   processedRows = 0;
@@ -212,9 +219,14 @@ export class PartnerdashComponent implements OnInit, AfterViewInit, AfterViewChe
     const currentUser = auth.currentUser;
     if (!currentUser) return;
     try {
+      // Only ever-growing "pending" stops need to show up here — once a stop
+      // is bundled into a route (confirmAll marks it 'inRoute') it must drop
+      // out, otherwise this reads the partner's ENTIRE stop history on every
+      // dashboard load, which is the main source of runaway read billing here.
       const q = query(
         collection(this.firestore, 'stops'),
         where('createdBy', '==', currentUser.uid),
+        where('state', '==', 'pending'),
       );
       const querySnapshot = await getDocs(q);
       this.availableStops = querySnapshot.docs.map((docSnapshot) => {
@@ -878,28 +890,6 @@ async deleteSelectedStops() {
     return orderedIds.map(id => this.dropOffs[parseInt(id)]);
   }
 
-  async chargeCompany(totalCost: number): Promise<'success' | 'fail'> {
-    const firestore = getFirestore();
-    const auth = getAuth();
-    const currentUser = auth.currentUser;
-    if (!currentUser) return 'fail';
-    const companyDocRef = doc(firestore, 'users', currentUser.uid); // Company stored under users collection
-    try {
-      await runTransaction(firestore, async (transaction) => {
-        const companySnap = await transaction.get(companyDocRef);
-        if (!companySnap.exists()) throw new Error('Company not found');
-        const data = companySnap.data();
-        const balance = Number(data?.['balance']) || 0;
-        if (balance < totalCost) throw new Error('Insufficient funds');
-        transaction.update(companyDocRef, { balance: balance - totalCost });
-      });
-      return 'success';
-    } catch (err) {
-      console.error('Charge failed:', err);
-      return 'fail';
-    }
-  }
-
   updateTSP() {
     this.orderedDropOffs = this.getOrderedStops();
   }
@@ -933,116 +923,68 @@ async deleteSelectedStops() {
       });
       return;
     }
-    const totalCost = this.totalCost;
-    if (totalCost > 0) {
-      const ispaid = await this.chargeCompany(totalCost);
-      if (ispaid === 'fail') {
-        Swal.fire({
-          title: "Insufficient balance to cover delivery cost. Please top up your account.",
-          icon: "error",
-          draggable: true
-        });
-        return;
+
+    try {
+      const auth = getAuth();
+      const uid = auth.currentUser?.uid;
+      if (uid) {
+        const since = Timestamp.fromMillis(Date.now() - 24 * 60 * 60 * 1000);
+        const recentOrdersQuery = query(
+          collection(this.firestore, 'orders'),
+          where('userID', '==', uid),
+          where('timestamp', '>=', since),
+        );
+        const countSnap = await getCountFromServer(recentOrdersQuery);
+        if (countSnap.data().count >= this.maxConcurrentOrders) {
+          Swal.fire({
+            icon: "error",
+            title: "Limite atteinte",
+            text: `Vous avez déjà lancé ${this.maxConcurrentOrders} tournées au cours des dernières 24h. Contactez le support si vous avez besoin d'une capacité plus élevée.`,
+          });
+          return;
+        }
       }
+    } catch (err) {
+      console.warn('Concurrent-orders check failed, proceeding (fail-open):', err);
     }
 
     try {
       this.isprocessed = true;
-      const auth = getAuth();
-      const userId = auth.currentUser?.uid;
-      if (!userId) {
+      if (!getAuth().currentUser) {
         throw new Error('No authenticated user');
       }
-
-      // FIXED: Ensure all drops are proper instances before processing (using fromFirestore for accuracy)
       this.dropOffs = this.dropOffs.map(drop => this.ensureDropOffInstance(drop));
 
-      const dropOffIds: string[] = [];
-      const dropOffCollection = collection(this.firestore, 'stops');
+      // Stops in delivery order (nearest-next from the pickup).
+      const indexed = this.dropOffs.map((d, i) => ({ id: String(i), lat: d.destination.lat, lng: d.destination.lng }));
+      const ordered = this.reorderStops(this.pickupLatLng!, indexed).map(i => this.dropOffs[parseInt(i)]);
+      const stops = ordered.map((drop: any) => {
+        if (drop.id) return { id: drop.id }; // from the pending pool
+        const data = drop.toFirestore();
+        return Object.fromEntries(Object.entries(data).filter(([, v]) => v !== undefined));
+      });
 
-      // Granular try-catch for stops
+      // The server books the tour and bills the company wallet in one
+      // transaction (stops x payrate, never below zero). The request id
+      // makes a retried click return the first result instead of billing twice.
+      const requestId = doc(collection(this.firestore, 'orders')).id;
+      let res: any;
       try {
-        for (const drop of this.dropOffs) {
-          let stopId: string;
-          if ((drop as any).id) {
-            // Existing stop
-            stopId = (drop as any).id;
-          } else {
-            // New stop - Now guaranteed to have toFirestore via reconstruction
-            let docData = drop.toFirestore();
-            docData.createdBy = userId;
-            docData.companyId = userId;
-            docData.definedBy = userId; // professional user who created this stop
-            if (!docData.expeditorPayout) docData.expeditorPayout = 'unpaid';
-            // FIXED: Clean undefined values to null to prevent Firestore error
-            docData = Object.fromEntries(
-              Object.entries(docData).map(([key, value]) => [key, value === undefined ? null : value])
-            );
-            const docRef = await addDoc(dropOffCollection, docData);
-            stopId = docRef.id;
-            (drop as any).id = stopId; // Set for cache
-          }
-          dropOffIds.push(stopId);
-        }
-      } catch (stopsErr: any) {
-        console.error('Stops save failed:', stopsErr);
-        throw new Error(`Failed to save stops: ${stopsErr.message || stopsErr}`);
+        const call = httpsCallable(getFunctions(), 'companyCreateTour');
+        res = (await call({
+          requestId,
+          pickup: { address: this.pickupAddress, lat: this.pickupLatLng!.lat, lng: this.pickupLatLng!.lng },
+          stops,
+          driverId: this.selectedDriverId,
+        })).data;
+      } catch (callErr: any) {
+        console.error('companyCreateTour failed:', callErr);
+        throw new Error(callErr?.message || 'Failed to create the tour.');
       }
 
-      // Prepare order data
-      const stopsData = this.dropOffs.map((d, i) => ({
-        id: dropOffIds[i],
-        lat: d.destination.lat,
-        lng: d.destination.lng
-      }));
-      const optimizedStopIds = this.reorderStops(this.pickupLatLng!, stopsData);
-
-      const orderCollection = collection(this.firestore, 'orders');
-
-      // Granular try-catch for order
-      try {
-        const orderRef = doc(orderCollection);
-        const orderId = orderRef.id;
-        await setDoc(orderRef, {
-          id: orderId,
-          price: totalCost,
-          distance: 0,  // Can compute later if needed
-          namePickUp: this.pickupAddress,
-          // GeoJSON: [longitude, latitude] — matches every reader (Orders.fromFirestore).
-          pickUpLocation: {
-            coordinates: [this.pickupLatLng.lng, this.pickupLatLng.lat],
-            type: 'Point',
-          },
-          stops: optimizedStopIds,  // Array of stop IDs (strings)
-          userID: userId,
-          category: 'eco',
-          currencyCode: 'TND',
-          optionalAssets: [],
-          budget: 0,
-          notes: null,
-          scheduleAt: Timestamp.now(),
-          isAccepted: false,
-          isAcepted: false,       // legacy mirror (client pending-screen query)
-          isBiddingMode: false,
-          isAdministrative: true, // company-assigned -> driver in-app calling hidden
-          chosenDriver: this.selectedDriverId,
-          timestamp: Timestamp.now()
-        });
-
-        // Push the job into the chosen driver's inbox so it actually reaches them
-        // (the driver app reads users/{uid}/assigned_jobs, never orders.chosenDriver).
-        if (this.selectedDriverId) {
-          await addDoc(collection(this.firestore, 'users', this.selectedDriverId, 'assigned_jobs'), {
-            orderId,
-            category: 'eco',
-            status: 'pending',
-            assignedAt: serverTimestamp(),
-          }).catch(err => console.warn('assigned_jobs write failed:', err));
-        }
-      } catch (orderErr: any) {
-        console.error('Order save failed:', orderErr);
-        throw new Error(`Failed to save order: ${orderErr.message || orderErr}`);
-      }
+      const consumed = new Set(stops.filter((x: any) => x.id).map((x: any) => x.id));
+      this.availableStops = this.availableStops.filter(st => !consumed.has((st as any).id));
+      console.log('Tour created', res);
 
       Swal.fire({
         title: "Order and stops successfully saved!",

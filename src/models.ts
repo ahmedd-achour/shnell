@@ -4,6 +4,7 @@ export interface Bid {
   idDriver: string;
   idUser: string;
   ammount: number;
+  currencyCode?: string;
   isActive: boolean;
   timestamp?: Date | any;
 }
@@ -15,6 +16,9 @@ export interface Cancelation {
   time?: Date | any;
 }
 
+/** Has the driver/company payment side of the deal been settled? */
+export type DealPaymentStatus = 'unpaid' | 'paid';
+
 export interface Deals {
   id?: string;
   idOrder: string;
@@ -22,6 +26,19 @@ export interface Deals {
   idUser: string;
   status: 'accepted' | 'acepted' | 'almost' | 'terminated' | string;
   timestamp?: Date | any;
+  /** Flat mission price agreed with the driver (spec §5) — fixed after acceptance. */
+  agreedPrice?: number;
+  currency?: string;
+  /** Percentage applied to `agreedPrice` to derive `commissionAmount`. */
+  commissionPercentage?: number;
+  commissionAmount?: number;
+  /** Amount actually paid out to the driver (may equal agreedPrice or agreedPrice - commission depending on payment flow). */
+  driverAmount?: number;
+  paymentStatus?: DealPaymentStatus;
+  acceptedAt?: Date | any;
+  startedAt?: Date | any;
+  completedAt?: Date | any;
+  cancelledAt?: Date | any;
 }
 
 export type Deal = Deals;
@@ -58,6 +75,16 @@ export interface DropOffData {
   /** Whether the collected cash has been paid out to the expeditor. Default 'unpaid'. */
   expeditorPayout?: ExpeditorPayout;
   paidToExpeditorAt?: any;  // Timestamp set when expeditorPayout flips to 'paid'
+  /** Position of this stop within its mission's optimized route (0-based). */
+  sequence?: number;
+  /** Reason selected by the driver when `state` is 'notDelivered'. */
+  failureReason?: string;
+  proofOfDelivery?: {
+    photoUrl?: string;
+    signatureUrl?: string;
+    deliveredAt?: any;
+    note?: string;
+  };
 }
 
 export interface CountryServiceArea {
@@ -79,6 +106,25 @@ export interface VehicleSettings {
   pricing?: any;
 }
 
+/** Tiered fee band, e.g. { upTo: 20, fee: 8 } = "up to 20 km costs +8 DT". `upTo: null` means "and above". */
+export interface PricingBand {
+  upTo: number | null;
+  fee: number;
+}
+
+/** Stored at settings/dispatch. Backs `PricingService` and `MissionCapacityService` — admin-configurable, never hardcoded in components. */
+export interface DispatchConfig {
+  maxStopsPerMission: number;
+  maxParcelsPerMission: number;
+  maxConcurrentOrders: number;
+  pricing: {
+    baseFee: number;
+    distanceBands: PricingBand[]; // km
+    stopBands: PricingBand[];     // stop count
+    parcelBands: PricingBand[];   // parcel count
+  };
+}
+
 export interface GlobalConfig {
   customerAppVersion: string;
   driverAppVersion: string;
@@ -96,6 +142,8 @@ export interface Orders {
   userID: string;
   userId?: string;
   price: number;
+  /** ISO 4217 code of price (the trip's country currency). */
+  currencyCode?: string;
   distance: number;
   namePickUp: string;
   pickUpLocation: {
@@ -134,8 +182,9 @@ export interface ShnellUser {
   phone: string;
   role: 'driver' | 'user' | 'admin' | 'company' | string;
   accType: 'pro' | 'standard' | 'eco' | string;
-  fcmToken?: string;
-  balance: number;
+  /** Display copy of wallets/{uid}.balances (joined in by the dashboard
+   *  service; never stored on users). */
+  balances?: Record<string, number>;
   isActive: boolean;
   darkMode?: boolean;
   platform?: string;
@@ -169,7 +218,12 @@ export interface Commission {
   orderId?: string;
   driverId?: string;
   time?: Date | any;
-  typeOfTransaction?: 'commission' | 'recharge' | string;
+  typeOfTransaction?: 'commission' | 'recharge' | 'adjustment' | string;
+  /** Currency of this ledger line (= the wallet balance it moved). */
+  currencyCode?: string;
+  /** That currency's wallet balance right after this line. */
+  balanceAfter?: number;
+  reason?: string;
 }
 
 export interface DriverRTDBLocation {

@@ -3,12 +3,16 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ShnellUser, DriverRTDBLocation } from '../../models/dashboard.models';
 import { DashboardDataService } from '../../services/dashboard-data.service';
+import { AdminHubService } from '../../services/admin-hub.service';
 import { confirmAction, toastSuccess, toastError } from '../../../shared/swal';
+import { walletBalances } from '../../services/wallet';
+import { WalletMovementComponent } from '../wallet-movement/wallet-movement.component';
+import { Observable } from 'rxjs';
 
 @Component({
   selector: 'app-users-tab',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, WalletMovementComponent],
   templateUrl: './users-tab.component.html',
   styleUrls: ['./users-tab.component.css']
 })
@@ -17,32 +21,38 @@ export class UsersTabComponent implements OnInit {
   @Input() driverLocations: DriverRTDBLocation[] = [];
 
   @Output() selectUserForNotification = new EventEmitter<ShnellUser>();
+  /** Opens Account 360 (any role). */
   @Output() inspectDriver = new EventEmitter<string>();
+  @Output() navigateTab = new EventEmitter<string>();
 
   searchTerm: string = '';
   roleFilter: string = 'all';
 
-  selectedUserModal: ShnellUser | null = null;
-
+  /** Account the credit / debit form is open for. */
   rechargeUserTarget: ShnellUser | null = null;
-  rechargeAmountInput: number = 50;
-  isProcessingRecharge: boolean = false;
-  rechargeSuccessMsg: string | null = null;
+  /** Recharges above the threshold, waiting for a SECOND admin (approved in Finance). */
+  pendingRecharges$!: Observable<any[]>;
+  config$!: Observable<any>;
+  readonly walletBalances = walletBalances;
 
   processingBanId: string | null = null;
   updatingAccTypeId: string | null = null;
 
-  constructor(private dashboardDataService: DashboardDataService) {}
+  constructor(private dashboardDataService: DashboardDataService, private hub: AdminHubService) {}
 
-  ngOnInit(): void {}
+  ngOnInit(): void {
+    this.pendingRecharges$ = this.hub.pendingRecharges$;
+    this.config$ = this.hub.config$;
+  }
 
   get filteredUsers(): ShnellUser[] {
+    const q = this.searchTerm.toLowerCase();
     return this.users.filter(user => {
-      const matchesSearch = !this.searchTerm ||
-        user.name?.toLowerCase().includes(this.searchTerm.toLowerCase()) ||
-        user.email?.toLowerCase().includes(this.searchTerm.toLowerCase()) ||
+      const matchesSearch = !q ||
+        user.name?.toLowerCase().includes(q) ||
+        user.email?.toLowerCase().includes(q) ||
         user.phone?.includes(this.searchTerm) ||
-        (user.uid || user.id || '').toLowerCase().includes(this.searchTerm.toLowerCase());
+        (user.uid || user.id || '').toLowerCase().includes(q);
 
       const matchesRole = this.roleFilter === 'all' || user.role === this.roleFilter;
 
@@ -58,51 +68,11 @@ export class UsersTabComponent implements OnInit {
   }
 
   openUserDetails(user: ShnellUser): void {
-    if (user.role === 'driver') {
-      this.inspectDriver.emit(user.uid || user.id || '');
-    } else {
-      this.selectedUserModal = user;
-    }
-  }
-
-  closeUserDetails(): void {
-    this.selectedUserModal = null;
+    this.inspectDriver.emit(user.uid || user.id || '');
   }
 
   openRechargeModal(user: ShnellUser): void {
     this.rechargeUserTarget = user;
-    this.rechargeAmountInput = 50;
-    this.rechargeSuccessMsg = null;
-  }
-
-  closeRechargeModal(): void {
-    this.rechargeUserTarget = null;
-    this.rechargeSuccessMsg = null;
-  }
-
-  async executeRecharge(): Promise<void> {
-    if (!this.rechargeUserTarget || !this.rechargeAmountInput || this.rechargeAmountInput <= 0) return;
-    const userId = this.rechargeUserTarget.uid || this.rechargeUserTarget.id;
-    if (!userId) return;
-
-    this.isProcessingRecharge = true;
-    try {
-      const updatedBalance = await this.dashboardDataService.rechargeUserBalance(
-        userId,
-        this.rechargeUserTarget.balance || 0,
-        this.rechargeAmountInput
-      );
-
-      this.rechargeUserTarget.balance = updatedBalance;
-      this.rechargeSuccessMsg = `Successfully deposited ${this.rechargeAmountInput} TND. Event recorded in commissions log.`;
-      toastSuccess(`${this.rechargeAmountInput} TND déposés`);
-      setTimeout(() => this.closeRechargeModal(), 1800);
-    } catch (err) {
-      console.error('Failed to recharge balance:', err);
-      toastError('Erreur lors du dépôt de fonds');
-    } finally {
-      this.isProcessingRecharge = false;
-    }
   }
 
   async toggleBan(user: ShnellUser): Promise<void> {
@@ -126,9 +96,9 @@ export class UsersTabComponent implements OnInit {
       user.isBan = newBanState;
       user.isBanned = newBanState;
       toastSuccess(newBanState ? 'Compte banni' : 'Compte débanni');
-    } catch (err) {
+    } catch (err: any) {
       console.error('Failed to toggle ban state:', err);
-      toastError('Erreur lors de la mise à jour du statut');
+      toastError(err?.message || 'Erreur lors de la mise à jour du statut');
     } finally {
       this.processingBanId = null;
     }
@@ -144,9 +114,9 @@ export class UsersTabComponent implements OnInit {
       await this.dashboardDataService.updateUserAccType(userId, newType);
       user.accType = newType as any;
       toastSuccess(`Palier mis à jour : ${String(newType).toUpperCase()}`);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Failed to update account type:', err);
-      toastError('Erreur lors de la mise à jour du palier');
+      toastError(err?.message || 'Erreur lors de la mise à jour du palier');
     } finally {
       this.updatingAccTypeId = null;
     }
@@ -154,7 +124,6 @@ export class UsersTabComponent implements OnInit {
 
   onSendNotify(user: ShnellUser): void {
     this.selectUserForNotification.emit(user);
-    if (this.selectedUserModal) this.closeUserDetails();
   }
 
   onInspectDriverClick(user: ShnellUser): void {

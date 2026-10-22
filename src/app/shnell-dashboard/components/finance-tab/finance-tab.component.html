@@ -1,0 +1,177 @@
+<div class="hub-head">
+  <div>
+    <h3>Finance &amp; ledger</h3>
+    <p>Every wallet movement: trip commissions, office recharges, corrections and partner tours. Each line names its account, receipt, admin and the balance before and after.</p>
+  </div>
+  <div class="hub-actions">
+    <div class="hub-seg" role="tablist" aria-label="Period">
+      <button [class.on]="range === 'today'" (click)="setRange('today')">Today</button>
+      <button [class.on]="range === '7d'" (click)="setRange('7d')">7 days</button>
+      <button [class.on]="range === '30d'" (click)="setRange('30d')">30 days</button>
+      <button [class.on]="range === '90d'" (click)="setRange('90d')">90 days</button>
+    </div>
+    <button class="hub-btn hub-btn--primary" (click)="openForm()"><i class="bi bi-plus-lg"></i> Record a movement</button>
+  </div>
+</div>
+
+<!-- KPIs -->
+<div class="hub-kpis">
+  <div class="hub-kpi">
+    <div class="hub-kpi__label"><i class="bi bi-cash-coin text-success"></i> Office recharges</div>
+    <div class="hub-kpi__value">{{ fmtTotals(totals('recharge')) }}</div>
+    <div class="hub-kpi__sub">{{ count('recharge') }} receipts in the period</div>
+  </div>
+  <div class="hub-kpi">
+    <div class="hub-kpi__label"><i class="bi bi-percent"></i> Commissions earned</div>
+    <div class="hub-kpi__value">{{ fmtTotals(totals('commission'), true) }}</div>
+    <div class="hub-kpi__sub">{{ count('commission') }} completed trips</div>
+  </div>
+  <div class="hub-kpi">
+    <div class="hub-kpi__label"><i class="bi bi-buildings"></i> Partner tours</div>
+    <div class="hub-kpi__value">{{ fmtTotals(totals('company_tour'), true) }}</div>
+    <div class="hub-kpi__sub">{{ count('company_tour') }} tours billed</div>
+  </div>
+  <div class="hub-kpi">
+    <div class="hub-kpi__label"><i class="bi bi-sliders"></i> Corrections (net)</div>
+    <div class="hub-kpi__value">{{ fmtTotals(totals('adjustment')) }}</div>
+    <div class="hub-kpi__sub">{{ count('adjustment') }} manual debits</div>
+  </div>
+  <div class="hub-kpi" [class.hub-kpi--alert]="pending.length">
+    <div class="hub-kpi__label"><i class="bi bi-hourglass-split"></i> Awaiting 2nd admin</div>
+    <div class="hub-kpi__value">{{ pending.length }}</div>
+    <div class="hub-kpi__sub">recharges above the approval limit</div>
+  </div>
+  <div class="hub-kpi" [class.hub-kpi--alert]="pausedAccounts.length">
+    <div class="hub-kpi__label"><i class="bi bi-pause-circle"></i> Drivers paused</div>
+    <div class="hub-kpi__value">{{ pausedAccounts.length }}</div>
+    <div class="hub-kpi__sub">balance under the pause line</div>
+  </div>
+</div>
+
+<div class="hub-grid-2">
+  <div>
+    <!-- Pending approvals -->
+    <div class="hub-card" *ngIf="pending.length">
+      <div class="hub-card__head">
+        <h5><i class="bi bi-shield-lock text-warning"></i> Recharges to approve <span class="hub-count">{{ pending.length }}</span></h5>
+        <small class="hub-dim">Maker–checker: the admin who entered a recharge can't approve it.</small>
+      </div>
+      <div class="hub-card__body--flush hub-table-wrap">
+        <table class="hub-table">
+          <thead><tr><th>Requested</th><th>Account</th><th class="num">Amount</th><th>Receipt</th><th>By</th><th></th></tr></thead>
+          <tbody>
+            <tr *ngFor="let r of pending">
+              <td class="nowrap">{{ toMillis(r.createdAt) | date:'dd MMM, HH:mm' }}</td>
+              <td><a class="hub-link" (click)="openAccount.emit(r.userId)">{{ name(r.userId) }}</a></td>
+              <td class="num" [class.amt-pos]="r.amount > 0" [class.amt-neg]="r.amount < 0">{{ r.amount > 0 ? '+' : '' }}{{ r.amount | number:'1.2-2' }} {{ r.currencyCode }}</td>
+              <td><span class="hub-mono">{{ r.reference }}</span><div class="hub-dim fs-9" *ngIf="r.reason">{{ r.reason }}</div></td>
+              <td>{{ name(r.requestedBy) }}</td>
+              <td class="nowrap text-end">
+                <ng-container *ngIf="r.requestedBy !== hub.myUid; else mine">
+                  <button class="hub-btn hub-btn--success hub-btn--sm me-1" [disabled]="deciding === r.id" (click)="decide(r, true)"><i class="bi bi-check2"></i> Approve</button>
+                  <button class="hub-btn hub-btn--danger hub-btn--sm" [disabled]="deciding === r.id" (click)="decide(r, false)"><i class="bi bi-x"></i></button>
+                </ng-container>
+                <ng-template #mine><span class="hub-tag tone-muted">Waiting for another admin</span></ng-template>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Ledger -->
+    <div class="hub-card">
+      <div class="hub-card__head">
+        <h5><i class="bi bi-journal-text"></i> Ledger <span class="hub-count">{{ filtered.length }}</span></h5>
+        <button class="hub-btn hub-btn--sm" (click)="exportCsv()" [disabled]="!filtered.length"><i class="bi bi-download"></i> CSV</button>
+      </div>
+      <div class="hub-card__body">
+        <div class="hub-toolbar">
+          <div class="hub-seg">
+            <button [class.on]="kindFilter === 'all'" (click)="kindFilter = 'all'">All<span class="n">{{ kindCount('all') }}</span></button>
+            <button [class.on]="kindFilter === 'recharge'" (click)="kindFilter = 'recharge'">Recharges<span class="n">{{ kindCount('recharge') }}</span></button>
+            <button [class.on]="kindFilter === 'commission'" (click)="kindFilter = 'commission'">Commissions<span class="n">{{ kindCount('commission') }}</span></button>
+            <button [class.on]="kindFilter === 'adjustment'" (click)="kindFilter = 'adjustment'">Corrections<span class="n">{{ kindCount('adjustment') }}</span></button>
+            <button [class.on]="kindFilter === 'company_tour'" (click)="kindFilter = 'company_tour'">Tours<span class="n">{{ kindCount('company_tour') }}</span></button>
+          </div>
+          <select class="hub-select" [(ngModel)]="currencyFilter" aria-label="Currency">
+            <option value="all">All currencies</option>
+            <option *ngFor="let c of currencies" [value]="c">{{ c }}</option>
+          </select>
+          <input class="hub-input hub-input--search" [(ngModel)]="search" placeholder="Account, receipt, order, admin…" aria-label="Search the ledger">
+        </div>
+      </div>
+      <div class="hub-card__body--flush hub-table-wrap">
+        <table class="hub-table">
+          <thead>
+            <tr><th>When</th><th>Account</th><th>Type</th><th class="num">Amount</th><th class="num">Balance</th><th>Receipt / order</th><th>Recorded by</th></tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let r of visible; trackBy: trackRow">
+              <td class="nowrap">{{ r.time | date:'dd MMM yy, HH:mm' }}</td>
+              <td><a class="hub-link" (click)="openAccount.emit(r.uid)">{{ name(r.uid) }}</a>
+                <div class="hub-dim fs-9">{{ user(r.uid)?.role || '' }}</div></td>
+              <td><span class="hub-tag" [ngClass]="'tone-' + ledgerMeta(r.kind).tone"><i class="bi" [ngClass]="ledgerMeta(r.kind).icon"></i>{{ ledgerMeta(r.kind).label }}</span></td>
+              <td class="num" [class.amt-pos]="r.delta > 0" [class.amt-neg]="r.delta < 0">{{ r.delta > 0 ? '+' : '' }}{{ r.delta | number:'1.2-2' }} {{ r.currencyCode }}</td>
+              <td class="num"><span *ngIf="r.balanceAfter !== null"><span class="hub-dim">{{ r.balanceBefore | number:'1.2-2' }} →</span> {{ r.balanceAfter | number:'1.2-2' }}</span><span *ngIf="r.balanceAfter === null" class="hub-dim">—</span></td>
+              <td>
+                <span class="hub-mono" *ngIf="r.reference">{{ r.reference }}</span>
+                <span class="hub-mono" *ngIf="!r.reference && r.orderId" title="{{ r.orderId }}">order {{ short(r.orderId) }}</span>
+                <div class="hub-dim fs-9" *ngIf="r.reason">{{ r.reason }}</div>
+              </td>
+              <td>
+                <span *ngIf="r.adminUid">{{ name(r.adminUid) }}</span>
+                <span *ngIf="!r.adminUid" class="hub-dim">auto</span>
+                <div class="fs-9 text-success" *ngIf="r.approvedBy"><i class="bi bi-check2-all"></i> {{ name(r.approvedBy) }}</div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+        <div class="hub-empty" *ngIf="!loading && !filtered.length"><i class="bi bi-inbox"></i>No movement in this period.</div>
+        <div class="hub-empty" *ngIf="loading"><span class="spinner-border spinner-border-sm"></span> Loading the ledger…</div>
+        <div class="text-center p-3" *ngIf="filtered.length > pageSize">
+          <button class="hub-btn hub-btn--sm" (click)="pageSize = pageSize + 200">Show more ({{ filtered.length - pageSize }} left)</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div>
+    <!-- Paused drivers -->
+    <div class="hub-card">
+      <div class="hub-card__head"><h5><i class="bi bi-pause-circle text-danger"></i> Paused drivers</h5><span class="hub-count">{{ pausedAccounts.length }}</span></div>
+      <ul class="hub-tl" *ngIf="pausedAccounts.length; else noPaused">
+        <li *ngFor="let p of pausedAccounts.slice(0, 12)">
+          <div class="hub-tl__main">
+            <div class="hub-tl__title"><a class="hub-link" (click)="openAccount.emit(p.user.uid || p.user.id || '')">{{ p.user.name || p.user.uid }}</a></div>
+            <div class="hub-tl__meta">pause line {{ p.floor }} {{ p.currency }}</div>
+          </div>
+          <div class="hub-tl__side">
+            <div class="amt-neg">{{ p.amount | number:'1.2-2' }} {{ p.currency }}</div>
+            <button class="hub-btn hub-btn--sm mt-1" (click)="openForm(p.user)"><i class="bi bi-plus"></i> Recharge</button>
+          </div>
+        </li>
+      </ul>
+      <ng-template #noPaused><div class="hub-empty"><i class="bi bi-emoji-smile"></i>Every driver is above the pause line.</div></ng-template>
+    </div>
+
+    <!-- Daily reports -->
+    <div class="hub-card">
+      <div class="hub-card__head"><h5><i class="bi bi-calendar-check"></i> Daily cash count</h5><small class="hub-dim">reports/recharges_*</small></div>
+      <ul class="hub-tl" *ngIf="reports.length; else noReports">
+        <li *ngFor="let rep of reports.slice(0, 10)">
+          <div class="hub-tl__main">
+            <div class="hub-tl__title">{{ rep.day | date:'EEE dd MMM yyyy' }} <span class="hub-count">{{ rep.lines }} lines</span></div>
+            <div class="hub-tl__text" *ngFor="let x of reportRows(rep)">
+              {{ x.admin }} · <b [class.amt-pos]="x.total > 0" [class.amt-neg]="x.total < 0">{{ x.total | number:'1.2-2' }} {{ x.currency }}</b> <span class="hub-dim">({{ x.count }})</span>
+            </div>
+            <div class="hub-tl__meta" *ngIf="!reportRows(rep).length">No office movement.</div>
+          </div>
+        </li>
+      </ul>
+      <ng-template #noReports><div class="hub-empty"><i class="bi bi-calendar"></i>The first report is written at 01:00 (Tunis).</div></ng-template>
+    </div>
+  </div>
+</div>
+
+<app-wallet-movement *ngIf="showForm" [users]="users" [user]="formUser" [config]="config" (closed)="showForm = false"></app-wallet-movement>

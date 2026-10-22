@@ -25,20 +25,26 @@
       </div>
 
       <nav class="ud-nav">
-        <button [class.on]="view === 'jobs'" (click)="setView('jobs')">
-          <i class="bi bi-grid-1x2-fill"></i> Répartition
+        <button [class.on]="view === 'home'" (click)="setView('home')" title="Vue d'ensemble de votre activité">
+          <i class="bi bi-speedometer2"></i> Accueil
         </button>
-        <button [class.on]="view === 'parcels'" (click)="setView('parcels')">
-          <i class="bi bi-geo-alt-fill"></i> Colis
+        <button [class.on]="view === 'parcels'" (click)="setView('parcels')" title="Importer, filtrer et assigner vos arrêts">
+          <i class="bi bi-geo-alt-fill"></i> Gérer les Arrêts
           <span class="ud-nav__badge" *ngIf="parcels.length">{{ parcels.length }}</span>
         </button>
-        <button [class.on]="view === 'api'" (click)="setView('api')">
+        <button [class.on]="view === 'jobs'" (click)="setView('jobs')" title="Créer une mission de A à Z (retrait, arrêts, véhicule, chauffeur)">
+          <i class="bi bi-grid-1x2-fill"></i> Créer une Mission
+        </button>
+        <button [class.on]="view === 'api'" (click)="setView('api')" title="Intégration API pour créer des missions depuis votre propre système">
           <i class="bi bi-code-slash"></i> API
         </button>
       </nav>
 
       <span class="ud-flex"></span>
 
+      <span class="ud-verified" *ngIf="companyApproved === true" title="Compte vérifié par Shnell">
+        <i class="bi bi-patch-check-fill"></i> Vérifié
+      </span>
       <span class="ud-user" [title]="userEmail">{{ userEmail }}</span>
       <button class="ud-btn ud-btn--primary" *ngIf="view === 'jobs'"
               [disabled]="!anyReady || dispatchingAll" (click)="dispatchAll()">
@@ -83,80 +89,42 @@
     </div>
   </section>
 
-  <div class="ud-shell" [class.ud-shell--wide]="view === 'api' || view === 'parcels'">
+  <!-- One shell, always wide — every view (home/parcels/jobs/api) now shares
+       the same full-width layout instead of 'jobs' alone carrying an extra
+       326px sidebar column no other screen has. -->
+  <div class="ud-shell ud-shell--wide">
 
-    <!-- ============ SIDEBAR ============ -->
-    <aside class="ud-side" *ngIf="view === 'jobs'">
-      <div class="ud-side__head">
-        <div>
-          <span class="ud-side__eyebrow">Commandes actives</span>
-          <span class="ud-side__count">{{ jobs.length }}<i> / {{ maxJobs }}</i></span>
-        </div>
-        <button class="ud-newbtn" (click)="addJob()" [disabled]="jobs.length >= maxJobs">
-          <i class="bi bi-plus-lg"></i> Ajouter
-        </button>
-      </div>
+    <!-- ============ WORKSPACE · JOBS ============ -->
+    <main class="ud-work" *ngIf="view === 'jobs'">
 
-      <div class="ud-side__list">
-        <button *ngFor="let j of jobs"
-                class="ud-jc"
-                [class.is-active]="j.id === activeJobId"
-                [class.is-placed]="j.status === 'placed'"
-                [class.is-error]="j.status === 'error'"
-                (click)="selectJob(j.id)">
-          <span class="ud-jc__ic">
+      <!-- Horizontal mission switcher — replaces the old 326px permanent
+           sidebar so the form below gets the width back. -->
+      <div class="ud-missionstrip">
+        <div class="ud-missionstrip__scroll">
+          <button *ngFor="let j of jobs"
+                  class="ud-mchip"
+                  [class.is-active]="j.id === activeJobId"
+                  [class.is-placed]="j.status === 'placed'"
+                  [class.is-error]="j.status === 'error'"
+                  (click)="selectJob(j.id)">
             <i class="bi" [ngClass]="{
               'bi-check-circle-fill': j.status === 'placed',
               'bi-exclamation-triangle-fill': j.status === 'error',
               'bi-arrow-repeat': j.status === 'placing',
               'bi-truck': j.status === 'draft'
             }"></i>
-          </span>
-          <span class="ud-jc__body">
-            <span class="ud-jc__title">{{ j.title }}</span>
-            <span class="ud-jc__meta">
-              {{ j.stops.length }} arrêt(s)
-              <ng-container *ngIf="j.status === 'placed'"> · publiée</ng-container>
-              <ng-container *ngIf="j.status === 'error'"> · à corriger</ng-container>
-              <ng-container *ngIf="j.status === 'draft' && jobReady(j)"> · prête</ng-container>
-            </span>
-          </span>
-          <i class="bi bi-x-lg ud-jc__x" *ngIf="jobs.length > 1"
-             (click)="$event.stopPropagation(); removeJob(j.id)"></i>
-        </button>
+            <span class="ud-mchip__t">{{ j.title }}</span>
+            <span class="ud-mchip__meta">{{ j.stops.length }} arrêt(s)</span>
+            <i class="bi bi-x-lg ud-mchip__x" *ngIf="jobs.length > 1"
+               (click)="$event.stopPropagation(); removeJob(j.id)"></i>
+          </button>
+          <button class="ud-mchip ud-mchip--add" (click)="addJob()" [disabled]="jobs.length >= maxJobs">
+            <i class="bi bi-plus-lg"></i> Nouvelle mission
+          </button>
+        </div>
+        <span class="ud-missionstrip__count">{{ jobs.length }} / {{ maxJobs }}</span>
       </div>
 
-      <div class="ud-side__meter">
-        <div class="ud-side__meterrow"><span>Prêtes à publier</span><b>{{ kpiReady }} / {{ jobs.length }}</b></div>
-        <div class="ud-side__bar"><i [style.width.%]="jobs.length ? kpiReady / jobs.length * 100 : 0"></i></div>
-        <div class="ud-side__meterrow"><span>Publiées</span><b>{{ kpiPlaced }} / {{ jobs.length }}</b></div>
-        <div class="ud-side__bar"><i class="is-ok" [style.width.%]="jobs.length ? kpiPlaced / jobs.length * 100 : 0"></i></div>
-      </div>
-
-      <div class="ud-side__flow">
-        <span class="ud-side__floweyebrow">Comment ça marche</span>
-        <ol>
-          <li><span>1</span> Tracez l’itinéraire — retrait + arrêts</li>
-          <li><span>2</span> Choisissez le véhicule</li>
-          <li><span>3</span> Publiez — les chauffeurs sont notifiés</li>
-        </ol>
-      </div>
-
-      <ng-lottie class="ud-side__lottie" [options]="lot.delivery" *ngIf="jobs.length === 1"></ng-lottie>
-
-      <div class="ud-side__lifetime" *ngIf="lifetimePlaced">
-        <b>{{ lifetimePlaced }}</b>
-        <span>commande{{ lifetimePlaced > 1 ? 's' : '' }} publiée{{ lifetimePlaced > 1 ? 's' : '' }} avec Shnell</span>
-      </div>
-
-      <p class="ud-side__foot">
-        <i class="bi bi-lightning-charge-fill"></i>
-        Jusqu’à {{ maxStops }} arrêts par commande. Attribution automatique dès la publication.
-      </p>
-    </aside>
-
-    <!-- ============ WORKSPACE · JOBS ============ -->
-    <main class="ud-work" *ngIf="view === 'jobs'">
       <ng-container *ngIf="activeJob as j">
 
         <!-- placed -->
@@ -165,9 +133,11 @@
           <span class="sh-eyebrow">Commande publiée</span>
           <h1 class="ud-placed__h">{{ j.title }} est en ligne</h1>
           <p class="ud-placed__sub">
-            {{ j.priceMode === 'bidding'
-                ? 'Ouverte aux enchères chauffeurs'
-                : ('Prix fixe ' + (j.computedPrice | number:'1.2-2') + ' ' + j.currency) }}
+            {{ j.assignedDriverId
+                ? ('Assignée directement à ' + j.assignedDriverName)
+                : (j.priceMode === 'bidding'
+                    ? 'Ouverte aux enchères chauffeurs'
+                    : ('Prix fixe ' + (j.computedPrice | number:'1.2-2') + ' ' + j.currency)) }}
             · {{ j.stops.length }} arrêts · {{ j.distanceKm | number:'1.1-1' }} km
           </p>
           <p class="ud-placed__id" *ngIf="j.placedOrderId"><i class="bi bi-hash"></i>{{ j.placedOrderId }}</p>
@@ -300,7 +270,7 @@
                   </div>
 
                   <!-- pickup -->
-                  <div class="ud-loc ud-loc--pickup">
+                  <div class="ud-loc ud-loc--pickup" id="pickup-row">
                     <span class="ud-loc__badge">A</span>
                     <div class="ud-loc__fields">
                       <span class="ud-loc__label">Retrait</span>
@@ -325,6 +295,7 @@
 
                   <!-- stops -->
                   <div class="ud-loc" *ngFor="let s of j.stops; let i = index"
+                       [attr.id]="'stop-row-' + i"
                        [class.is-qmatch]="j.stops.length > 1 && (stopQ.op !== 'contains' || stopQ.value) && stopMatches(s)"
                        [class.is-bulksel]="bulkSel.has(i)">
                     <button type="button" class="ud-loc__badge ud-loc__badge--stop"
@@ -447,17 +418,45 @@
                     <span>Calculating your price…</span>
                   </div>
 
-                  <div class="ud-pmodes" [class.dim]="j.pricing">
-                    <button class="ud-pmode" [class.on]="j.priceMode === 'fixed'" (click)="j.priceMode = 'fixed'">
+                  <div class="ud-pmodes" [class.dim]="j.pricing || !!j.assignedDriverId">
+                    <button class="ud-pmode" [class.on]="j.priceMode === 'fixed'" [disabled]="!!j.assignedDriverId" (click)="j.priceMode = 'fixed'">
                       <i class="bi bi-tag-fill"></i>
                       <span class="ud-pmode__t">Fixed price</span>
                       <span class="ud-pmode__amt">{{ j.computedPrice | number:'1.2-2' }} {{ j.currency }}</span>
                     </button>
-                    <button class="ud-pmode" [class.on]="j.priceMode === 'bidding'" (click)="j.priceMode = 'bidding'">
+                    <button class="ud-pmode" [class.on]="j.priceMode === 'bidding'" [disabled]="!!j.assignedDriverId" (click)="j.priceMode = 'bidding'">
                       <i class="bi bi-people-fill"></i>
                       <span class="ud-pmode__t">Let drivers bid</span>
                       <span class="ud-pmode__amt">~ {{ j.computedPrice | number:'1.0-0' }} {{ j.currency }}</span>
                     </button>
+                  </div>
+
+                  <!-- Direct assignment: skip the open marketplace/bidding
+                       entirely and hand this mission to one of your own
+                       drivers — only they will see it. -->
+                  <div class="ud-directassign" *ngIf="myDrivers.length > 0">
+                    <span class="ud-lbl"><i class="bi bi-person-check-fill me-1"></i>Assigner directement à un de mes chauffeurs (optionnel)</span>
+
+                    <div class="ud-directassign__picked" *ngIf="j.assignedDriverId">
+                      <span><i class="bi bi-truck me-1"></i>{{ j.assignedDriverName }}</span>
+                      <button type="button" class="ud-btn ud-btn--soft" (click)="assignJobToDriver(j, null)">
+                        <i class="bi bi-x-lg me-1"></i>Retirer
+                      </button>
+                    </div>
+
+                    <ng-container *ngIf="!j.assignedDriverId">
+                      <input type="text" class="ud-inp" [(ngModel)]="driverAssignSearch" (ngModelChange)="filterMyDrivers()"
+                             placeholder="Rechercher un chauffeur par nom ou téléphone…" />
+                      <ul class="ud-directassign__list">
+                        <li *ngFor="let d of filteredMyDrivers">
+                          <button type="button" (click)="assignJobToDriver(j, d)">
+                            <span>{{ d.name }}</span>
+                            <small>{{ d.phone }}</small>
+                          </button>
+                        </li>
+                        <li *ngIf="filteredMyDrivers.length === 0" class="ud-muted">Aucun chauffeur trouvé.</li>
+                      </ul>
+                    </ng-container>
                   </div>
 
                   <div class="ud-row2">
@@ -556,6 +555,10 @@
                     <span>Distance</span>
                     <b>{{ j.distanceKm > 0 ? (j.distanceKm | number:'1.1-1') + ' km' : '—' }}</b>
                   </div>
+                  <div class="ud-sumline" *ngIf="j.assignedDriverId">
+                    <span>Chauffeur</span>
+                    <b><i class="bi bi-person-check-fill me-1"></i>{{ j.assignedDriverName }}</b>
+                  </div>
 
                   <div class="ud-summary__price">
                     <span *ngIf="j.pricing" class="ud-spin ud-spin--lg"><span></span><span></span><span></span></span>
@@ -615,15 +618,22 @@
           <div class="ud-panel__pad">
             <p class="ud-sub">
               Create Shnell orders straight from your own system and have drivers auto-assigned.
-              Authenticate with your account UID — every order created this way is attributed to you.
+              Authenticate with an API key created here — every order created this way is attributed to you.
             </p>
 
-            <span class="ud-lbl">Your API key <em>(account UID)</em></span>
-            <div class="ud-keyrow">
-              <code class="ud-key">{{ userUid || '—' }}</code>
-              <button class="ud-btn ud-btn--soft" (click)="copy(userUid)"><i class="bi bi-clipboard"></i> Copy</button>
+            <span class="ud-lbl">Your API key</span>
+            <div class="ud-keyrow" *ngIf="newApiKey">
+              <code class="ud-key">{{ newApiKey }}</code>
+              <button class="ud-btn ud-btn--soft" (click)="copy(newApiKey)"><i class="bi bi-clipboard"></i> Copy</button>
             </div>
-            <p class="ud-mini">Send it as the <code>x-api-key</code> header on every request. Keep it secret — it can place paid orders.</p>
+            <p class="ud-mini" *ngIf="newApiKey"><b>Copy it now: it will never be shown again.</b></p>
+            <div class="ud-keyrow" *ngIf="!newApiKey">
+              <code class="ud-key">{{ apiKeyPrefix ? apiKeyPrefix + '…' : 'No key yet' }}</code>
+              <button class="ud-btn ud-btn--soft" [disabled]="apiKeyBusy" (click)="createApiKey()">
+                <i class="bi bi-key"></i> {{ apiKeyPrefix ? 'Replace key' : 'Create key' }}
+              </button>
+            </div>
+            <p class="ud-mini">Send it as the <code>x-api-key</code> header on every request. Keep it secret — it can place paid orders. Keys based on your account UID stop working on 15 Nov 2026.</p>
 
             <span class="ud-lbl">Endpoint</span>
             <div class="ud-keyrow">
@@ -696,13 +706,87 @@
       </div>
     </main>
 
+    <!-- ============ WORKSPACE · HOME / OVERVIEW ============ -->
+    <main class="ud-work ud-work--home" *ngIf="view === 'home'">
+      <div class="ud-workhead ud-workhead--editorial">
+        <div class="ud-workhead__main">
+          <span class="sh-eyebrow">Tableau de bord</span>
+          <h1 class="ud-title">Bonjour{{ companyName ? ', ' + companyName : '' }}</h1>
+          <p class="ud-lede">
+            Vue d'ensemble de votre activité Shnell — missions, arrêts en attente, et encaissement (COD).
+          </p>
+        </div>
+      </div>
+
+      <div class="ud-kpis ud-kpis--home">
+        <div class="ud-kpi">
+          <i class="bi bi-send-check-fill ud-kpi__i"></i>
+          <span class="ud-kpi__n">{{ loadingOverview ? '—' : ordersTotal }}</span>
+          <span class="ud-kpi__l">Missions au total</span>
+        </div>
+        <div class="ud-kpi ud-kpi--ok">
+          <i class="bi bi-calendar-week-fill ud-kpi__i"></i>
+          <span class="ud-kpi__n">{{ loadingOverview ? '—' : ordersThisWeek }}</span>
+          <span class="ud-kpi__l">Cette semaine</span>
+        </div>
+        <div class="ud-kpi">
+          <i class="bi bi-geo-alt-fill ud-kpi__i"></i>
+          <span class="ud-kpi__n">{{ parcelKpis.total }}</span>
+          <span class="ud-kpi__l">Arrêts dans le pool</span>
+        </div>
+        <div class="ud-kpi">
+          <i class="bi bi-truck ud-kpi__i"></i>
+          <span class="ud-kpi__n">{{ myDrivers.length }}</span>
+          <span class="ud-kpi__l">Chauffeurs liés</span>
+        </div>
+        <div class="ud-kpi ud-kpi--amber">
+          <i class="bi bi-hourglass-split ud-kpi__i"></i>
+          <span class="ud-kpi__n">{{ parcelKpis.toCollect | number:'1.0-0' }}</span>
+          <span class="ud-kpi__l">TND à collecter</span>
+        </div>
+        <div class="ud-kpi ud-kpi--ok">
+          <i class="bi bi-cash-stack ud-kpi__i"></i>
+          <span class="ud-kpi__n">{{ parcelKpis.collected | number:'1.0-0' }}</span>
+          <span class="ud-kpi__l">TND collecté</span>
+        </div>
+      </div>
+
+      <div class="ud-lbl" style="margin-top: 28px;">Actions rapides</div>
+      <div class="ud-quickactions">
+        <button type="button" class="ud-quickcard" (click)="setView('parcels')">
+          <i class="bi bi-geo-alt-fill"></i>
+          <div>
+            <span class="ud-quickcard__t">Gérer les Arrêts</span>
+            <span class="ud-quickcard__d">Importer, filtrer et assigner vos arrêts à un chauffeur</span>
+          </div>
+          <i class="bi bi-chevron-right ud-quickcard__go"></i>
+        </button>
+        <button type="button" class="ud-quickcard" (click)="setView('jobs')">
+          <i class="bi bi-grid-1x2-fill"></i>
+          <div>
+            <span class="ud-quickcard__t">Créer une Mission</span>
+            <span class="ud-quickcard__d">Retrait, arrêts, véhicule et chauffeur, de A à Z</span>
+          </div>
+          <i class="bi bi-chevron-right ud-quickcard__go"></i>
+        </button>
+        <button type="button" class="ud-quickcard" (click)="setView('api')">
+          <i class="bi bi-code-slash"></i>
+          <div>
+            <span class="ud-quickcard__t">Intégration API</span>
+            <span class="ud-quickcard__d">Créez des missions depuis votre propre système</span>
+          </div>
+          <i class="bi bi-chevron-right ud-quickcard__go"></i>
+        </button>
+      </div>
+    </main>
+
     <!-- ============ WORKSPACE · PARCELS ============ -->
     <main class="ud-work ud-work--parcels" *ngIf="view === 'parcels'">
       <div class="ud-workhead ud-workhead--editorial">
         <div class="ud-workhead__main">
-          <span class="sh-eyebrow">Colis &amp; encaissement</span>
-          <h1 class="ud-title">Vos colis</h1>
-          <p class="ud-lede">Importez, filtrez, regroupez en tournées, et suivez l’argent collecté par expéditeur.</p>
+          <span class="sh-eyebrow">Gérer les Arrêts</span>
+          <h1 class="ud-title">Définir, filtrer &amp; assigner vos arrêts</h1>
+          <p class="ud-lede">1. Importez ou ajoutez vos arrêts ci-dessous — 2. filtrez / recherchez ceux qui vous intéressent — 3. sélectionnez-les et regroupez-les en une mission à assigner à un chauffeur.</p>
           <div class="ud-facts">
             <span class="ud-fact"><i class="bi bi-box2"></i> {{ parcelKpis.total }} stored</span>
             <span class="ud-fact"><i class="bi bi-geo"></i> {{ parcelKpis.located }} located</span>
@@ -948,7 +1032,9 @@
   </div>
 
   <!-- ============ PIN PICKER MODAL ============ -->
-  <div class="ud-pinmodal" *ngIf="pinOpen">
+  <!-- Re-parented to document.body at runtime (see openPin()) so it always
+       renders as a true full-screen overlay, regardless of any ancestor. -->
+  <div class="ud-pinmodal" *ngIf="pinOpen" #pinModalRoot>
     <div class="ud-pinmodal__sheet">
       <div class="ud-pinmodal__head">
         <strong>{{ pinTarget.kind === 'pickup' ? 'Set the pickup' : ('Set stop ' + (pinTarget.index + 1)) }}</strong>

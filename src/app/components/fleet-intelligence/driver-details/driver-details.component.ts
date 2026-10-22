@@ -7,6 +7,9 @@ import { CrossTabSyncService } from '../../../services/cross-tab-sync.service';
 import { Subscription, Observable } from 'rxjs';
 import { Firestore, doc, docData, collection, query, where, collectionData, updateDoc, setDoc, addDoc, serverTimestamp } from '@angular/fire/firestore';
 import { ShnellUser } from '../../../../Models/shnellUsers.models';
+import { DashboardDataService } from '../../../shnell-dashboard/services/dashboard-data.service';
+import { WalletLike, walletBalances, rechargeCurrencies, rechargeConfirmHtml, rechargeResultText, validReceiptRef } from '../../../shnell-dashboard/services/wallet';
+import { confirmAction } from '../../../shared/swal';
 import { Vehicle } from '../../../../Models/vehicle';
 
 @Component({
@@ -39,6 +42,12 @@ export class DriverDetailsComponent implements OnInit, OnDestroy {
   verification$!: Observable<any>;
   selectedDriverVerification: any = null;
   rechargeAmount: number = 20;
+  rechargeCurrency: string = '';
+  rechargeReference: string = '';
+  /** wallets/{uid}: the driver's money, one balance per currency. */
+  wallet: WalletLike | null = null;
+  readonly walletBalances = walletBalances;
+  readonly rechargeCurrencies = rechargeCurrencies;
 
   // Notification Modal/Form
   notifTitle: string = '';
@@ -52,7 +61,8 @@ export class DriverDetailsComponent implements OnInit, OnDestroy {
     private fleetService: FleetIntelligenceService,
     private firestore: Firestore,
     private router: Router,
-    private crossTabSyncService: CrossTabSyncService
+    private crossTabSyncService: CrossTabSyncService,
+    private dashboardDataService: DashboardDataService
   ) {}
 
   ngOnInit(): void {
@@ -78,6 +88,11 @@ export class DriverDetailsComponent implements OnInit, OnDestroy {
         if (data) {
           this.driver = ShnellUser.fromJson(data);
         }
+      })
+    );
+    this.subscription.add(
+      docData(doc(this.firestore, `wallets/${id}`)).subscribe(w => {
+        this.wallet = (w as WalletLike) || null;
       })
     );
 
@@ -166,31 +181,26 @@ export class DriverDetailsComponent implements OnInit, OnDestroy {
 
     async rechargeBalance(): Promise<void> {
     if (!this.driver || !this.driverId || !this.rechargeAmount || this.rechargeAmount <= 0) return;
+    if (!/^[A-Z]{3}$/.test(this.rechargeCurrency) || this.isProcessing) return;
+    if (!validReceiptRef(this.rechargeReference)) {
+      alert('Saisissez le numéro du reçu');
+      return;
+    }
     this.isProcessing = true;
     try {
-      const newBal = (this.driver.balance || 0) + this.rechargeAmount;
-      const userRef = doc(this.firestore, `users/${this.driverId}`);
-      await updateDoc(userRef, { balance: newBal });
-
-      const walletDocRef = doc(this.firestore, `wallets/${this.driverId}`);
-      await setDoc(walletDocRef, { balance: newBal }, { merge: true });
-
-      const commColRef = collection(this.firestore, 'commissions');
-      await addDoc(commColRef, {
-        userId: this.driverId,
-        DriverId: this.driverId,
-        commissionDeducted: this.rechargeAmount,
-        percentageFees: 0,
-        DealAmount: this.rechargeAmount,
-        time: serverTimestamp(),
-        typeOfTransaction: 'recharge'
+      const ok = await confirmAction({
+        title: 'Confirmer la recharge',
+        html: rechargeConfirmHtml(this.driver.name, this.wallet, this.rechargeAmount, this.rechargeCurrency),
+        confirmText: `Créditer ${this.rechargeAmount} ${this.rechargeCurrency}`,
       });
-
-      this.driver.balance = newBal;
-      this.crossTabSyncService.notifyDriverUpdated(this.driverId, { balance: newBal });
-      alert(`Credited ${this.rechargeAmount} TND to ${this.driver.name}'s account.`);
-    } catch (e) {
+      if (!ok) return;
+      // Server-side: wallets/{uid}.balances[currency] + ledger line, atomically.
+      const res = await this.dashboardDataService.rechargeUserBalance(this.driverId, this.rechargeAmount, this.rechargeCurrency, this.rechargeReference);
+      this.rechargeReference = '';
+      alert(rechargeResultText(this.rechargeAmount, res));
+    } catch (e: any) {
       console.error('Error recharging balance:', e);
+      alert(e?.message || 'Recharge failed');
     } finally {
       this.isProcessing = false;
     }

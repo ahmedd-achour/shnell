@@ -5,17 +5,20 @@ import {
   collectionData,
   doc,
   docData,
+  getDoc,
   updateDoc,
   deleteDoc,
   addDoc,
   setDoc,
   query,
   where,
-  serverTimestamp
+  serverTimestamp,
+  writeBatch
 } from '@angular/fire/firestore';
 import { Database, ref, onValue } from '@angular/fire/database';
+import { Functions, httpsCallable } from '@angular/fire/functions';
 import { Observable, BehaviorSubject, of, combineLatest } from 'rxjs';
-import { map, startWith, catchError, switchMap, tap } from 'rxjs/operators';
+import { map, startWith, catchError, switchMap, tap, shareReplay } from 'rxjs/operators';
 import {
   Bid,
   Cancelation,
@@ -25,6 +28,7 @@ import {
     CallLog,
   VehicleSettings,
   GlobalConfig,
+  DispatchConfig,
   Orders,
   Rating,
   ShnellUser,
@@ -33,11 +37,55 @@ import {
   DriverRTDBLocation
 } from '../models/dashboard.models';
 
+/** Mirrors the limits partnerdash/user-dashboard currently hardcode (maxStops=250, MAX_JOBS=50)
+ *  and the pricing example from the pro-dispatch spec, used only until an admin saves settings/dispatch. */
+const DEFAULT_DISPATCH_CONFIG: DispatchConfig = {
+  maxStopsPerMission: 250,
+  maxParcelsPerMission: 250,
+  maxConcurrentOrders: 50,
+  pricing: {
+    baseFee: 5,
+    distanceBands: [
+      { upTo: 10, fee: 5 },
+      { upTo: 20, fee: 8 },
+      { upTo: 40, fee: 15 },
+      { upTo: null, fee: 25 }
+    ],
+    stopBands: [
+      { upTo: 20, fee: 0 },
+      { upTo: 50, fee: 5 },
+      { upTo: null, fee: 10 }
+    ],
+    parcelBands: [
+      { upTo: 50, fee: 0 },
+      { upTo: 100, fee: 10 },
+      { upTo: 250, fee: 20 },
+      { upTo: null, fee: 30 }
+    ]
+  }
+};
+
+/** adminAdjustBalance answer: applied now, or waiting for a second admin. */
+export interface RechargeResult {
+  success: boolean;
+  pending: boolean;
+  requestId: string;
+  currencyCode: string;
+  newBalance?: number;
+  replay?: boolean;
+}
+
+/** Idempotency key for one money movement. */
+export function newRequestId(): string {
+  return (crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random().toString(36).slice(2)).replace(/-/g, '');
+}
+
 @Injectable({
   providedIn: 'root'
 })
 export class DashboardDataService {
   private firestore = inject(Firestore);
+  private functions = inject(Functions);
   private database = inject(Database);
 
   private driverLocations$ = new BehaviorSubject<DriverRTDBLocation[]>([]);
@@ -91,7 +139,14 @@ export class DashboardDataService {
     }
   }
 
+  /** One shared users+wallets listener for the whole console (shell, search, bell). */
+  private users$?: Observable<ShnellUser[]>;
+
   getUsers(): Observable<ShnellUser[]> {
+    return this.users$ ??= this.loadUsers().pipe(shareReplay({ bufferSize: 1, refCount: true }));
+  }
+
+  private loadUsers(): Observable<ShnellUser[]> {
     const colRef = collection(this.firestore, 'users');
     const walletsCol = collection(this.firestore, 'wallets');
     
@@ -110,7 +165,8 @@ export class DashboardDataService {
             ...u,
             role,
             id: u.uid || u['__id'] || u['id'],
-            balance: w ? w['balance'] : u['balance']
+            // The money lives in wallets/{uid} only.
+            balances: w ? w['balances'] : undefined
           } as ShnellUser;
         });
       }),
@@ -335,18 +391,41 @@ export class DashboardDataService {
     );
   }
 
+  getDispatchConfigDoc(): Observable<DispatchConfig> {
+    const docRef = doc(this.firestore, 'settings', 'dispatch');
+    return docData(docRef).pipe(
+      map(data => ({ ...DEFAULT_DISPATCH_CONFIG, ...(data as any) }) as DispatchConfig),
+      startWith(DEFAULT_DISPATCH_CONFIG),
+      catchError(err => {
+        console.error('Error fetching settings/dispatch:', err);
+        return of(DEFAULT_DISPATCH_CONFIG);
+      })
+    );
+  }
+
+  async updateDispatchConfig(config: DispatchConfig): Promise<void> {
+    await this.adminCall('adminSaveSettings', { docId: 'dispatch', data: config });
+  }
+
   getDriverRTDBLocations(): Observable<DriverRTDBLocation[]> {
     return this.driverLocations$.asObservable();
   }
 
+  /** Admin writes below go through Cloud Functions that log them in admin_audit. */
+  private async adminCall<T = any>(name: string, data: any): Promise<T> {
+    return (await httpsCallable<any, T>(this.functions, name)(data)).data;
+  }
+
   async updateVehicleApproval(vehicleId: string, approved: boolean): Promise<void> {
-    const docRef = doc(this.firestore, `vehicles/${vehicleId}`);
-    await updateDoc(docRef, { isAdminApproved: approved, isAssetsApproved: approved });
+    await this.adminCall('adminReviewVehicle', { vehicleId, approve: approved });
   }
 
   async deleteVehicle(vehicleId: string): Promise<void> {
-    const docRef = doc(this.firestore, `vehicles/${vehicleId}`);
-    await deleteDoc(docRef);
+    await this.adminCall('adminReviewVehicle', { vehicleId, remove: true });
+  }
+
+  async setDriverVerified(driverId: string, verified: boolean): Promise<void> {
+    await this.adminCall('adminUpdateAccount', { userId: driverId, isVerified: verified });
   }
 
   
@@ -361,17 +440,10 @@ export class DashboardDataService {
         idDriver: driverId,
         idUser: userId,
         status: 'accepted',
+        // onDealLifecycle pushes "job assigned" to the driver and "driver
+        // found" to the customer (notifications/ is the device registry only).
+        assignedBy: 'admin',
         timestamp: serverTimestamp()
-      });
-      
-      const notifRef = doc(collection(this.firestore, 'notifications'));
-      await setDoc(notifRef, {
-        userId: driverId,
-        title: 'New Job Assigned',
-        body: 'Admin has manually assigned you a job.',
-        time: serverTimestamp(),
-        isRead: false,
-        type: 'assignment'
       });
     } catch (e) {
       console.error('Failed to assign driver:', e);
@@ -379,53 +451,82 @@ export class DashboardDataService {
     }
   }
 
+  /** Fetches specific stop docs by id (one-shot, not realtime) — used by the dispatch
+   *  center to load only the stops belonging to the order being dispatched, instead of
+   *  subscribing to the whole `stops` collection. */
+  async getStopsByIds(ids: string[]): Promise<DropOffData[]> {
+    const docs = await Promise.all(ids.map(id => getDoc(doc(this.firestore, 'stops', id))));
+    return docs
+      .filter(d => d.exists())
+      .map(d => ({ id: d.id, ...(d.data() as any) })) as DropOffData[];
+  }
+
+  /** One-shot company doc lookup (plan/commissionRate) — used to price a mission per the
+   *  owning company's PAYG/PRO status instead of always falling back to the global rate. */
+  async getCompanyDoc(companyId: string): Promise<any | null> {
+    const snap = await getDoc(doc(this.firestore, 'companies', companyId));
+    return snap.exists() ? { id: snap.id, ...snap.data() } : null;
+  }
+
+  /** Persists a dispatch-center route optimization: reorders `orders/{orderId}.stops`
+   *  and writes each stop's `sequence` so the driver app receives the correct order (spec §7). */
+  async applyRouteSequence(orderId: string, orderedStopIds: string[]): Promise<void> {
+    const batch = writeBatch(this.firestore);
+    batch.update(doc(this.firestore, 'orders', orderId), { stops: orderedStopIds });
+    orderedStopIds.forEach((stopId, index) => {
+      batch.update(doc(this.firestore, 'stops', stopId), { sequence: index });
+    });
+    await batch.commit();
+  }
+
   async softDeleteOrder(orderId: string): Promise<void> {
     const docRef = doc(this.firestore, `orders/${orderId}`);
     await updateDoc(docRef, { isAcepted: true });
   }
 
-  async updateUserBalance(userId: string, newBalance: number): Promise<void> {
-    const docRef = doc(this.firestore, `users/${userId}`);
-    await updateDoc(docRef, { balance: newBalance });
-  }
 
   async toggleUserBan(userId: string, currentBanState: boolean): Promise<boolean> {
     const newBanState = !currentBanState;
-    const docRef = doc(this.firestore, `users/${userId}`);
-    await updateDoc(docRef, {
-      isBan: newBanState,
-      isBanned: newBanState,
-      isActive: !newBanState
-    });
+    await this.adminCall('adminUpdateAccount', { userId, isBan: newBanState });
     return newBanState;
   }
 
-  async rechargeUserBalance(userId: string, currentBalance: number, rechargeAmount: number, adminOrDriverId?: string): Promise<number> {
-    const newBalance = (currentBalance || 0) + rechargeAmount;
-    
-    // Update the wallet collection (create if not exists)
-    const walletDocRef = doc(this.firestore, `wallets/${userId}`);
-    await setDoc(walletDocRef, { balance: newBalance }, { merge: true });
-
-    
-
-    const commColRef = collection(this.firestore, 'commissions');
-    await addDoc(commColRef, {
-      userId: userId,
-      DriverId: adminOrDriverId || userId,
-      commissionDeducted: rechargeAmount,
-      percentageFees: 0,
-      DealAmount: rechargeAmount,
-      time: serverTimestamp(),
-      typeOfTransaction: 'recharge'
+  /**
+   * Credits (or debits, amount < 0) ONE currency of a user's wallet through
+   * the adminAdjustBalance function: wallets/{uid}.balances[currency], the
+   * commissions ledger line and the admin_audit entry, server-side.
+   * No conversion: a DZD recharge never lifts a negative TND balance.
+   */
+  async rechargeUserBalance(
+    userId: string, amount: number, currencyCode: string, reference: string, reason?: string,
+  ): Promise<RechargeResult> {
+    const callable = httpsCallable<
+      { userId: string; amount: number; currencyCode: string; reference: string; requestId: string; reason?: string },
+      RechargeResult
+    >(this.functions, 'adminAdjustBalance');
+    // One id per submission: a network retry of this call can't credit twice
+    // (and the receipt number can't be used twice either).
+    const requestId = newRequestId();
+    const res = await callable({
+      userId, amount, currencyCode: currencyCode.trim().toUpperCase(), reference: reference.trim(), requestId,
+      ...(reason ? { reason: reason.trim().slice(0, 300) } : {}),
     });
+    return res.data;
+  }
 
-    return newBalance;
+  /** Recharges above the currency's threshold, waiting for a second admin. */
+  getPendingRecharges(): Observable<any[]> {
+    const q = query(collection(this.firestore, 'recharge_requests'), where('status', '==', 'pending'));
+    return collectionData(q, { idField: 'id' }).pipe(startWith([]), catchError(() => of([])));
+  }
+
+  async decideRecharge(requestId: string, approve: boolean): Promise<{ status: string; newBalance?: number; currencyCode?: string }> {
+    const callable = httpsCallable<{ requestId: string; approve: boolean }, any>(this.functions, 'adminApproveRecharge');
+    return (await callable({ requestId, approve })).data;
   }
 
   async updateUserAccType(userId: string, accType: 'pro' | 'standard' | string): Promise<void> {
-    const docRef = doc(this.firestore, `users/${userId}`);
-    await updateDoc(docRef, { accType: accType });
+    await this.adminCall('adminUpdateAccount', { userId, accType });
   }
 
   async updateConfigParams(params: {
@@ -436,20 +537,17 @@ export class DashboardDataService {
     update_link_customer_app?: string;
     update_link_driver_app?: string;
   }): Promise<void> {
-    const docRef = doc(this.firestore, 'settings', 'config');
-    await setDoc(docRef, params, { merge: true });
+    await this.adminCall('adminSaveSettings', { docId: 'config', data: params });
   }
 
   async updateVehicleSettingsConfig(vehicles: Record<string, VehicleSettings>): Promise<void> {
-    const docRef = doc(this.firestore, 'settings', 'vehicles');
-    await setDoc(docRef, vehicles, { merge: true });
+    await this.adminCall('adminSaveSettings', { docId: 'vehicles', data: vehicles });
   }
 
   async updateServiceAreasConfig(data: {
     countries?: Record<string, CountryServiceArea>;
     messages?: Record<string, string>;
   }): Promise<void> {
-    const docRef = doc(this.firestore, 'settings', 'service_areas');
-    await setDoc(docRef, data, { merge: true });
+    await this.adminCall('adminSaveSettings', { docId: 'service_areas', data });
   }
 }

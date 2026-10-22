@@ -28,7 +28,10 @@
     <div class="col-12 col-sm-6 col-xl-3">
       <div class="card saas-card border-0 p-4 h-100">
         <span class="text-uppercase fw-bold text-muted fs-8 tracking-wide">Solde Disponible</span>
-        <h2 class="display-6 fw-bold text-emerald my-1">{{ profile.balance || 0 }} TND</h2>
+        <ng-container *ngIf="wallet$ | async as wallet; else noWallet">
+          <h2 *ngFor="let b of walletBalances(wallet)" class="display-6 fw-bold my-1" [class.text-emerald]="b.amount >= 0" [class.text-danger]="b.amount < 0">{{ b.amount | number:'1.2-2' }} {{ b.currency }}</h2>
+        </ng-container>
+        <ng-template #noWallet><h2 class="display-6 fw-bold text-emerald my-1">0.00</h2></ng-template>
         <small class="text-muted fs-8">Crédit de compte actif</small>
       </div>
     </div>

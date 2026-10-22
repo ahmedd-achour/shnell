@@ -1,0 +1,20 @@
+<div class="pending-approval">
+  <div class="pending-approval__card">
+    <i class="fa-solid fa-hourglass-half pending-approval__icon"></i>
+    <h1>Compte en cours de vérification</h1>
+
+    <ng-container [ngSwitch]="(status$ | async)">
+      <p *ngSwitchCase="'pending'">
+        Merci pour votre inscription ! Notre équipe vérifie votre CIN et vos documents d'entreprise.
+        Vous recevrez un accès à votre espace dès que votre compte sera approuvé.
+      </p>
+      <p *ngSwitchCase="'unknown'">
+        Nous n'avons pas trouvé de dossier de vérification pour ce compte. Contactez le support si
+        vous pensez qu'il s'agit d'une erreur.
+      </p>
+      <p *ngSwitchDefault>Chargement du statut de votre compte...</p>
+    </ng-container>
+
+    <button type="button" class="sh-btn sh-btn--outline" (click)="logout()">Se déconnecter</button>
+  </div>
+</div>

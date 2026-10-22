@@ -44,7 +44,10 @@
 
           <div class="p-3 rounded-3 bg-subtle border border-subtle d-flex justify-content-between align-items-center mb-3">
             <span class="text-muted fs-8">Account Balance:</span>
-            <span class="font-monospace fw-bold text-success fs-5">{{ (driver.balance || 0) | number:'1.2-2' }} TND</span>
+            <span class="text-end">
+              <span *ngFor="let b of walletBalances(wallet)" class="d-block font-monospace fw-bold fs-5" [ngClass]="b.amount < 0 ? 'text-danger' : 'text-success'">{{ b.amount | number:'1.2-2' }} {{ b.currency }}</span>
+              <span *ngIf="!walletBalances(wallet).length" class="font-monospace fw-bold text-muted fs-5">0.00</span>
+            </span>
           </div>
 
           <div class="d-grid mb-3">
@@ -100,10 +103,15 @@
 
           <!-- Wallet Recharge -->
           <div>
-            <label class="text-muted fs-8 fw-semibold d-block mb-1">Credit / Add Wallet Funds (TND):</label>
+            <label class="text-muted fs-8 fw-semibold d-block mb-1">Credit / Add Wallet Funds (amount + currency):</label>
             <div class="input-group input-group-sm">
-              <input type="number" class="form-control bg-dark text-white border-secondary" [(ngModel)]="rechargeAmount" placeholder="Amount (TND)" />
-              <button class="btn btn-success fw-bold" [disabled]="isProcessing" (click)="rechargeBalance()">
+              <input type="number" class="form-control bg-dark text-white border-secondary" [(ngModel)]="rechargeAmount" placeholder="Amount" />
+              <select class="form-select bg-dark text-white border-secondary" style="max-width: 110px" [(ngModel)]="rechargeCurrency">
+                <option value="" disabled>Currency</option>
+                <option *ngFor="let c of rechargeCurrencies(wallet)" [value]="c">{{ c }}</option>
+              </select>
+              <input type="text" class="form-control bg-dark text-white border-secondary" [(ngModel)]="rechargeReference" placeholder="N° reçu" title="Numéro du reçu de caisse (obligatoire, unique)" style="max-width: 130px" />
+              <button class="btn btn-success fw-bold" [disabled]="isProcessing || !rechargeCurrency || !rechargeReference" (click)="rechargeBalance()">
                 <i class="bi bi-plus-circle me-1"></i> Credit
               </button>
             </div>

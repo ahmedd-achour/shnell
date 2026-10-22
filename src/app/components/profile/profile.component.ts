@@ -4,6 +4,7 @@ import { Router } from '@angular/router';
 import { Firestore, arrayRemove, arrayUnion, doc, docData, getDoc, updateDoc } from '@angular/fire/firestore';
 import { Observable } from 'rxjs';
 import { ShnellUser } from '../../../Models/shnellUsers.models';
+import { WalletLike, walletBalances } from '../../shnell-dashboard/services/wallet';
 import Swal from 'sweetalert2';
 
 @Component({
@@ -18,6 +19,9 @@ export class ProfileComponent implements OnInit {
 
   user: User | null = null;
   profile$!: Observable<ShnellUser | undefined>;
+  /** wallets/{uid}: the account's money, one balance per currency. */
+  wallet$!: Observable<WalletLike | undefined>;
+  readonly walletBalances = walletBalances;
 
   ngOnInit() {
     this.user = this.auth.currentUser;
@@ -25,6 +29,7 @@ export class ProfileComponent implements OnInit {
     if (this.user) {
       const userDoc = doc(this.firestore, `users/${this.user.uid}`);
       this.profile$ = docData(userDoc) as Observable<ShnellUser>;
+      this.wallet$ = docData(doc(this.firestore, `wallets/${this.user.uid}`)) as Observable<WalletLike>;
     }
   }
 

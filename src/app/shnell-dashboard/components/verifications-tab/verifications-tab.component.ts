@@ -1,7 +1,7 @@
 import { Component, Input, Output, EventEmitter } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ShnellUser } from '../../models/dashboard.models';
-import { Firestore, doc, updateDoc } from '@angular/fire/firestore';
+import { DashboardDataService } from '../../services/dashboard-data.service';
 import { FormsModule } from '@angular/forms';
 import { toastSuccess, toastError } from '../../../shared/swal';
 
@@ -22,7 +22,7 @@ export class VerificationsTabComponent {
   selectedVerification: any = null;
   activeAssetTab: string = '';
 
-  constructor(private firestore: Firestore) {}
+  constructor(private dashboardDataService: DashboardDataService) {}
 
   get filteredVerifications(): any[] {
     let filtered = this.verifications;
@@ -80,8 +80,7 @@ export class VerificationsTabComponent {
     this.processingId = v.uid;
     try {
       const newStatus = v.isVerified !== true;
-      const verifyRef = doc(this.firestore, `drivers/${v.uid}`);
-      await updateDoc(verifyRef, { isVerified: newStatus });
+      await this.dashboardDataService.setDriverVerified(v.uid, newStatus);
       v.isVerified = newStatus;
       toastSuccess(newStatus ? 'Vérification approuvée' : 'Vérification révoquée');
     } catch (e) {

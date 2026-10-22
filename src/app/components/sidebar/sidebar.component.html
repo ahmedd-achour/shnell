@@ -40,6 +40,8 @@
                 <i class="bi" [ngClass]="item.icon"></i>
               </span>
               <span class="nav-label" *ngIf="!sidebarCollapsed">{{ item.label }}</span>
+              <span class="nav-badge" *ngIf="badgeOf(item)" [class.nav-badge--dot]="sidebarCollapsed"
+                    [class.nav-badge--critical]="item.badge === 'alerts' && criticalAlerts">{{ sidebarCollapsed ? '' : badgeOf(item) }}</span>
             </a>
           </li>
         </ng-container>
@@ -74,10 +76,21 @@
           <i class="bi bi-list fs-5"></i>
         </button>
 
-        <div class="topbar-search d-none d-md-flex align-items-center">
+        <div class="topbar-search d-none d-md-flex align-items-center" *ngIf="user?.role === 'admin'">
           <i class="bi bi-search search-icon"></i>
-          <input type="text" class="search-input" placeholder="Search orders, drivers, vehicles or stops...">
-          <kbd class="search-kbd">⌘K</kbd>
+          <input #searchBox type="text" class="search-input" placeholder="Search accounts or pages…"
+                 [(ngModel)]="searchQuery" (focus)="searchOpen = true" (keydown)="onSearchKey($event)"
+                 aria-label="Search accounts and pages" autocomplete="off">
+          <kbd class="search-kbd">Ctrl K</kbd>
+          <div class="search-pop" *ngIf="searchOpen && searchQuery.trim()">
+            <button type="button" class="search-hit" *ngFor="let h of searchHits; let i = index"
+                    [class.on]="i === searchIndex" (mouseenter)="searchIndex = i" (click)="pick(h)">
+              <i class="bi" [ngClass]="h.icon"></i>
+              <span class="search-hit__main"><span class="search-hit__label">{{ h.label }}</span><span class="search-hit__sub">{{ h.sub }}</span></span>
+              <span class="search-hit__kind">{{ h.kind === 'account' ? 'Open 360' : 'Go to' }}</span>
+            </button>
+            <div class="search-empty" *ngIf="!searchHits.length">No account or page matches “{{ searchQuery }}”.</div>
+          </div>
         </div>
       </div>
 
@@ -88,11 +101,31 @@
           <span class="fs-8 fw-semibold text-emerald">SYSTEM ONLINE</span>
         </div>
 
-        <!-- Quick Notifications Pill -->
-        <button class="btn-topbar-action" title="System Notifications">
-          <i class="bi bi-bell"></i>
-          <span class="badge-dot"></span>
-        </button>
+        <!-- Alerts bell: open incidents + recharges waiting for approval -->
+        <div class="bell-wrap position-relative" *ngIf="user?.role === 'admin'">
+          <button class="btn-topbar-action" [class.has-critical]="criticalAlerts" (click)="bellOpen = !bellOpen"
+                  [attr.aria-expanded]="bellOpen" [attr.aria-label]="bellCount + ' open alerts'" title="Alerts">
+            <i class="bi" [ngClass]="bellCount ? 'bi-bell-fill' : 'bi-bell'"></i>
+            <span class="bell-count" *ngIf="bellCount">{{ bellCount > 99 ? '99+' : bellCount }}</span>
+          </button>
+          <div class="bell-pop" *ngIf="bellOpen">
+            <div class="bell-pop__head">
+              <b>Alerts</b>
+              <span class="fs-8 text-muted">{{ bellCount }} open</span>
+            </div>
+            <button type="button" class="bell-item bell-item--warn" *ngIf="pendingRecharges.length" (click)="goTab('finance')">
+              <i class="bi bi-shield-lock"></i>
+              <span><b>{{ pendingRecharges.length }} recharge(s) to approve</b><small>Maker–checker: needs a second admin</small></span>
+            </button>
+            <button type="button" class="bell-item" *ngFor="let a of openAlerts.slice(0, 6)" (click)="goTab('alerts')"
+                    [class.bell-item--crit]="a.severity === 'critical'" [class.bell-item--warn]="a.severity === 'warning'">
+              <i class="bi" [ngClass]="a.severity === 'critical' ? 'bi-exclamation-octagon-fill' : 'bi-exclamation-triangle'"></i>
+              <span><b>{{ a.title }}</b><small>{{ toMillis(a.lastAt || a.createdAt) | date:'dd MMM, HH:mm' }}<ng-container *ngIf="a.count > 1"> · ×{{ a.count }}</ng-container></small></span>
+            </button>
+            <div class="bell-empty" *ngIf="!bellCount && !pendingRecharges.length"><i class="bi bi-check2-circle"></i> All clear</div>
+            <button type="button" class="bell-pop__foot" (click)="goTab('alerts')">Open the alerts center <i class="bi bi-arrow-right"></i></button>
+          </div>
+        </div>
 
         <!-- Current User Chip -->
         <div class="user-chip-bar d-flex align-items-center gap-2 px-3 py-1 rounded-pill" *ngIf="user">

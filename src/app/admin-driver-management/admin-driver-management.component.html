@@ -48,13 +48,19 @@
           <div class="wallet-display p-3 rounded-3 bg-subtle border border-subtle">
             <label class="text-muted small fw-bold tracking-wide d-block mb-1">SOLDE DU PORTEFEUILLE CHAUFFEUR</label>
             <div class="balance-value my-1 font-mono text-amber fw-bold fs-3">
-              {{ (driver.balance || 0) | number:'1.2-2' }} <span class="currency fs-6">TND</span>
+              <div *ngFor="let b of walletBalances(driver)" [class.text-danger]="b.amount < 0">{{ b.amount | number:'1.2-2' }} <span class="currency fs-6">{{ b.currency }}</span></div>
+              <div *ngIf="!walletBalances(driver).length">0.00</div>
             </div>
 
             <div class="recharge-box mt-3">
               <div class="input-group">
                 <input type="number" [(ngModel)]="rechargeAmount" class="form-control" placeholder="Montant (ex: 50)">
-                <button class="btn btn-saas-primary" (click)="addFunds(driver)" [disabled]="isUpdating || !rechargeAmount || rechargeAmount <= 0">
+                <select class="form-select" style="max-width: 110px" [(ngModel)]="rechargeCurrency" title="Chaque devise est un solde séparé, jamais converti">
+                  <option value="" disabled>Devise</option>
+                  <option *ngFor="let c of rechargeCurrencies(driver)" [value]="c">{{ c }}</option>
+                </select>
+                <input type="text" class="form-control" [(ngModel)]="rechargeReference" placeholder="N° reçu" title="Numéro du reçu de caisse (obligatoire, unique)" style="max-width: 130px" />
+                <button class="btn btn-saas-primary" (click)="addFunds(driver)" [disabled]="isUpdating || !rechargeCurrency || !rechargeReference || !rechargeAmount || rechargeAmount <= 0">
                   <i class="bi bi-plus-circle me-1"></i> Recharger
                 </button>
               </div>

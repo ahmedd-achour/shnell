@@ -91,7 +91,7 @@
                 <span class="text-light fw-bold">{{ o.distance || 0 }} km</span>
               </td>
               <td class="numeric font-mono">
-                <span class="fw-bold text-success fs-6">{{ (o.price || 0) | number:'1.2-2' }} TND</span>
+                <span class="fw-bold text-success fs-6">{{ (o.price || 0) | number:'1.2-2' }} {{ o.currencyCode || 'TND' }}</span>
               </td>
               <td>
                 <ng-container *ngIf="getDealForOrder(o.id) as deal; else noDeal">
@@ -141,7 +141,7 @@
                           <li class="list-group-item bg-transparent text-light border-secondary px-2 py-1" *ngFor="let b of getOrderBids(o.id!)">
                             <div class="d-flex justify-content-between align-items-center">
                               <span><i class="bi bi-person text-muted me-1"></i>{{ getUserName(b.idDriver) }}</span>
-                              <span class="badge bg-success">{{ b.ammount | number:'1.2-2' }} TND</span>
+                              <span class="badge bg-success">{{ b.ammount | number:'1.2-2' }} {{ b.currencyCode || 'TND' }}</span>
                             </div>
                             <small class="text-muted">{{ b.timestamp?.seconds ? (b.timestamp.seconds * 1000) : b.timestamp | date:'short' }}</small>
                           </li>

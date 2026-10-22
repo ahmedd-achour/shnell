@@ -91,6 +91,35 @@
 }
 @media (max-width: 720px) { .ud-user { display: none; } }
 
+.ud-verified {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 0.72rem; font-weight: 800; letter-spacing: 0.03em;
+  color: var(--sh-emerald-700, #0e7a5f);
+  background: color-mix(in srgb, var(--sh-emerald-700, #0e7a5f) 12%, transparent);
+  padding: 4px 10px; border-radius: var(--sh-r-pill);
+  margin-right: 4px;
+}
+
+/* ============ HOME / OVERVIEW ============ */
+.ud-kpis--home { margin-top: 4px; }
+.ud-quickactions {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 14px; margin-top: 10px;
+}
+.ud-quickcard {
+  display: flex; align-items: center; gap: 14px;
+  background: var(--sh-card); border: 1px solid var(--sh-line);
+  border-radius: var(--sh-r-lg); padding: 18px 16px;
+  text-align: left; cursor: pointer;
+  transition: transform var(--sh-t-fast) var(--sh-ease), box-shadow var(--sh-t-fast) var(--sh-ease), border-color var(--sh-t-fast) var(--sh-ease);
+}
+.ud-quickcard:hover { transform: translateY(-2px); box-shadow: var(--sh-shadow-md); border-color: var(--sh-line-2); }
+.ud-quickcard > i:first-child { font-size: 1.5rem; color: var(--sh-amber-700); flex-shrink: 0; }
+.ud-quickcard > div { display: flex; flex-direction: column; gap: 3px; flex: 1; min-width: 0; }
+.ud-quickcard__t { font-weight: 800; color: var(--sh-ink-900); }
+.ud-quickcard__d { font-size: 0.78rem; color: var(--sh-ink-500); }
+.ud-quickcard__go { color: var(--sh-ink-400); flex-shrink: 0; }
+
 /* ============ BUTTONS ============ */
 .ud-btn {
   display: inline-flex; align-items: center; justify-content: center; gap: 0.5em;
@@ -222,6 +251,31 @@
 .ud-jc__meta { display: block; font-size: 0.72rem; color: var(--sh-ink-500); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 1px; }
 .ud-jc__x { color: var(--sh-ink-400); font-size: 0.75rem; padding: 4px; flex-shrink: 0; }
 .ud-jc__x:hover { color: var(--sh-danger); }
+
+/* ============ MISSION STRIP (horizontal job switcher) ============
+   Replaces the old 326px permanent .ud-side column — every view now shares
+   the same full-width .ud-shell--wide layout. */
+.ud-missionstrip { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
+.ud-missionstrip__scroll { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; flex: 1; min-width: 0; }
+.ud-missionstrip__count { font-size: 0.74rem; color: var(--sh-ink-400); font-weight: 700; flex-shrink: 0; white-space: nowrap; }
+.ud-mchip {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 8px 14px; border-radius: var(--sh-r-pill);
+  border: 1.5px solid var(--sh-line-2); background: var(--sh-card);
+  white-space: nowrap; flex-shrink: 0; cursor: pointer;
+  transition: border-color var(--sh-t-fast) var(--sh-ease), box-shadow var(--sh-t-fast) var(--sh-ease), transform var(--sh-t-fast) var(--sh-ease);
+}
+.ud-mchip:hover { border-color: var(--sh-amber-500); transform: translateY(-1px); }
+.ud-mchip.is-active { border-color: var(--sh-amber-600); background: color-mix(in srgb, var(--sh-amber-500) 10%, var(--sh-card)); box-shadow: var(--sh-shadow-sm); }
+.ud-mchip.is-placed i:first-child { color: var(--sh-success); }
+.ud-mchip.is-error i:first-child { color: var(--sh-danger); }
+.ud-mchip__t { font-family: var(--sh-font-display); font-weight: 800; font-size: 0.85rem; color: var(--sh-ink-900); }
+.ud-mchip__meta { font-size: 0.72rem; color: var(--sh-ink-500); }
+.ud-mchip__x { color: var(--sh-ink-400); font-size: 0.7rem; margin-left: 2px; padding: 2px; }
+.ud-mchip__x:hover { color: var(--sh-danger); }
+.ud-mchip--add { color: var(--sh-amber-700); font-weight: 700; border-style: dashed; }
+.ud-mchip--add:disabled { opacity: 0.45; cursor: not-allowed; }
+@media (max-width: 720px) { .ud-missionstrip__count { display: none; } }
 
 .ud-side__foot {
   margin-top: auto;
@@ -648,6 +702,33 @@
   text-transform: uppercase; color: var(--sh-ink-400); margin: 18px 0 6px;
 }
 .ud-lbl em { font-style: normal; text-transform: none; letter-spacing: 0; color: var(--sh-ink-400); font-weight: 600; }
+
+.ud-directassign {
+  margin-top: 6px; margin-bottom: 8px;
+  padding: 14px;
+  border: 1px dashed var(--sh-line-2);
+  border-radius: var(--sh-r-md);
+  background: var(--sh-card-2);
+}
+.ud-directassign .ud-lbl { margin-top: 0; }
+.ud-directassign__picked {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  font-weight: 700; color: var(--sh-ink-900);
+}
+.ud-directassign__list {
+  list-style: none; margin: 8px 0 0; padding: 0;
+  max-height: 220px; overflow-y: auto;
+  border: 1px solid var(--sh-line); border-radius: var(--sh-r-sm);
+}
+.ud-directassign__list li + li { border-top: 1px solid var(--sh-line); }
+.ud-directassign__list button {
+  width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  padding: 9px 12px; border: 0; background: transparent; text-align: left; cursor: pointer;
+  color: var(--sh-ink-700); font-weight: 600;
+}
+.ud-directassign__list button:hover { background: var(--sh-card); }
+.ud-directassign__list small { color: var(--sh-ink-400); font-weight: 500; }
+.ud-directassign__list li.ud-muted { padding: 9px 12px; }
 
 .ud-help {
   font-size: 0.8rem; color: var(--sh-ink-500);

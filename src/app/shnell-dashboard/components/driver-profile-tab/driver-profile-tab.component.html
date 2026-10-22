@@ -66,7 +66,10 @@
             </li>
             <li class="list-group-item bg-transparent text-light border-secondary d-flex justify-content-between px-0 align-items-center">
               <span class="text-muted"><i class="bi bi-wallet2 me-2"></i>Wallet Balance</span>
-              <span class="fs-5 fw-bold text-success">{{ (selectedDriver.balance || 0) | number:'1.2-2' }} TND</span>
+              <span class="text-end">
+                <span *ngFor="let b of walletBalances(selectedDriver)" class="d-block fs-5 fw-bold" [ngClass]="b.amount < 0 ? 'text-danger' : 'text-success'">{{ b.amount | number:'1.2-2' }} {{ b.currency }}</span>
+                <span *ngIf="!walletBalances(selectedDriver).length" class="fs-5 fw-bold text-muted">0.00</span>
+              </span>
             </li>
           </ul>
 
@@ -114,10 +117,15 @@
 
             <!-- Recharge Balance -->
             <div>
-              <label class="text-muted fs-8 fw-semibold d-block mb-1">Credit / Recharge Wallet Balance (TND):</label>
+              <label class="text-muted fs-8 fw-semibold d-block mb-1">Credit / Recharge Wallet Balance (amount + currency):</label>
               <div class="input-group input-group-sm">
-                <input type="number" class="form-control bg-dark text-white border-secondary" [(ngModel)]="rechargeAmount" placeholder="Amount (TND)" />
-                <button class="btn btn-success fw-bold" [disabled]="isProcessing" (click)="rechargeDriverBalance()">
+                <input type="number" class="form-control bg-dark text-white border-secondary" [(ngModel)]="rechargeAmount" placeholder="Amount" />
+                <select class="form-select bg-dark text-white border-secondary" style="max-width: 110px" [(ngModel)]="rechargeCurrency" title="Each currency is a separate balance, never converted">
+                  <option value="" disabled>Currency</option>
+                  <option *ngFor="let c of rechargeCurrencies(selectedDriver)" [value]="c">{{ c }}</option>
+                </select>
+                <input type="text" class="form-control bg-dark text-white border-secondary" [(ngModel)]="rechargeReference" placeholder="N° reçu" title="Numéro du reçu de caisse (obligatoire, unique)" style="max-width: 130px" />
+                <button class="btn btn-success fw-bold" [disabled]="isProcessing || !rechargeCurrency || !rechargeReference" (click)="rechargeDriverBalance()">
                   <i class="bi bi-plus-circle me-1"></i> Add Funds
                 </button>
               </div>
@@ -236,7 +244,7 @@
               <thead>
                 <tr>
                   <th class="ps-3">Order ID</th>
-                  <th>Amount (TND)</th>
+                  <th>Amount</th>
                   <th>Timestamp</th>
                   <th class="pe-3 text-end">Active Status</th>
                 </tr>
@@ -244,7 +252,7 @@
               <tbody>
                 <tr *ngFor="let b of driverBids">
                   <td class="ps-3 font-monospace text-info small">{{ b.idOrder }}</td>
-                  <td class="fw-bold text-success">{{ b.ammount | number:'1.2-2' }} TND</td>
+                  <td class="fw-bold text-success">{{ b.ammount | number:'1.2-2' }} {{ b.currencyCode || 'TND' }}</td>
                   <td class="text-muted small">
                     {{ b.timestamp?.seconds ? (b.timestamp.seconds * 1000 | date:'short') : (b.timestamp | date:'short') || 'N/A' }}
                   </td>
@@ -330,9 +338,10 @@
                       {{ c.typeOfTransaction === 'recharge' ? 'WALLET RECHARGE' : 'SYSTEM COMMISSION' }}
                     </span>
                   </td>
-                  <td class="fw-bold text-white">{{ c.DealAmount | number:'1.2-2' }} TND</td>
+                  <td class="fw-bold text-white">{{ c.DealAmount | number:'1.2-2' }} {{ c.currencyCode || 'TND' }}</td>
                   <td class="fw-bold" [ngClass]="c.typeOfTransaction === 'recharge' ? 'text-success' : 'text-danger'">
-                    {{ c.typeOfTransaction === 'recharge' ? '+' : '-' }}{{ c.commissionDeducted | number:'1.2-2' }} TND
+                    {{ c.typeOfTransaction === 'recharge' ? '+' : '-' }}{{ c.commissionDeducted | number:'1.2-2' }} {{ c.currencyCode || 'TND' }}
+                    <small *ngIf="c.balanceAfter !== undefined && c.balanceAfter !== null" class="d-block text-muted fw-normal">→ {{ c.balanceAfter | number:'1.2-2' }} {{ c.currencyCode || 'TND' }}</small>
                   </td>
                   <td class="pe-3 text-end text-muted small">
                     {{ c.time?.seconds ? (c.time.seconds * 1000 | date:'short') : (c.time | date:'short') || 'N/A' }}

@@ -1,0 +1,131 @@
+<div class="dispatch-center-container">
+  <div class="row g-4">
+    <!-- ============ QUEUE: orders awaiting a driver ============ -->
+    <div class="col-12" [class.col-xl-5]="selectedOrderId">
+      <div class="card border-0 shadow-sm dashboard-card h-100">
+        <div class="card-body p-3">
+          <div class="input-group input-group-sm mb-3">
+            <span class="input-group-text"><i class="bi bi-search"></i></span>
+            <input type="text" class="form-control" placeholder="Search order ID or pickup…" [(ngModel)]="searchQuery" />
+          </div>
+
+          <div class="fs-9 text-muted mb-2">{{ pendingOrders.length }} mission(s) awaiting dispatch</div>
+
+          <div class="dispatch-queue-list">
+            <button type="button" *ngFor="let o of pendingOrders"
+                    class="dispatch-queue-row w-100 text-start border-0 rounded-3 mb-2 p-3"
+                    [class.active]="o.id === selectedOrderId"
+                    (click)="selectOrder(o)">
+              <div class="d-flex justify-content-between align-items-start">
+                <div>
+                  <div class="fw-bold fs-8 font-monospace">#{{ (o.id || '').slice(0, 8) }}</div>
+                  <div class="fs-9 text-muted">{{ o.namePickUp || 'Pickup not set' }}</div>
+                </div>
+                <span class="badge bg-secondary-subtle text-secondary-emphasis fs-9">
+                  {{ (o.stops || []).length }} stops
+                </span>
+              </div>
+            </button>
+
+            <div *ngIf="!pendingOrders.length" class="text-center py-5 text-muted fs-8">
+              <i class="bi bi-check2-circle fs-3 d-block mb-2"></i>
+              Nothing waiting — every order has a driver.
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ DISPATCH PANEL ============ -->
+    <div class="col-12 col-xl-7" *ngIf="selectedOrderId">
+      <div class="card border-0 shadow-sm dashboard-card h-100">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <h6 class="mb-0 fw-bold">
+            <i class="bi bi-signpost-split-fill me-2 text-brand"></i>
+            Dispatch #{{ (selectedOrderId || '').slice(0, 8) }}
+          </h6>
+          <button class="btn btn-sm btn-outline-secondary rounded-pill" (click)="cancelSelection()">
+            <i class="bi bi-x-lg"></i>
+          </button>
+        </div>
+
+        <div class="card-body">
+          <div *ngIf="loadingOrder" class="text-center py-5">
+            <div class="spinner-border text-brand" role="status"></div>
+          </div>
+
+          <ng-container *ngIf="!loadingOrder">
+            <!-- Route summary -->
+            <div class="row g-3 mb-3">
+              <div class="col-4">
+                <div class="metric-tile">
+                  <div class="fs-9 text-muted text-uppercase">Stops</div>
+                  <div class="fs-6 fw-bold">{{ orderStops.length }}</div>
+                </div>
+              </div>
+              <div class="col-4">
+                <div class="metric-tile">
+                  <div class="fs-9 text-muted text-uppercase">Distance</div>
+                  <div class="fs-6 fw-bold">{{ totalDistanceKm }} km</div>
+                </div>
+              </div>
+              <div class="col-4">
+                <div class="metric-tile">
+                  <div class="fs-9 text-muted text-uppercase">Company plan</div>
+                  <div class="fs-6 fw-bold">{{ companyPlanLabel }}</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="alert alert-warning border-0 py-2 px-3 fs-9 mb-3" *ngIf="capacitySplit.length > 1">
+              <i class="bi bi-exclamation-triangle-fill me-1"></i>
+              This selection exceeds the configured per-mission limits and would split into
+              <strong>{{ capacitySplit.length }}</strong> missions under current settings/dispatch caps.
+              Dispatching here still sends it as one order — resplit stops manually if needed.
+            </div>
+
+            <!-- Optimized stop order -->
+            <div class="fs-9 text-uppercase fw-bold text-brand mb-2">Optimized route</div>
+            <ol class="route-order-list mb-3">
+              <li *ngFor="let stopId of optimizedStopIds; let i = index" class="fs-8">
+                <span class="text-muted me-1">{{ i + 1 }}.</span>{{ stopNameFor(stopId) }}
+              </li>
+            </ol>
+
+            <!-- Price breakdown -->
+            <div class="fs-9 text-uppercase fw-bold text-brand mb-2">Mission price</div>
+            <div class="price-breakdown mb-3" *ngIf="price">
+              <div class="d-flex justify-content-between fs-8"><span>Base fee</span><span>{{ price.baseFee }} TND</span></div>
+              <div class="d-flex justify-content-between fs-8"><span>Distance</span><span>{{ price.distanceFee }} TND</span></div>
+              <div class="d-flex justify-content-between fs-8"><span>Stops</span><span>{{ price.stopFee }} TND</span></div>
+              <div class="d-flex justify-content-between fs-8"><span>Parcels</span><span>{{ price.parcelFee }} TND</span></div>
+              <hr class="my-2" />
+              <div class="d-flex justify-content-between fw-bold fs-7">
+                <span>Driver receives</span><span>{{ price.agreedPrice }} TND</span>
+              </div>
+              <div class="d-flex justify-content-between fs-9 text-muted">
+                <span>Platform commission ({{ commissionPercentage }}%)</span><span>{{ commissionAmount }} TND</span>
+              </div>
+            </div>
+
+            <!-- Driver assignment -->
+            <div class="fs-9 text-uppercase fw-bold text-brand mb-2">Assign driver</div>
+            <select class="form-select form-select-sm mb-3" [(ngModel)]="selectedDriverId">
+              <option value="">Select a driver…</option>
+              <option *ngFor="let d of driverUsers" [value]="d.uid || d.id">{{ d.name }} — {{ d.phone }}</option>
+            </select>
+
+            <div class="text-end">
+              <button class="btn btn-sm btn-saas-primary rounded-pill px-4"
+                      [disabled]="!selectedDriverId || !price || submitting"
+                      (click)="confirmDispatch()">
+                <span *ngIf="submitting" class="spinner-border spinner-border-sm me-2"></span>
+                <i *ngIf="!submitting" class="bi bi-send-check-fill me-1"></i>Create deal &amp; dispatch
+              </button>
+            </div>
+          </ng-container>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

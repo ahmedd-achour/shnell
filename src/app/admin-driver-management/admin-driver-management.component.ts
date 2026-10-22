@@ -16,6 +16,8 @@ import { getDoc,
 import { ActivatedRoute, Router, NavigationEnd } from '@angular/router';
 import { Observable, of, Subject } from 'rxjs';
 import { confirmAction, notify, toastSuccess, toastError } from '../shared/swal';
+import { DashboardDataService } from '../shnell-dashboard/services/dashboard-data.service';
+import { walletBalances, rechargeCurrencies, rechargeConfirmHtml, rechargeResultText, validReceiptRef } from '../shnell-dashboard/services/wallet';
 import { 
   catchError,
   switchMap,
@@ -41,6 +43,10 @@ export class AdminDriverManagementComponent implements OnInit, OnDestroy {
 
   driverId: string | null = null;
   rechargeAmount: number | null = null;
+  rechargeCurrency: string = '';
+  rechargeReference: string = '';
+  readonly walletBalances = walletBalances;
+  readonly rechargeCurrencies = rechargeCurrencies;
   isUpdating: boolean = false;
 
   activeAsset: { url: string; label: string } | null = null;
@@ -51,7 +57,8 @@ export class AdminDriverManagementComponent implements OnInit, OnDestroy {
   constructor(
     private firestore: Firestore,
     private route: ActivatedRoute,
-    private router: Router
+    private router: Router,
+    private dashboardDataService: DashboardDataService
   ) {}
 
   ngOnInit(): void {
@@ -93,7 +100,8 @@ export class AdminDriverManagementComponent implements OnInit, OnDestroy {
         return docData(walletRef).pipe(
           map(wallet => ({
             ...driver,
-            balance: wallet ? (wallet as any).balance : (driver as any).balance
+            // The money: wallets/{uid}.balances, one per currency.
+            balances: wallet ? (wallet as any).balances : undefined
           }))
         );
       }),
@@ -283,36 +291,35 @@ export class AdminDriverManagementComponent implements OnInit, OnDestroy {
       return;
     }
 
+    if (!/^[A-Z]{3}$/.test(this.rechargeCurrency)) {
+      notify('warning', 'Devise manquante', 'Choisissez la devise de la recharge.');
+      return;
+    }
+
+    if (!validReceiptRef(this.rechargeReference)) {
+      notify('warning', 'Reçu manquant', 'Saisissez le numéro du reçu de caisse.');
+      return;
+    }
+    if (this.isUpdating) return;
     this.isUpdating = true;
 
     try {
-      const db = this.firestore;
-      const walletRef = doc(db, `wallets/${driver.id}`);
-      const commissionsRef = doc(collection(db, 'commissions'));
-
+      // Server-side: wallets/{uid}.balances[currency] + ledger line, atomically.
       const amount = Number(this.rechargeAmount.toFixed(2));
-      const newBalance = Number(((driver.balance || 0) + amount).toFixed(2));
-
-      await updateDoc(walletRef, {
-        balance: newBalance
+      const ok = await confirmAction({
+        title: 'Confirmer la recharge',
+        html: rechargeConfirmHtml(driver.name, driver, amount, this.rechargeCurrency),
+        confirmText: `Créditer ${amount} ${this.rechargeCurrency}`,
       });
-
-      await setDoc(commissionsRef, {
-        DriverId: String(driver.id),
-        commissionDeducted: amount,
-        percentageFees: 0.0,
-        DealAmount: amount,
-        userId: 'ADMIN_PANEL',
-        time: Timestamp.fromDate(new Date()),
-        typeOfTransaction: 'recharge'
-      });
-
-      toastSuccess(`Solde mis à jour : +${amount} TND`);
+      if (!ok) return;
+      const res = await this.dashboardDataService.rechargeUserBalance(String(driver.id), amount, this.rechargeCurrency, this.rechargeReference);
+      toastSuccess(rechargeResultText(amount, res));
       this.rechargeAmount = null;
+      this.rechargeReference = '';
 
-    } catch (err) {
+    } catch (err: any) {
       console.error('Recharge failed:', err);
-      toastError('Erreur lors de la recharge');
+      toastError(err?.message || 'Erreur lors de la recharge');
     } finally {
       this.isUpdating = false;
     }

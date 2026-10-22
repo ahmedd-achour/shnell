@@ -4,7 +4,7 @@ import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } 
 import { Subject, combineLatest } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 import { DashboardDataService } from '../../services/dashboard-data.service';
-import { VehicleSettings, CountryServiceArea } from '../../models/dashboard.models';
+import { VehicleSettings, CountryServiceArea, DispatchConfig, PricingBand } from '../../models/dashboard.models';
 import { toastSuccess, toastError } from '../../../shared/swal';
 
 /** One row of per-country pricing, as the user wants it modelled:
@@ -25,7 +25,13 @@ interface CountryPriceRow {
 })
 export class SettingsTabComponent implements OnInit, OnDestroy {
   configForm!: FormGroup;
+  dispatchForm!: FormGroup;
   vehicleForms: Record<string, FormGroup> = {};
+
+  /** Editable rows for the three pricing bands — mirrors `vehiclePricing`'s row-array pattern. */
+  distanceBands: PricingBand[] = [];
+  stopBands: PricingBand[] = [];
+  parcelBands: PricingBand[] = [];
 
   vehicleTypesList: string[] = ['super_light', 'light', 'medium', 'medium_heavy', 'heavy', 'super_heavy', 'popular'];
   vehicleSettingsData: Record<string, VehicleSettings> = {};
@@ -41,6 +47,7 @@ export class SettingsTabComponent implements OnInit, OnDestroy {
   savingGlobal: boolean = false;
   savingVehicle: string | null = null;
   savingAreas: boolean = false;
+  savingDispatch: boolean = false;
 
   successMessage: string | null = null;
   errorMessage: string | null = null;
@@ -79,6 +86,13 @@ export class SettingsTabComponent implements OnInit, OnDestroy {
       this.vehicleForms[key] = this.createVehicleFormGroup();
       this.vehiclePricing[key] = [];
     });
+
+    this.dispatchForm = this.fb.group({
+      maxStopsPerMission: [250, [Validators.required, Validators.min(1)]],
+      maxParcelsPerMission: [250, [Validators.required, Validators.min(1)]],
+      maxConcurrentOrders: [50, [Validators.required, Validators.min(1)]],
+      baseFee: [5, [Validators.required, Validators.min(0)]]
+    });
   }
 
   private createVehicleFormGroup(data?: VehicleSettings): FormGroup {
@@ -115,11 +129,12 @@ export class SettingsTabComponent implements OnInit, OnDestroy {
     combineLatest([
       this.dashboardDataService.getGlobalConfigDoc(),
       this.dashboardDataService.getVehicleSettingsDoc(),
-      this.dashboardDataService.getServiceAreasDoc()
+      this.dashboardDataService.getServiceAreasDoc(),
+      this.dashboardDataService.getDispatchConfigDoc()
     ])
       .pipe(takeUntil(this.destroy$))
       .subscribe({
-        next: ([configDoc, vehiclesDoc, areasDoc]) => {
+        next: ([configDoc, vehiclesDoc, areasDoc, dispatchDoc]) => {
           if (configDoc) {
             this.configForm.patchValue({
               version_customer_app: configDoc.version_customer_app || '1.0.0',
@@ -170,6 +185,18 @@ export class SettingsTabComponent implements OnInit, OnDestroy {
             };
           }
 
+          if (dispatchDoc) {
+            this.dispatchForm.patchValue({
+              maxStopsPerMission: dispatchDoc.maxStopsPerMission ?? 250,
+              maxParcelsPerMission: dispatchDoc.maxParcelsPerMission ?? 250,
+              maxConcurrentOrders: dispatchDoc.maxConcurrentOrders ?? 50,
+              baseFee: dispatchDoc.pricing?.baseFee ?? 5
+            });
+            this.distanceBands = [...(dispatchDoc.pricing?.distanceBands || [])];
+            this.stopBands = [...(dispatchDoc.pricing?.stopBands || [])];
+            this.parcelBands = [...(dispatchDoc.pricing?.parcelBands || [])];
+          }
+
           this.loading = false;
         },
         error: (err) => {
@@ -192,6 +219,14 @@ export class SettingsTabComponent implements OnInit, OnDestroy {
 
   removePricingRow(key: string, index: number): void {
     this.vehiclePricing[key]?.splice(index, 1);
+  }
+
+  addBand(bands: PricingBand[]): void {
+    bands.push({ upTo: null, fee: 0 });
+  }
+
+  removeBand(bands: PricingBand[], index: number): void {
+    bands.splice(index, 1);
   }
 
   async saveGlobalConfig(): Promise<void> {
@@ -290,6 +325,36 @@ export class SettingsTabComponent implements OnInit, OnDestroy {
       toastError('Failed to save service areas');
     } finally {
       this.savingAreas = false;
+    }
+  }
+
+  async saveDispatchConfig(): Promise<void> {
+    if (this.dispatchForm.invalid) return;
+    this.savingDispatch = true;
+    this.clearAlerts();
+
+    try {
+      const val = this.dispatchForm.value;
+      const config: DispatchConfig = {
+        maxStopsPerMission: Number(val.maxStopsPerMission),
+        maxParcelsPerMission: Number(val.maxParcelsPerMission),
+        maxConcurrentOrders: Number(val.maxConcurrentOrders),
+        pricing: {
+          baseFee: Number(val.baseFee),
+          distanceBands: this.distanceBands.map(b => ({ upTo: b.upTo === null ? null : Number(b.upTo), fee: Number(b.fee) })),
+          stopBands: this.stopBands.map(b => ({ upTo: b.upTo === null ? null : Number(b.upTo), fee: Number(b.fee) })),
+          parcelBands: this.parcelBands.map(b => ({ upTo: b.upTo === null ? null : Number(b.upTo), fee: Number(b.fee) }))
+        }
+      };
+      await this.dashboardDataService.updateDispatchConfig(config);
+      this.successMessage = 'Dispatch & pricing config saved.';
+      toastSuccess('Dispatch config saved');
+    } catch (err) {
+      console.error('Save dispatch config error:', err);
+      this.errorMessage = 'Failed to update dispatch & pricing configuration.';
+      toastError('Failed to save dispatch config');
+    } finally {
+      this.savingDispatch = false;
     }
   }
 

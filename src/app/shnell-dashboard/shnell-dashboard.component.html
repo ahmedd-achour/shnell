@@ -24,12 +24,19 @@
           <span class="fs-8 fw-bold mono">{{ activeDriversCount }} DRIVERS LIVE</span>
         </div>
 
-        <!-- Pending Fleet Approvals Pill -->
-        <div class="status-pill warning px-3 py-2 d-flex align-items-center gap-2 cursor-pointer" (click)="setTab('vehicles')">
-          <i class="bi bi-truck text-warning"></i>
-          <span class="fs-8 fw-bold mono">{{ pendingVehiclesCount }} PENDING APPROVALS</span>
-          <span *ngIf="pendingVehiclesCount > 0" class="badge bg-warning text-dark rounded-circle px-2">!</span>
-        </div>
+        <!-- Things waiting for an admin: one click to the screen that clears them -->
+        <button class="status-pill px-3 py-2 d-flex align-items-center gap-2 border-0" [ngClass]="criticalAlertsCount ? 'error' : openAlertsCount ? 'warning' : 'info'" (click)="setTab('alerts')">
+          <i class="bi bi-bell-fill"></i>
+          <span class="fs-8 fw-bold mono">{{ openAlertsCount }} OPEN ALERTS</span>
+        </button>
+        <button *ngIf="pendingRechargesCount" class="status-pill warning px-3 py-2 d-flex align-items-center gap-2 border-0" (click)="setTab('finance')">
+          <i class="bi bi-shield-lock"></i>
+          <span class="fs-8 fw-bold mono">{{ pendingRechargesCount }} RECHARGES TO APPROVE</span>
+        </button>
+        <button class="status-pill px-3 py-2 d-flex align-items-center gap-2 border-0" [ngClass]="pendingVehiclesCount ? 'warning' : 'info'" (click)="setTab('vehicles')">
+          <i class="bi bi-truck"></i>
+          <span class="fs-8 fw-bold mono">{{ pendingVehiclesCount }} VEHICLES TO REVIEW</span>
+        </button>
       </div>
     </header>
 
@@ -40,6 +47,14 @@
 
     <!-- Dynamic Active Component View -->
     <div class="dash-tab-viewport">
+    <app-attention-strip
+      *ngIf="activeTab === 'overview'"
+      [users]="users"
+      [vehicles]="vehicles"
+      [verifications]="verifications"
+      (navigateTab)="setTab($any($event))">
+    </app-attention-strip>
+
     <app-overview-tab
       *ngIf="activeTab === 'overview'"
       [users]="users"
@@ -58,6 +73,7 @@
       [users]="users"
       [driverLocations]="driverLocations"
       (inspectDriver)="onInspectDriver($event)"
+      (navigateTab)="setTab($any($event))"
       (selectUserForNotification)="onSelectUserForNotification($event)">
     </app-users-tab>
 
@@ -94,11 +110,32 @@
       (selectUserForNotification)="onSelectUserForNotification($event)">
     </app-live-map-tab>
 
-    <app-driver-profile-tab
-      *ngIf="activeTab === 'driver-profile'"
-      [driverId]="selectedDriverIdForInspection"
-      [driversList]="users">
-    </app-driver-profile-tab>
+    <app-account-tab
+      *ngIf="activeTab === 'account'"
+      [uid]="selectedAccountUid"
+      [users]="users"
+      (openAccount)="openAccount($event)"
+      (notifyUser)="onSelectUserForNotification($event)">
+    </app-account-tab>
+
+    <app-finance-tab
+      *ngIf="activeTab === 'finance'"
+      [users]="users"
+      (openAccount)="openAccount($event)">
+    </app-finance-tab>
+
+    <app-activity-tab
+      *ngIf="activeTab === 'activity'"
+      [users]="users"
+      (openAccount)="openAccount($event)">
+    </app-activity-tab>
+
+    <app-alerts-tab
+      *ngIf="activeTab === 'alerts'"
+      [users]="users"
+      (openAccount)="openAccount($event)"
+      (navigateTab)="setTab($any($event))">
+    </app-alerts-tab>
 
     <app-settings-tab
       *ngIf="activeTab === 'settings'">
@@ -118,6 +155,13 @@
       (navigateTab)="setTab($any($event))"
       (inspectDriver)="onInspectDriver($event)">
     </app-dispatch-order-tab>
+
+    <app-dispatch-center-tab
+      *ngIf="activeTab === 'dispatch-center'"
+      [orders]="orders"
+      [users]="users"
+      [vehicles]="vehicles">
+    </app-dispatch-center-tab>
     </div>
   </main>
 

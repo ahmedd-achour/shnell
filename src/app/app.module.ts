@@ -4,8 +4,11 @@ import { HttpClientModule } from '@angular/common/http';
 import { AppRoutingModule } from './app-routing.module';
 import { AppComponent } from './app.component';
 import { initializeApp, provideFirebaseApp } from '@angular/fire/app';
+import { initializeAppCheck, provideAppCheck, ReCaptchaEnterpriseProvider } from '@angular/fire/app-check';
+import { environment } from '../environments/environment';
 import { AuthModule, getAuth, provideAuth } from '@angular/fire/auth';
 import { getFirestore, provideFirestore } from '@angular/fire/firestore';
+import { getStorage, provideStorage } from '@angular/fire/storage';
 import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
 import { WelcomePageComponent } from './components/welcome-page/welcome-page.component';
 import { DownloadRedirectComponent } from './components/download-redirect/download-redirect.component';
@@ -35,6 +38,8 @@ import { getFunctions, provideFunctions } from '@angular/fire/functions';
 import { getRemoteConfig, provideRemoteConfig } from '@angular/fire/remote-config';
 import { DragDropModule } from '@angular/cdk/drag-drop';
 import { AdminDriverManagementComponent } from './admin-driver-management/admin-driver-management.component';
+import { AdminCompanyManagementComponent } from './admin-company-management/admin-company-management.component';
+import { PendingApprovalComponent } from './components/pending-approval/pending-approval.component';
 import { ExpiredOrdersComponent } from './expired-orders/expired-orders.component';
 import { UpdateStopLocationComponent } from './update-stop-location/update-stop-location.component';
 import { APP_INITIALIZER, NgModule } from '@angular/core';
@@ -68,6 +73,8 @@ export function playerFactory() {
     SignUpComponent,
     PublicLayoutComponent,
     AdminDriverManagementComponent,
+    AdminCompanyManagementComponent,
+    PendingApprovalComponent,
     ExpiredOrdersComponent,
     UpdateStopLocationComponent,
   ],
@@ -104,8 +111,17 @@ AuthModule,
     appId: "1:217120837439:web:bf8efa57bd6d30294e0d8a",
     measurementId: "G-7H2GZ2YM6V"
     })),
+    // App Check: the server refuses calls without it once
+    // settings/config.app_check_enforce is on.
+    ...(environment.appCheckSiteKey
+      ? [provideAppCheck(() => initializeAppCheck(undefined, {
+          provider: new ReCaptchaEnterpriseProvider(environment.appCheckSiteKey),
+          isTokenAutoRefreshEnabled: true,
+        }))]
+      : []),
     provideAuth(() => getAuth()),
     provideFirestore(() => getFirestore()),
+    provideStorage(() => getStorage()),
     provideDatabase(() => getDatabase()),
     provideFunctions(() => getFunctions()),
     provideRemoteConfig(() => getRemoteConfig()),

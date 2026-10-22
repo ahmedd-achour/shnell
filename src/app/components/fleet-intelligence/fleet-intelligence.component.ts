@@ -307,8 +307,7 @@ export class FleetIntelligenceDashboardComponent implements OnInit, OnDestroy, A
       Name: d.name,
       Phone: d.phone,
       Role: d.role,
-      Status: this.getDriverStatusObj(d.uid || d.id).onlineStatus,
-      Balance: d.balance || 0
+      Status: this.getDriverStatusObj(d.uid || d.id).onlineStatus
     }));
 
     const ws = XLSX.utils.json_to_sheet(data);

@@ -1,10 +1,9 @@
 import { Component, inject } from '@angular/core';
-import { Auth, AuthErrorCodes, createUserWithEmailAndPassword, signInWithEmailAndPassword } from '@angular/fire/auth';  // Added signIn for explicit
-import { Firestore, doc, setDoc } from '@angular/fire/firestore';
+import { Auth, AuthErrorCodes, createUserWithEmailAndPassword, signInWithEmailAndPassword } from '@angular/fire/auth';
+import { Firestore, doc, setDoc, serverTimestamp } from '@angular/fire/firestore';
+import { Storage, ref, uploadBytes, getDownloadURL } from '@angular/fire/storage';
 import { FormControl, FormGroup, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
-import { ShnellUser } from '../../../../Models/shnellUsers.models';
-import { Company } from '../../../../Models/company';
 
 @Component({
   selector: 'app-sign-up',
@@ -16,8 +15,14 @@ export class SignUpComponent {
 
   auth = inject(Auth);
   firestore = inject(Firestore);
+  storage = inject(Storage);
+
+  cinFile: File | null = null;
+  companyPaperFile: File | null = null;
+  fileError: string = '';
 
   isSubmissionInProgress: boolean = false;
+  uploadStatus: string = '';
   errorMessage: string = '';
 
   constructor(private router: Router) {
@@ -32,89 +37,120 @@ export class SignUpComponent {
       password: new FormControl('', [Validators.required, Validators.minLength(6)]),
       confirmPassword: new FormControl('', Validators.required),
       dailyVolume: new FormControl('', Validators.required),
+      cinNumber: new FormControl('', Validators.required),
     });
   }
 
+  onCinFileSelected(event: Event) {
+    this.cinFile = (event.target as HTMLInputElement).files?.[0] || null;
+  }
+
+  onCompanyPaperFileSelected(event: Event) {
+    this.companyPaperFile = (event.target as HTMLInputElement).files?.[0] || null;
+  }
+
+  private async uploadVerificationFile(uid: string, file: File, label: 'cin' | 'company_paper'): Promise<string> {
+    const ext = (file.name.split('.').pop() || 'jpg').toLowerCase();
+    const fileRef = ref(this.storage, `company_verification/${uid}/${label}.${ext}`);
+    await uploadBytes(fileRef, file);
+    return getDownloadURL(fileRef);
+  }
+
   async onSubmit() {
+    this.errorMessage = '';
+    this.fileError = '';
+
     if (this.authForm.invalid) {
-      this.errorMessage = 'Please fill all required fields correctly';
+      this.errorMessage = 'Veuillez remplir correctement tous les champs requis.';
+      return;
+    }
+    if (!this.cinFile || !this.companyPaperFile) {
+      this.fileError = 'La copie de la CIN et le document de l\'entreprise (registre de commerce / patente) sont requis.';
       return;
     }
 
-    const { businessName, email, phone, password, confirmPassword, dailyVolume } = this.authForm.value;
+    const { businessName, email, phone, password, confirmPassword, dailyVolume, cinNumber } = this.authForm.value;
 
-    // Password confirmation check
     if (password !== confirmPassword) {
-      this.errorMessage = 'Passwords do not match';
+      this.errorMessage = 'Les mots de passe ne correspondent pas';
       return;
     }
 
     this.isSubmissionInProgress = true;
-    this.errorMessage = '';
 
     try {
-      // Step 1: Create user in Firebase Auth
-      console.log('Creating Auth user for:', email);
+      // Step 1: Create the Auth account.
+      this.uploadStatus = 'Création du compte...';
       const userCredential = await createUserWithEmailAndPassword(this.auth, email, password);
       const uid = userCredential.user.uid;
-      console.log('Auth user created with UID:', uid);
-
-      // Step 2: Explicitly sign in (redundant but ensures auth state)
       await signInWithEmailAndPassword(this.auth, email, password);
-      console.log('User signed in');
 
-      // Step 3: Construct and save to Firestore
-      const newUser = new Company(
-        email,            // email
-        businessName,     // name
-        phone,            // phone
-        'company-onheld', // role
-        true,             // darkMode
-        50.0,            // balance (fixed to 100.0 for cleanliness)
-        [],               // drivers
-        dailyVolume,
-        0.25       // dailyVolume
-      );
-
-      console.log('Saving user to Firestore:', newUser.toJson());
-
-      // Separate try-catch for Firestore
+      // Step 2: Upload verification documents. If either fails we still leave
+      // the account created (it's already pending review either way) but we
+      // surface the error so the partner knows to retry from their pending page.
+      this.uploadStatus = 'Envoi des documents de vérification...';
+      let cinFileUrl = '';
+      let companyPaperUrl = '';
       try {
-        await setDoc(doc(this.firestore, 'users', uid), newUser.toJson());
-        console.log('Firestore doc saved successfully for UID:', uid);
-      } catch (firestoreError: any) {
-        console.error('Firestore save failed:', firestoreError);
-        if (firestoreError.code === 'permission-denied') {
-          throw new Error('Firestore permissions denied. Check your Security Rules in Firebase Console.');
-        } else {
-          throw firestoreError;
-        }
+        [cinFileUrl, companyPaperUrl] = await Promise.all([
+          this.uploadVerificationFile(uid, this.cinFile, 'cin'),
+          this.uploadVerificationFile(uid, this.companyPaperFile, 'company_paper'),
+        ]);
+      } catch (uploadErr: any) {
+        console.error('Verification upload failed:', uploadErr);
+        this.errorMessage = 'Compte créé, mais l\'envoi des documents a échoué. Reconnectez-vous pour réessayer depuis votre espace en attente.';
       }
 
-      // Success: Redirect to dashboard (or sign-in if preferred)
-      this.router.navigate(['/sign-in']);  // Change to your post-signup route
+      // Step 3: users/{uid} — role stays 'company-onheld' until an admin
+      // approves the companies/{uid} application below. Never include
+      // 'balance' here: it isn't self-settable (see firestore.rules) and any
+      // starting credit must be granted server-side, same as driver wallets.
+      this.uploadStatus = 'Finalisation...';
+      await setDoc(doc(this.firestore, 'users', uid), {
+        email,
+        name: businessName,
+        phone,
+        role: 'company-onheld',
+        accType: 'standard',
+        isBan: false,
+        darkMode: true,
+        drivers: [], // roster this company can direct-assign to (see profile.component.ts)
+      });
+
+      // Step 4: companies/{uid} — the verification application admins review.
+      await setDoc(doc(this.firestore, 'companies', uid), {
+        businessName,
+        email,
+        phone,
+        dailyVolume,
+        cinNumber,
+        cinFileUrl,
+        companyPaperUrl,
+        isAdminApproved: false,
+        submittedAt: serverTimestamp(),
+      });
+
+      this.router.navigate(['/pending-approval']);
     } catch (error: any) {
       this.isSubmissionInProgress = false;
       console.error('Signup error:', error);
 
-      // Handle Auth errors
       if (error.code?.startsWith('auth/')) {
         switch (error.code) {
           case AuthErrorCodes.INVALID_EMAIL:
-            this.errorMessage = 'Email is not valid';
+            this.errorMessage = 'L\'email n\'est pas valide';
             break;
           case AuthErrorCodes.WEAK_PASSWORD:
-            this.errorMessage = 'Password is too weak (min 6 characters)';
+            this.errorMessage = 'Le mot de passe est trop faible (6 caractères min.)';
             break;
           case AuthErrorCodes.EMAIL_EXISTS:
-            this.errorMessage = 'The email is already used for another account';
+            this.errorMessage = 'Cet email est déjà utilisé par un autre compte';
             break;
           default:
-            this.errorMessage = error.message || 'Authentication failed. Please try again.';
+            this.errorMessage = error.message || 'Échec de l\'authentification. Réessayez.';
         }
       } else {
-        // Firestore or other errors
-        this.errorMessage = error.message || 'Something went wrong with registration. Check console for details.';
+        this.errorMessage = error.message || 'Une erreur est survenue lors de l\'inscription.';
       }
     }
   }

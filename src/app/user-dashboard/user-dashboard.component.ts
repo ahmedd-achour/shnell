@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, AfterViewInit, AfterViewChecked, ElementRef, ViewChild, inject } from '@angular/core';
+import { Component, OnInit, OnDestroy, AfterViewInit, AfterViewChecked, ElementRef, ViewChild, Renderer2, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -6,7 +6,7 @@ import { LottieComponent, AnimationOptions } from 'ngx-lottie';
 import Chart from 'chart.js/auto';
 import {
   Firestore, collection, addDoc, doc, getDoc, getDocs, setDoc,
-  query, where, serverTimestamp, Timestamp, onSnapshot
+  query, where, serverTimestamp, Timestamp, onSnapshot, getCountFromServer
 } from '@angular/fire/firestore';
 import { Auth, signOut } from '@angular/fire/auth';
 import { Functions, httpsCallable } from '@angular/fire/functions';
@@ -22,7 +22,7 @@ import {
 import { RemoteConfigService } from '../shared/remote-config.service';
 import * as XLSX from 'xlsx';
 
-const MAX_JOBS = 10;
+const MAX_JOBS = 50;
 const MAX_STOPS = 250;
 const ROAD_FACTOR = 1.3;
 
@@ -73,6 +73,12 @@ interface Job {
   equipment: string[];
 
   distanceKm: number;
+
+  /** Direct-assign this job to one of the company's own drivers instead of
+   *  broadcasting it to the open marketplace (see placeJob()). null/undefined
+   *  keeps the existing broadcast/bidding behaviour unchanged. */
+  assignedDriverId?: string | null;
+  assignedDriverName?: string | null;
 }
 
 interface VehicleOption {
@@ -150,6 +156,8 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit,
 
   
   @ViewChild('pinMapEl') pinMapRef!: ElementRef<HTMLDivElement>;
+  @ViewChild('pinModalRoot') pinModalRootRef?: ElementRef<HTMLDivElement>;
+  private renderer = inject(Renderer2);
   @ViewChild('statusChartEl') statusChartRef?: ElementRef<HTMLCanvasElement>;
   @ViewChild('stopsChartEl') stopsChartRef?: ElementRef<HTMLCanvasElement>;
   @ViewChild('parcelMapEl') parcelMapRef?: ElementRef<HTMLDivElement>;
@@ -174,6 +182,19 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit,
   // ---- real-time ban wall ----
   banned = false;
   private banUnsub?: () => void;
+
+  // ---- my drivers roster (for direct-assign, see placeJob()) ----
+  myDriverIds: string[] = [];
+  myDrivers: { id: string; name: string; phone: string }[] = [];
+  filteredMyDrivers: { id: string; name: string; phone: string }[] = [];
+  driverAssignSearch = '';
+
+  // ---- home / business overview ----
+  companyName = '';
+  companyApproved: boolean | null = null; // null = still loading
+  loadingOverview = true;
+  ordersTotal = 0;
+  ordersThisWeek = 0;
 
   // ---- Excel import (AI column-mapping -> stops pool) ----
   importStage: 'idle' | 'parsing' | 'ai' | 'geocoding' | 'ready' | 'saving' = 'idle';
@@ -200,7 +221,12 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit,
   readonly maxStops = MAX_STOPS;
   readonly steps = ['Itinéraire', 'Véhicule', 'Tarif'];
 
-  view: 'jobs' | 'parcels' | 'api' = 'jobs';
+  // 'home' is the business snapshot a professional should land on first
+  // (KPIs, account status, money owed/collected) — 'parcels' (Manage Stops)
+  // is where you actually work: define/import stops, filter them, batch the
+  // ones you want into a mission. 'jobs' is reached from there
+  // (createOrderFromParcels) or directly for a one-off mission.
+  view: 'home' | 'jobs' | 'parcels' | 'api' = 'home';
   userEmail = '';
   userUid = '';
   countryCode = 'TN';
@@ -274,7 +300,48 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit,
   }
   apiLang: 'curl' | 'node' | 'python' = 'curl';
 
-  private get apiKeyOrPlaceholder(): string { return this.userUid || '<YOUR_USER_UID>'; }
+  /** The full key, shown ONCE right after it is created (only a hash is stored). */
+  newApiKey = '';
+  /** Prefix of the live key (api_keys, server-written). */
+  apiKeyPrefix = '';
+  apiKeyBusy = false;
+
+  private get apiKeyOrPlaceholder(): string { return this.newApiKey || '<YOUR_API_KEY>'; }
+
+  private async loadApiKeyPrefix(): Promise<void> {
+    if (!this.userUid) return;
+    try {
+      const snap = await getDocs(query(collection(this.firestore, 'api_keys'),
+        where('uid', '==', this.userUid), where('revoked', '==', false)));
+      this.apiKeyPrefix = snap.empty ? '' : String(snap.docs[0].data()['prefix'] || '');
+    } catch {
+      this.apiKeyPrefix = '';
+    }
+  }
+
+  async createApiKey(): Promise<void> {
+    if (this.apiKeyBusy) return;
+    if (this.apiKeyPrefix) {
+      const ok = await confirmAction({
+        title: 'Nouvelle clé API',
+        text: 'La clé actuelle cessera immédiatement de fonctionner. Continuer ?',
+        danger: true,
+        confirmText: 'Créer une nouvelle clé',
+      });
+      if (!ok) return;
+    }
+    this.apiKeyBusy = true;
+    try {
+      const res = await httpsCallable<unknown, { key: string; prefix: string }>(this.functions, 'issueApiKey')({});
+      this.newApiKey = res.data.key;
+      this.apiKeyPrefix = res.data.prefix;
+      toastSuccess('Clé créée : copiez-la maintenant, elle ne sera plus affichée.');
+    } catch (e: any) {
+      toastError(e?.message || 'Échec de la création de la clé');
+    } finally {
+      this.apiKeyBusy = false;
+    }
+  }
 
   get sampleBody(): string {
     return `{
@@ -349,6 +416,7 @@ print(res.json())  # { success, orderId, price, currency, distanceKm, stopIds }`
   async ngOnInit(): Promise<void> {
     this.userEmail = this.auth.currentUser?.email || '';
     this.userUid = this.auth.currentUser?.uid || '';
+    this.loadApiKeyPrefix();
 
     // Defence-in-depth beyond AuthedGuard: a user banned mid-session is kicked
     // out the next time this view initialises.
@@ -385,7 +453,79 @@ print(res.json())  # { success, orderId, price, currency, distanceKm, stopIds }`
 
     await Promise.all([this.loadVehicles(), this.loadConfig()]);
     this.loadParcels();
+    this.loadMyDrivers();
+    this.loadOverview();
   }
+
+  /** Roster of drivers this company account is linked to (users/{uid}.drivers,
+   *  managed from /profile) — the pool a job can be direct-assigned to. */
+  async loadMyDrivers(): Promise<void> {
+    if (!this.userUid) return;
+    try {
+      const snap = await getDoc(doc(this.firestore, 'users', this.userUid));
+      const ids: string[] = (snap.exists() ? (snap.data() as any)?.drivers : []) || [];
+      this.myDriverIds = ids;
+      if (ids.length === 0) { this.myDrivers = []; this.filteredMyDrivers = []; return; }
+
+      const rows = await Promise.all(ids.map(async (id) => {
+        const dSnap = await getDoc(doc(this.firestore, 'users', id));
+        const d = dSnap.exists() ? (dSnap.data() as any) : null;
+        return d ? { id, name: d.name || 'Chauffeur', phone: d.phone || '' } : null;
+      }));
+      this.myDrivers = rows.filter((r): r is { id: string; name: string; phone: string } => r !== null);
+      this.filterMyDrivers();
+    } catch (err) {
+      console.error('loadMyDrivers failed:', err);
+    }
+  }
+
+  filterMyDrivers(): void {
+    const q = this.driverAssignSearch.trim().toLowerCase();
+    this.filteredMyDrivers = !q ? [...this.myDrivers]
+      : this.myDrivers.filter(d => d.name.toLowerCase().includes(q) || d.phone.includes(q));
+  }
+
+  assignJobToDriver(j: Job, driver: { id: string; name: string } | null): void {
+    j.assignedDriverId = driver?.id || null;
+    j.assignedDriverName = driver?.name || null;
+    this.scheduleSave();
+  }
+
+  /** The business snapshot for the home view — server-truth counts (not the
+   *  localStorage lifetimePlaced counter, which is per-browser and resets on
+   *  a new device), account verification status, and the COD figures already
+   *  computed from the live stops pool (see parcelKpis). */
+  async loadOverview(): Promise<void> {
+    this.loadingOverview = true;
+    try {
+      const uid = this.userUid;
+      if (!uid) return;
+
+      const [userSnap, companySnap] = await Promise.all([
+        getDoc(doc(this.firestore, 'users', uid)),
+        getDoc(doc(this.firestore, 'companies', uid)),
+      ]);
+      this.companyName = (userSnap.exists() ? (userSnap.data() as any)?.name : '') || '';
+      this.companyApproved = companySnap.exists() ? (companySnap.data() as any)?.isAdminApproved === true : null;
+
+      const ordersCol = collection(this.firestore, 'orders');
+      const totalQ = query(ordersCol, where('userID', '==', uid));
+      const weekAgo = Timestamp.fromMillis(Date.now() - 7 * 24 * 60 * 60 * 1000);
+      const weekQ = query(ordersCol, where('userID', '==', uid), where('timestamp', '>=', weekAgo));
+
+      const [totalCount, weekCount] = await Promise.all([
+        getCountFromServer(totalQ),
+        getCountFromServer(weekQ),
+      ]);
+      this.ordersTotal = totalCount.data().count;
+      this.ordersThisWeek = weekCount.data().count;
+    } catch (err) {
+      console.error('loadOverview failed:', err);
+    } finally {
+      this.loadingOverview = false;
+    }
+  }
+
   ngOnDestroy(): void {
     if (this.pinMap) { this.pinMap.remove(); this.pinMap = null; }
     if (this.parcelMap) { this.parcelMap.remove(); this.parcelMap = null; }
@@ -493,7 +633,7 @@ print(res.json())  # { success, orderId, price, currency, distanceKm, stopIds }`
     }, 2600);
   }
 
-  setView(v: 'jobs' | 'parcels' | 'api'): void {
+  setView(v: 'home' | 'jobs' | 'parcels' | 'api'): void {
     this.view = v;
     if (v === 'parcels') setTimeout(() => this.initParcelMap(), 60);
   }
@@ -1278,7 +1418,8 @@ ${JSON.stringify(rows)}`;
       stops: [this.newStop()],
       vehicleKey: this.vehicleOptions[0]?.key || '',
       priceMode: 'fixed', computedPrice: 0, currency: 'TND', pricing: false,
-      scheduleAt: null, budget: null, notes: '', equipment: [], distanceKm: 0
+      scheduleAt: null, budget: null, notes: '', equipment: [], distanceKm: 0,
+      assignedDriverId: null, assignedDriverName: null,
     };
   }
   private newStop(): JobStop {
@@ -1456,7 +1597,20 @@ ${JSON.stringify(rows)}`;
       this.pinName = s.name || s.address || '';
     }
     this.pinOpen = true;
-    setTimeout(() => this.initPinMap(), 60);
+    // In production this modal was rendering as a plain in-flow block at the
+    // bottom of the page instead of a full-screen overlay, despite
+    // `.ud-pinmodal` having `position: fixed` in its own stylesheet — i.e.
+    // something in the ancestor chain (a transform/filter/contain property
+    // establishes a containing block for `fixed` descendants) is stopping it
+    // from escaping to the viewport the way the CSS alone says it should.
+    // Re-parenting the modal to a direct child of <body> once it's rendered
+    // sidesteps that entirely — there's no ancestor left to interfere with.
+    setTimeout(() => {
+      this.initPinMap();
+      if (this.pinModalRootRef) {
+        this.renderer.appendChild(document.body, this.pinModalRootRef.nativeElement);
+      }
+    }, 60);
   }
   closePin(): void {
     this.pinOpen = false;
@@ -1508,18 +1662,27 @@ ${JSON.stringify(rows)}`;
     this.pinLoading = true;
     const name = (await this.reverseTN(this.pinLat, this.pinLng)) || `${this.pinLat.toFixed(5)}, ${this.pinLng.toFixed(5)}`;
     const j = this.activeJob;
-    if (this.pinTarget.kind === 'pickup') {
+    const target = this.pinTarget;
+    if (target.kind === 'pickup') {
       j.pickupLat = this.pinLat; j.pickupLng = this.pinLng;
       j.pickupAddress = name; j.pickupSuggests = [];
       this.rememberPickup(name, this.pinLat, this.pinLng);
     } else {
-      const s = j.stops[this.pinTarget.index];
+      const s = j.stops[target.index];
       if (s) { s.lat = this.pinLat; s.lng = this.pinLng; s.address = name; s.suggests = []; }
     }
     this.recalcDistance(j);
     this.pinLoading = false;
     this.closePin();
     this.scheduleSave();
+
+    // The location is set, but the rest of the stop's fields (name, phone,
+    // price…) still need filling in — without this the user has to remember
+    // to scroll back down to find that row themselves once the modal closes.
+    const rowId = target.kind === 'pickup' ? 'pickup-row' : `stop-row-${target.index}`;
+    setTimeout(() => {
+      document.getElementById(rowId)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 0);
   }
 
   // ---------- distance ----------
@@ -1656,9 +1819,24 @@ ${JSON.stringify(rows)}`;
         budget: (j.budget != null && !isNaN(Number(j.budget))) ? Number(j.budget) : 0,
         notes: j.notes.trim(),
         currencyCode: j.currency || 'TND',
-        isBiddingMode: j.priceMode === 'bidding',
-        isAdministrative: true   // created from the web portal -> driver in-app calling disabled
+        // A direct-assigned job is never biddable and always goes straight to
+        // one driver — chosenDriver below is what actually routes it there,
+        // this just keeps the marketplace/bidding UI from treating it as open.
+        isBiddingMode: j.assignedDriverId ? false : j.priceMode === 'bidding',
+        isAdministrative: true,   // created from the web portal -> driver in-app calling disabled
+        ...(j.assignedDriverId ? { chosenDriver: j.assignedDriverId } : {}),
       });
+
+      // Direct assignment: push straight into that driver's inbox, bypassing
+      // the open marketplace/bidding entirely — only this driver ever sees it.
+      if (j.assignedDriverId) {
+        await addDoc(collection(this.firestore, 'users', j.assignedDriverId, 'assigned_jobs'), {
+          orderId,
+          category: 'eco',
+          status: 'pending',
+          assignedAt: serverTimestamp(),
+        }).catch(err => console.warn('assigned_jobs write failed:', err));
+      }
 
       j.placedOrderId = orderId;
       j.status = 'placed';

@@ -6,7 +6,8 @@ import { takeUntil } from 'rxjs/operators';
 import { DashboardDataService } from '../../services/dashboard-data.service';
 import { CrossTabSyncService } from '../../../services/cross-tab-sync.service';
 import { ShnellUser, Vehicle, Bid, Deals, Commission } from '../../models/dashboard.models';
-import { toastSuccess, toastError } from '../../../shared/swal';
+import { toastSuccess, toastError, confirmAction } from '../../../shared/swal';
+import { walletBalances, rechargeCurrencies, rechargeConfirmHtml, rechargeResultText, validReceiptRef } from '../../services/wallet';
 
 @Component({
   selector: 'app-driver-profile-tab',
@@ -35,8 +36,12 @@ export class DriverProfileTabComponent implements OnInit, OnChanges, OnDestroy {
   notifType: string = 'info';
   notifSentSuccess: boolean = false;
 
-  // Balance Recharge State
+  // Balance Recharge State: amount + the currency it is credited in.
   rechargeAmount: number = 20;
+  rechargeCurrency: string = '';
+  rechargeReference: string = '';
+  readonly walletBalances = walletBalances;
+  readonly rechargeCurrencies = rechargeCurrencies;
 
   private destroy$ = new Subject<void>();
 
@@ -184,18 +189,36 @@ export class DriverProfileTabComponent implements OnInit, OnChanges, OnDestroy {
   async rechargeDriverBalance(): Promise<void> {
     if (!this.selectedDriver || !this.rechargeAmount || this.rechargeAmount <= 0) return;
     const uid = this.selectedDriver.uid || this.selectedDriver.id;
+    const currency = (this.rechargeCurrency || '').trim().toUpperCase();
     if (!uid) return;
-
+    if (!/^[A-Z]{3}$/.test(currency)) {
+      toastError('Choisissez la devise du crédit');
+      return;
+    }
+    if (!validReceiptRef(this.rechargeReference)) {
+      toastError('Saisissez le numéro du reçu');
+      return;
+    }
+    if (this.isProcessing) return;
     this.isProcessing = true;
     try {
-      const newBal = await this.dashboardDataService.rechargeUserBalance(uid, this.selectedDriver.balance || 0, this.rechargeAmount);
-      this.selectedDriver.balance = newBal;
-
-      this.crossTabSyncService.notifyDriverUpdated(uid, { balance: newBal });
-      toastSuccess(`${this.rechargeAmount} TND crédités sur le portefeuille de ${this.selectedDriver.name}`);
-    } catch (e) {
+      const ok = await confirmAction({
+        title: 'Confirmer la recharge',
+        html: rechargeConfirmHtml(this.selectedDriver.name, this.selectedDriver, this.rechargeAmount, currency),
+        confirmText: `Créditer ${this.rechargeAmount} ${currency}`,
+      });
+      if (!ok) return;
+      const res = await this.dashboardDataService.rechargeUserBalance(uid, this.rechargeAmount, currency, this.rechargeReference);
+      if (!res.pending && res.newBalance !== undefined) {
+        const balances = { ...(this.selectedDriver.balances || {}), [res.currencyCode]: res.newBalance };
+        this.selectedDriver.balances = balances;
+        this.crossTabSyncService.notifyDriverUpdated(uid, { balances } as any);
+      }
+      this.rechargeReference = '';
+      toastSuccess(rechargeResultText(this.rechargeAmount, res));
+    } catch (e: any) {
       console.error('Error recharging balance:', e);
-      toastError('Erreur lors du crédit du portefeuille');
+      toastError(e?.message || 'Erreur lors du crédit du portefeuille');
     } finally {
       this.isProcessing = false;
     }

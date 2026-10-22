@@ -2,6 +2,7 @@ import { Component, Input, OnInit, OnDestroy, OnChanges, SimpleChanges, ViewChil
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import Chart from 'chart.js/auto';
+import { walletBalances } from '../../services/wallet';
 import { ShnellUser, Vehicle, Orders, Deals, Commission, MetricCard, Bid } from '../../models/dashboard.models';
 
 @Component({
@@ -51,7 +52,8 @@ export class OverviewTabComponent implements OnInit, OnChanges, OnDestroy {
 
   metricCards: MetricCard[] = [];
   fleetTypeCounts: { type: string; count: number; approved: number; percentage: number }[] = [];
-  topDrivers: { driver: ShnellUser; dealCount: number; earnings: number; vehicleType: string }[] = [];
+  topDrivers: { driver: ShnellUser; dealCount: number; vehicleType: string }[] = [];
+  readonly walletBalances = walletBalances;
 
   private financeChart: Chart | null = null;
   private fleetChart: Chart | null = null;
@@ -265,7 +267,6 @@ export class OverviewTabComponent implements OnInit, OnChanges, OnDestroy {
         return {
           driver: d,
           dealCount: dDeals.length,
-          earnings: d.balance || 0,
           vehicleType: vehicle ? vehicle.type : 'N/A'
         };
       })

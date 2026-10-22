@@ -1,0 +1,2 @@
+/* Reuses the global admin (.saas-card / .saas-table / status-pill) classes
+   defined alongside admin-driver-management — no component-local overrides needed. */

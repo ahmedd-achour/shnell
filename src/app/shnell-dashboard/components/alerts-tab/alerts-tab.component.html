@@ -1,0 +1,56 @@
+<div class="hub-head">
+  <div>
+    <h3>Alerts</h3>
+    <p>Incidents raised by the platform: orders no driver takes, aborted trips, recharges waiting for a second admin, services down. Close an alert once it's handled. Closing keeps who closed it and when.</p>
+  </div>
+  <div class="hub-actions">
+    <div class="hub-seg">
+      <button [class.on]="view === 'open'" (click)="setView('open')">Open</button>
+      <button [class.on]="view === 'all'" (click)="setView('all')">History</button>
+    </div>
+  </div>
+</div>
+
+<div class="hub-card">
+  <div class="hub-card__body">
+    <div class="hub-seg">
+      <button [class.on]="severity === 'all'" (click)="severity = 'all'">All<span class="n">{{ sevCount('all') }}</span></button>
+      <button [class.on]="severity === 'critical'" (click)="severity = 'critical'"><i class="bi bi-circle-fill text-danger" style="font-size:.5rem"></i> Critical<span class="n">{{ sevCount('critical') }}</span></button>
+      <button [class.on]="severity === 'warning'" (click)="severity = 'warning'"><i class="bi bi-circle-fill text-warning" style="font-size:.5rem"></i> Warning<span class="n">{{ sevCount('warning') }}</span></button>
+      <button [class.on]="severity === 'info'" (click)="severity = 'info'">Info<span class="n">{{ sevCount('info') }}</span></button>
+    </div>
+  </div>
+  <ul class="hub-tl">
+    <li *ngFor="let a of filtered" [style.opacity]="a.resolved ? .65 : 1">
+      <span class="hub-ico" [ngClass]="'tone-' + alertTone(a.severity)"><i class="bi" [ngClass]="alertType(a.type).icon"></i></span>
+      <div class="hub-tl__main">
+        <div class="hub-tl__title">
+          {{ a.title }}
+          <span class="hub-tag" [ngClass]="'tone-' + alertTone(a.severity)">{{ alertType(a.type).label }}</span>
+          <span class="hub-count" *ngIf="a.count > 1" title="Times this incident happened">×{{ a.count }}</span>
+          <span class="hub-tag tone-success" *ngIf="a.resolved"><i class="bi bi-check2"></i> closed</span>
+        </div>
+        <div class="hub-tl__text" *ngIf="a.body">{{ a.body }}</div>
+        <div class="hub-tl__meta">
+          {{ toMillis(a.lastAt || a.createdAt) | date:'dd MMM yyyy, HH:mm' }}
+          <span *ngIf="a.driverId"> · <a class="hub-link" (click)="openAccount.emit(a.driverId)">{{ name(a.driverId) }}</a></span>
+          <span *ngIf="a.clientId"> · <a class="hub-link" (click)="openAccount.emit(a.clientId)">{{ name(a.clientId) }}</a></span>
+          <span *ngIf="a.orderId" class="hub-mono"> · order {{ short(a.orderId) }}</span>
+          <span *ngIf="a.resolved"> · closed by {{ name(a.resolvedBy) }} {{ toMillis(a.resolvedAt) | date:'dd MMM, HH:mm' }}</span>
+          <span *ngIf="a.note"> · “{{ a.note }}”</span>
+        </div>
+      </div>
+      <div class="hub-tl__side d-flex flex-column gap-1 align-items-end" *ngIf="!a.resolved">
+        <div class="d-flex gap-1 flex-wrap justify-content-end">
+          <button *ngIf="a.type === 'recharge_pending'" class="hub-btn hub-btn--sm hub-btn--primary" (click)="navigateTab.emit('finance')"><i class="bi bi-shield-check"></i> Review</button>
+          <button *ngIf="a.orderId && a.type === 'no_supply'" class="hub-btn hub-btn--sm" [disabled]="busy === a.id" (click)="retry(a)"><i class="bi bi-arrow-repeat"></i> Retry dispatch</button>
+          <button *ngIf="a.orderId && a.type === 'no_supply'" class="hub-btn hub-btn--sm" (click)="navigateTab.emit('dispatch-order')"><i class="bi bi-send-plus"></i> Assign</button>
+          <button *ngIf="a.orderId && a.type !== 'recharge_pending'" class="hub-btn hub-btn--sm hub-btn--danger" [disabled]="busy === a.id" (click)="cancelOrder(a)" title="Cancel the order"><i class="bi bi-x-octagon"></i></button>
+        </div>
+        <button class="hub-btn hub-btn--sm hub-btn--success" [disabled]="busy === a.id" (click)="resolve(a)"><i class="bi bi-check2"></i> Close</button>
+      </div>
+    </li>
+  </ul>
+  <div class="hub-empty" *ngIf="loading"><span class="spinner-border spinner-border-sm"></span> Loading alerts…</div>
+  <div class="hub-empty" *ngIf="!loading && !filtered.length"><i class="bi bi-check2-circle"></i>{{ view === 'open' ? 'Nothing needs attention right now.' : 'No alert yet.' }}</div>
+</div>

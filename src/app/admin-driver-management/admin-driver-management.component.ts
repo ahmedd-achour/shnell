@@ -17,6 +17,7 @@ import { ActivatedRoute, Router, NavigationEnd } from '@angular/router';
 import { Observable, of, Subject } from 'rxjs';
 import { confirmAction, notify, toastSuccess, toastError } from '../shared/swal';
 import { DashboardDataService } from '../shnell-dashboard/services/dashboard-data.service';
+import { withLicenseUrls } from '../../Models/driver_verification';
 import { walletBalances, rechargeCurrencies, rechargeConfirmHtml, rechargeResultText, validReceiptRef } from '../shnell-dashboard/services/wallet';
 import { 
   catchError,
@@ -174,6 +175,7 @@ export class AdminDriverManagementComponent implements OnInit, OnDestroy {
     const verifyRef = doc(this.firestore, `drivers/${uid}`);
     this.verification$ = docData(verifyRef).pipe(
       takeUntil(this.destroy$),
+      map(withLicenseUrls),
       catchError(err => {
         console.error('Verification fetch error:', err);
         return of(null);

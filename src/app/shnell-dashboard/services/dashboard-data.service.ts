@@ -12,6 +12,8 @@ import {
   setDoc,
   query,
   where,
+  orderBy,
+  limit,
   serverTimestamp,
   writeBatch
 } from '@angular/fire/firestore';
@@ -538,6 +540,40 @@ export class DashboardDataService {
     update_link_driver_app?: string;
   }): Promise<void> {
     await this.adminCall('adminSaveSettings', { docId: 'config', data: params });
+  }
+
+  /** Strategic switches (WhatsApp job reach, automatic driver suspensions)
+   *  in settings/config — audited like every settings change. */
+  async updateStrategicControls(params: {
+    whatsapp_job_reach_enabled: boolean;
+    whatsapp_job_reach_offline: boolean;
+    whatsapp_job_reach_per_order: number;
+    whatsapp_job_reach_daily_cap: number;
+    whatsapp_job_reach_cooldown_hours: number;
+    whatsapp_job_reach_text: string;
+    driver_auto_ban_enabled: boolean;
+  }): Promise<void> {
+    await this.adminCall('adminSaveSettings', { docId: 'config', data: params });
+  }
+
+  /** Demo mode: requests stay silent for drivers and can't be taken in one tap. */
+  async setDemoMode(on: boolean): Promise<void> {
+    await this.adminCall('adminSaveSettings', { docId: 'config', data: { demo_mode_enabled: on } });
+  }
+
+  /** WhatsApp reach messages counted today (Africa/Tunis day). */
+  getWhatsAppReachToday(): Observable<number> {
+    const day = new Intl.DateTimeFormat('en-CA', { timeZone: 'Africa/Tunis' }).format(new Date());
+    return docData(doc(this.firestore, 'whatsapp_reach_daily', day)).pipe(
+      map((d: any) => Number(d?.count) || 0),
+      catchError(() => of(0))
+    );
+  }
+
+  /** Latest WhatsApp reach messages, newest first. */
+  getWhatsAppReachLog(max = 15): Observable<any[]> {
+    const q = query(collection(this.firestore, 'whatsapp_outbox'), orderBy('createdAtMs', 'desc'), limit(max));
+    return collectionData(q, { idField: 'id' }).pipe(startWith([]), catchError(() => of([])));
   }
 
   async updateVehicleSettingsConfig(vehicles: Record<string, VehicleSettings>): Promise<void> {

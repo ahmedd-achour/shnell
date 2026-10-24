@@ -36,3 +36,23 @@ details[open] > summary::before { transform: rotate(90deg); }
 }
 .pricing-row--head span { padding-left: 2px; }
 .pricing-row .form-control-sm { padding: 0.25rem 0.4rem; font-size: 0.78rem; }
+
+/* WhatsApp message preview */
+.reach-bubble {
+  white-space: pre-wrap;
+  font-size: 0.82rem;
+  line-height: 1.4;
+  background: #dcf8c6;
+  color: #111b21;
+  border-radius: 10px 10px 10px 2px;
+  padding: 8px 12px;
+  max-width: 420px;
+}
+
+/* Demo mode */
+.demo-card { transition: border-color 0.2s ease, background 0.2s ease; }
+.demo-card--on {
+  border: 2px solid #f59f00 !important;
+  background: rgba(245, 159, 0, 0.08);
+}
+.demo-switch { width: 2.6em; height: 1.4em; cursor: pointer; }

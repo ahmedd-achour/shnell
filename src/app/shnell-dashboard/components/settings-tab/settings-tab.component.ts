@@ -16,6 +16,12 @@ interface CountryPriceRow {
   currency: string;
 }
 
+/** Same default as functions/lib/whatsapp_reach.js ({name} {km} filled in). */
+export const DEFAULT_REACH_TEXT =
+  'Asslema {name} 👋\n' +
+  'Shnell t3lmek enou famma offre 3la tabi9a tawa 🚚 ({km} km mennek)\n' +
+  'Choufha 9bal ma y9blha chauffeur a5er w temchi 3lik! 👉 Ouvri Shnell Driver';
+
 @Component({
   selector: 'app-settings-tab',
   standalone: true,
@@ -26,6 +32,12 @@ interface CountryPriceRow {
 export class SettingsTabComponent implements OnInit, OnDestroy {
   configForm!: FormGroup;
   dispatchForm!: FormGroup;
+  strategicForm!: FormGroup;
+  savingStrategic = false;
+  reachToday = 0;
+  reachLog: any[] = [];
+  demoMode = false;
+  savingDemo = false;
   vehicleForms: Record<string, FormGroup> = {};
 
   /** Editable rows for the three pricing bands — mirrors `vehiclePricing`'s row-array pattern. */
@@ -63,6 +75,71 @@ export class SettingsTabComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.loadSettings();
+    this.dashboardDataService.getWhatsAppReachToday()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(n => this.reachToday = n);
+    this.dashboardDataService.getWhatsAppReachLog()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(rows => this.reachLog = rows);
+  }
+
+  /** Message preview with sample values. */
+  get reachPreview(): string {
+    const text = (this.strategicForm.get('whatsapp_job_reach_text')?.value || '').trim() || DEFAULT_REACH_TEXT;
+    return text.replace(/\{name\}/g, 'Sami').replace(/\{km\}/g, '2.4');
+  }
+
+  resetReachText(): void {
+    this.strategicForm.patchValue({ whatsapp_job_reach_text: DEFAULT_REACH_TEXT });
+  }
+
+  async saveStrategicControls(): Promise<void> {
+    if (this.strategicForm.invalid) return;
+    this.savingStrategic = true;
+    this.clearAlerts();
+    try {
+      const v = this.strategicForm.value;
+      await this.dashboardDataService.updateStrategicControls({
+        whatsapp_job_reach_enabled: !!v.whatsapp_job_reach_enabled,
+        whatsapp_job_reach_offline: !!v.whatsapp_job_reach_offline,
+        whatsapp_job_reach_per_order: Number(v.whatsapp_job_reach_per_order),
+        whatsapp_job_reach_daily_cap: Number(v.whatsapp_job_reach_daily_cap),
+        whatsapp_job_reach_cooldown_hours: Number(v.whatsapp_job_reach_cooldown_hours),
+        whatsapp_job_reach_text: (v.whatsapp_job_reach_text || '').trim(),
+        driver_auto_ban_enabled: !!v.driver_auto_ban_enabled,
+      });
+      this.strategicForm.markAsPristine();
+      this.successMessage = 'Strategic controls saved.';
+      toastSuccess('Strategic controls saved');
+    } catch (err) {
+      console.error('Save strategic controls error:', err);
+      this.errorMessage = 'Failed to save strategic controls.';
+      toastError('Failed to save strategic controls');
+    } finally {
+      this.savingStrategic = false;
+    }
+  }
+
+  /** Saved at once (no Save button): it's flipped right before a demo. */
+  async toggleDemoMode(on: boolean): Promise<void> {
+    this.savingDemo = true;
+    try {
+      await this.dashboardDataService.setDemoMode(on);
+      this.demoMode = on;
+      toastSuccess(on ? 'Demo mode ON: drivers are not notified' : 'Demo mode OFF: back to normal');
+    } catch (err) {
+      console.error('Demo mode error:', err);
+      toastError('Failed to switch demo mode');
+    } finally {
+      this.savingDemo = false;
+    }
+  }
+
+  reachStatusClass(status: string): string {
+    if (status === 'sent') return 'text-success';
+    if (status === 'failed') return 'text-danger';
+    if (status === 'queued' || status === 'sending') return 'text-primary';
+    return 'text-muted';
   }
 
   ngOnDestroy(): void {
@@ -80,6 +157,17 @@ export class SettingsTabComponent implements OnInit, OnDestroy {
       stop_fee: [0.4, [Validators.required, Validators.min(0)]],
       update_link_customer_app: [''],
       update_link_driver_app: ['']
+    });
+
+    // Both switches default to OFF: they are used strategically.
+    this.strategicForm = this.fb.group({
+      whatsapp_job_reach_enabled: [false],
+      whatsapp_job_reach_offline: [true],
+      whatsapp_job_reach_per_order: [10, [Validators.required, Validators.min(1), Validators.max(50)]],
+      whatsapp_job_reach_daily_cap: [60, [Validators.required, Validators.min(0), Validators.max(95)]],
+      whatsapp_job_reach_cooldown_hours: [12, [Validators.required, Validators.min(1), Validators.max(168)]],
+      whatsapp_job_reach_text: [DEFAULT_REACH_TEXT, [Validators.maxLength(1000)]],
+      driver_auto_ban_enabled: [false]
     });
 
     this.vehicleTypesList.forEach(key => {
@@ -146,6 +234,19 @@ export class SettingsTabComponent implements OnInit, OnDestroy {
               update_link_customer_app: configDoc.update_link_customer_app || '',
               update_link_driver_app: configDoc.update_link_driver_app || ''
             });
+            this.demoMode = configDoc.demo_mode_enabled === true;
+            // Don't overwrite what the admin is editing on a live update.
+            if (!this.strategicForm.dirty) {
+              this.strategicForm.patchValue({
+                whatsapp_job_reach_enabled: configDoc.whatsapp_job_reach_enabled === true,
+                whatsapp_job_reach_offline: configDoc.whatsapp_job_reach_offline !== false,
+                whatsapp_job_reach_per_order: configDoc.whatsapp_job_reach_per_order ?? 10,
+                whatsapp_job_reach_daily_cap: configDoc.whatsapp_job_reach_daily_cap ?? 60,
+                whatsapp_job_reach_cooldown_hours: configDoc.whatsapp_job_reach_cooldown_hours ?? 12,
+                whatsapp_job_reach_text: configDoc.whatsapp_job_reach_text || DEFAULT_REACH_TEXT,
+                driver_auto_ban_enabled: configDoc.driver_auto_ban_enabled === true
+              });
+            }
           }
 
           if (vehiclesDoc && Object.keys(vehiclesDoc).length > 0) {

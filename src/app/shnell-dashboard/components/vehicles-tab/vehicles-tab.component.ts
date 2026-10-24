@@ -285,7 +285,9 @@ export class VehiclesTabComponent implements OnInit {
       toastSuccess(newStatus ? 'Véhicule approuvé' : 'Approbation révoquée');
     } catch (err) {
       console.error('Error toggling vehicle approval:', err);
-      toastError('Erreur lors de la mise à jour du véhicule');
+      const e = err as { code?: string; message?: string };
+      const detail = [e?.code, e?.message].filter(Boolean).join(' — ');
+      toastError('Erreur lors de la mise à jour du véhicule' + (detail ? ` : ${detail}` : ''));
     } finally {
       this.processingId = null;
     }

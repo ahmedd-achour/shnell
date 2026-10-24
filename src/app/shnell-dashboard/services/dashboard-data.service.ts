@@ -19,6 +19,7 @@ import {
 } from '@angular/fire/firestore';
 import { Database, ref, onValue } from '@angular/fire/database';
 import { Functions, httpsCallable } from '@angular/fire/functions';
+import { withLicenseUrls } from '../../../Models/driver_verification';
 import { Observable, BehaviorSubject, of, combineLatest } from 'rxjs';
 import { map, startWith, catchError, switchMap, tap, shareReplay } from 'rxjs/operators';
 import {
@@ -220,7 +221,7 @@ export class DashboardDataService {
 
   getDriverVerifications(): Observable<any[]> {
     const colRef = collection(this.firestore, 'drivers');
-    return collectionData(colRef, { idField: 'uid' });
+    return collectionData(colRef, { idField: 'uid' }).pipe(map(list => list.map(withLicenseUrls)));
   }
 
   getOrders(): Observable<Orders[]> {

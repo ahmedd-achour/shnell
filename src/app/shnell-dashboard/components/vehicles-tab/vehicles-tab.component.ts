@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Vehicle, ShnellUser } from '../../models/dashboard.models';
 import { DashboardDataService } from '../../services/dashboard-data.service';
+import { withLicenseUrls } from '../../../../Models/driver_verification';
 import { CrossTabSyncService } from '../../../services/cross-tab-sync.service';
 import { Firestore, doc, getDoc, updateDoc } from '@angular/fire/firestore';
 import { confirmAction, toastSuccess, toastError } from '../../../shared/swal';
@@ -145,7 +146,7 @@ export class VehiclesTabComponent implements OnInit {
     try {
       const docSnap = await getDoc(doc(this.firestore, `drivers/${vehicle.idDriver}`));
       if (docSnap.exists()) {
-        this.selectedDriverVerification = docSnap.data();
+        this.selectedDriverVerification = withLicenseUrls(docSnap.data());
       }
     } catch (e) {
       console.error('Failed to fetch driver verification', e);

@@ -21,3 +21,13 @@ export class DriverVerification {
     return new DriverVerification(json, documentId);
   }
 }
+
+/** Older driver-app builds saved the licence as permitFrontUrl/permitBackUrl. */
+export function withLicenseUrls<T extends Record<string, any> | null | undefined>(d: T): T {
+  if (!d) return d;
+  return {
+    ...d,
+    drivingLicenseFrontUrl: d['drivingLicenseFrontUrl'] || d['permitFrontUrl'],
+    drivingLicenseBackUrl: d['drivingLicenseBackUrl'] || d['permitBackUrl'],
+  };
+}

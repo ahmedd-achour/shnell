@@ -2,6 +2,7 @@ import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
+import { withLicenseUrls } from '../../../../Models/driver_verification';
 import { FleetIntelligenceService, DriverStatus } from '../../../services/fleet-intelligence.service';
 import { CrossTabSyncService } from '../../../services/cross-tab-sync.service';
 import { Subscription, Observable } from 'rxjs';
@@ -131,7 +132,7 @@ export class DriverDetailsComponent implements OnInit, OnDestroy {
     const verifyRef = doc(this.firestore, `drivers/${id}`);
     this.subscription.add(
       docData(verifyRef).subscribe(data => {
-        this.selectedDriverVerification = data || null;
+        this.selectedDriverVerification = withLicenseUrls(data) || null;
       })
     );
   }

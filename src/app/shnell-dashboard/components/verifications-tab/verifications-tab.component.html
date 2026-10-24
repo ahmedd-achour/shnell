@@ -50,6 +50,15 @@
               </span>
             </div>
 
+            <!-- AI auto-review state (drivers/{uid}.verificationStatus) -->
+            <div *ngIf="v.verificationStatus" class="d-flex align-items-center gap-2 small mb-2">
+              <i class="bi bi-stars text-brand"></i>
+              <span class="status-pill fs-8 fw-bold text-uppercase" [ngClass]="reviewStatusClass(v.verificationStatus)">
+                {{ reviewStatusLabel(v.verificationStatus) }}
+              </span>
+              <span *ngIf="v.verifiedBy === 'ai' && v.isVerified" class="text-muted fs-8">par l'IA</span>
+            </div>
+
             <!-- Documents Summary -->
             <div class="bg-subtle p-2 rounded-3 border border-subtle mb-3">
               <div class="d-flex justify-content-around text-center">
@@ -101,6 +110,54 @@
         </div>
 
         <div class="modal-body p-4 p-md-5 bg-dark">
+          <!-- Gemini identity review (functions onDriverDocWritten) -->
+          <div class="bg-subtle p-3 rounded-3 border border-subtle mb-4">
+            <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
+              <span class="text-white fw-bold"><i class="bi bi-stars me-1 text-brand"></i> Analyse IA</span>
+              <span class="status-pill fs-8 fw-bold text-uppercase" [ngClass]="reviewStatusClass(selectedVerification.verificationStatus)">
+                {{ reviewStatusLabel(selectedVerification.verificationStatus) }}
+              </span>
+            </div>
+            <div *ngIf="identityLoading" class="text-muted small">Chargement…</div>
+            <div *ngIf="!identityLoading && !identityReview" class="text-muted small">
+              Pas encore d'analyse IA (documents envoyés avant l'analyse automatique).
+            </div>
+            <ng-container *ngIf="identityReview?.review as r">
+              <div *ngIf="r.status === 'failed'" class="alert alert-warning py-2 px-3 small mb-2">
+                IA indisponible ({{ r.error }}) — vérifiez à l'œil.
+              </div>
+              <ng-container *ngIf="r.status === 'done'">
+                <div class="d-flex flex-wrap align-items-center gap-2 small mb-2">
+                  <span class="text-muted">Avis</span>
+                  <span class="status-pill fs-8 fw-bold text-uppercase" [ngClass]="verdictClass(r.verdict)">{{ verdictLabel(r.verdict) }}</span>
+                  <span class="text-muted ms-2">Confiance</span>
+                  <strong class="text-white">{{ r.confidence }}</strong>
+                </div>
+                <div class="row g-2 small mb-2">
+                  <div class="col-6 col-md-4"><span class="text-muted d-block">Nom (CIN)</span>
+                    <strong class="text-white">{{ r.fullNameCin || '—' }}</strong></div>
+                  <div class="col-6 col-md-4"><span class="text-muted d-block">Nom (permis)</span>
+                    <strong class="text-white">{{ r.fullNamePermit || '—' }}</strong></div>
+                  <div class="col-6 col-md-4"><span class="text-muted d-block">N° CIN</span>
+                    <strong class="text-white font-monospace">{{ r.cinNumber || '—' }}</strong></div>
+                  <div class="col-6 col-md-4"><span class="text-muted d-block">Naissance</span>
+                    <strong class="text-white">{{ r.birthDate || '—' }}</strong></div>
+                  <div class="col-6 col-md-4"><span class="text-muted d-block">Catégories permis</span>
+                    <strong class="text-white">{{ r.permitCategories?.length ? r.permitCategories.join(', ') : '—' }}</strong></div>
+                  <div class="col-6 col-md-4"><span class="text-muted d-block">Validité permis</span>
+                    <strong class="text-white">{{ r.permitExpiry || '—' }}</strong></div>
+                </div>
+                <div *ngIf="r.reason" class="text-muted small mb-2">
+                  <i class="bi bi-chat-left-text me-1"></i>{{ r.reason }}
+                </div>
+              </ng-container>
+              <div *ngIf="identityReview.signals?.length" class="alert alert-danger py-2 px-3 small mb-0">
+                <i class="bi bi-shield-exclamation me-1"></i>
+                <span *ngFor="let s of identityReview.signals; let last = last">{{ signalLabel(s) }}{{ last ? '' : ' · ' }}</span>
+              </div>
+            </ng-container>
+          </div>
+
           <ul class="nav nav-pills mb-4 gap-2 border-bottom border-subtle pb-3">
             <li class="nav-item" *ngIf="selectedVerification.cinFrontUrl">
               <button class="nav-link btn-sm rounded-pill" [class.active]="activeAssetTab === 'cinFront'" (click)="activeAssetTab = 'cinFront'">

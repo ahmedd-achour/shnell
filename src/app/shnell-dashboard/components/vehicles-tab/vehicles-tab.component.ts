@@ -7,6 +7,7 @@ import { withLicenseUrls } from '../../../../Models/driver_verification';
 import { CrossTabSyncService } from '../../../services/cross-tab-sync.service';
 import { Firestore, doc, getDoc, updateDoc } from '@angular/fire/firestore';
 import { confirmAction, toastSuccess, toastError } from '../../../shared/swal';
+import { aiSignalLabel, aiVerdictLabel, aiVerdictClass, aiReviewStatusLabel, aiReviewStatusClass } from '../../../shared/ai-review-labels';
 
 @Pipe({
   name: 'assetUrl',
@@ -48,6 +49,14 @@ export class VehiclesTabComponent implements OnInit {
   selectedVehicleDossier: (Vehicle & { driver?: ShnellUser }) | null = null;
   selectedDriverVerification: any = null;
   activeAssetTab: string | number = 'vehicle';
+
+  /** Carte grise of the open dossier (vehicles/{id}/private/papers). */
+  selectedPapers: { carteGriseFrontUrl?: string; carteGriseBackUrl?: string } | null = null;
+  /** Type the admin approves with — starts at the AI suggestion. */
+  selectedType = '';
+  /** settings/vehicles keys, cheapest first as in the catalog. */
+  catalogTypes: string[] = [];
+  private static readonly CATALOG_ORDER = ['super_light', 'light', 'light_medium', 'medium', 'medium_heavy', 'heavy', 'super_heavy'];
 
   constructor(
     private dashboardDataService: DashboardDataService,
@@ -142,7 +151,18 @@ export class VehiclesTabComponent implements OnInit {
     this.selectedVehicleDossier = { ...vehicle, driver };
     this.activeAssetTab = tab;
     this.selectedDriverVerification = null;
-    
+    this.selectedPapers = null;
+    this.selectedType = vehicle.type || vehicle.aiSuggestion?.type || '';
+
+    this.loadCatalog();
+    if (vehicle.id) {
+      getDoc(doc(this.firestore, `vehicles/${vehicle.id}/private/papers`))
+        .then(snap => {
+          if (snap.exists() && this.selectedVehicleDossier?.id === vehicle.id) this.selectedPapers = snap.data() as any;
+        })
+        .catch(e => console.error('Failed to fetch carte grise', e));
+    }
+
     try {
       const docSnap = await getDoc(doc(this.firestore, `drivers/${vehicle.idDriver}`));
       if (docSnap.exists()) {
@@ -155,7 +175,37 @@ export class VehiclesTabComponent implements OnInit {
 
   closeDossierComplet(): void {
     this.selectedVehicleDossier = null;
+    this.selectedPapers = null;
   }
+
+  private async loadCatalog(): Promise<void> {
+    if (this.catalogTypes.length) return;
+    try {
+      const snap = await getDoc(doc(this.firestore, 'settings/vehicles'));
+      const keys = Object.keys(snap.data() || {});
+      const order = VehiclesTabComponent.CATALOG_ORDER;
+      this.catalogTypes = keys.sort((a, b) =>
+        (order.indexOf(a) + 1 || 99) - (order.indexOf(b) + 1 || 99) || a.localeCompare(b));
+    } catch (e) {
+      console.error('Failed to load vehicle catalog', e);
+      this.catalogTypes = [...VehiclesTabComponent.CATALOG_ORDER];
+    }
+  }
+
+  /** Waiting for the AI, or the AI could not decide: the admin must pick. */
+  needsTypeChoice(v: Vehicle): boolean {
+    return !v.type && !v.isAdminApproved;
+  }
+
+  aiConfidenceClass(c?: string): string {
+    return c === 'high' ? 'success' : c === 'medium' ? 'warning' : 'danger';
+  }
+
+  readonly verdictLabel = aiVerdictLabel;
+  readonly verdictClass = aiVerdictClass;
+  readonly reviewStatusLabel = aiReviewStatusLabel;
+  readonly reviewStatusClass = aiReviewStatusClass;
+  readonly signalLabel = aiSignalLabel;
 
   openAssetModal(url: string): void {
     if (!url) return;
@@ -272,15 +322,26 @@ export class VehiclesTabComponent implements OnInit {
 
   async toggleApproval(vehicle: Vehicle): Promise<void> {
     if (!vehicle.id) return;
+    const newStatus = !vehicle.isAdminApproved;
+    // The type chosen in the open dossier (AI suggestion or the admin's pick).
+    const inDossier = this.selectedVehicleDossier?.id === vehicle.id;
+    const type = newStatus && inDossier ? this.selectedType : '';
+    if (newStatus && !(type || vehicle.type)) {
+      // No type yet (classifier pending or unsure): decide it in the dossier.
+      this.openDossierCompletTab(vehicle, 'vehicle');
+      toastError('Choisissez le type de véhicule avant d\'approuver.');
+      return;
+    }
     this.processingId = vehicle.id;
     try {
-      const newStatus = !vehicle.isAdminApproved;
-      await this.dashboardDataService.updateVehicleApproval(vehicle.id, newStatus);
+      await this.dashboardDataService.updateVehicleApproval(vehicle.id, newStatus, type || undefined);
       vehicle.isAdminApproved = newStatus;
       vehicle.isAssetsApproved = newStatus;
+      if (type) vehicle.type = type;
       if (this.selectedVehicleDossier && this.selectedVehicleDossier.id === vehicle.id) {
         this.selectedVehicleDossier.isAdminApproved = newStatus;
         this.selectedVehicleDossier.isAssetsApproved = newStatus;
+        if (type) this.selectedVehicleDossier.type = type;
       }
       this.crossTabSyncService.notifyVehicleApproved(vehicle.id, newStatus);
       toastSuccess(newStatus ? 'Véhicule approuvé' : 'Approbation révoquée');

@@ -54,6 +54,10 @@
                 <div>
                   <h5 class="fw-bold mb-0 text-white font-heading">Fleet Vehicle</h5>
                   <small class="text-muted font-monospace fs-8">ID: {{ (v.id || 'N/A') | slice:0:12 }}</small>
+                  <small class="d-block fs-8 fw-bold" [class.text-warning]="needsTypeChoice(v)" [class.text-info]="!needsTypeChoice(v)">
+                    <i class="bi me-1" [ngClass]="v.typeSource === 'ai' ? 'bi-stars' : 'bi-tag'"></i>
+                    {{ v.type || (v.typeSource === 'ai_pending' && !v.aiSuggestion ? 'Analyse IA…' : 'Type à confirmer') }}
+                  </small>
                 </div>
               </div>
               <span class="status-pill text-uppercase fs-8 fw-bold" [ngClass]="v.isAdminApproved ? 'success' : 'warning'">
@@ -201,6 +205,76 @@
         </div>
       </div>
 
+      <!-- Vehicle type: AI suggestion (truck photos + carte grise), confirmed here -->
+      <div class="bg-subtle p-3 rounded-3 border border-subtle mb-4">
+        <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
+          <span class="text-white fw-bold"><i class="bi bi-stars me-1 text-brand"></i> Type de véhicule</span>
+          <ng-container [ngSwitch]="selectedVehicleDossier.aiSuggestion?.status">
+            <span *ngSwitchCase="'done'" class="status-pill fs-8 fw-bold text-uppercase"
+                  [ngClass]="aiConfidenceClass(selectedVehicleDossier.aiSuggestion?.confidence)">
+              IA · confiance {{ selectedVehicleDossier.aiSuggestion?.confidence }}
+            </span>
+            <span *ngSwitchCase="'failed'" class="status-pill danger fs-8 fw-bold text-uppercase">IA indisponible</span>
+            <span *ngSwitchDefault class="status-pill fs-8 fw-bold text-uppercase"
+                  [ngClass]="selectedVehicleDossier.typeSource === 'ai_pending' ? 'warning' : 'success'">
+              {{ selectedVehicleDossier.typeSource === 'ai_pending' ? 'Analyse IA en cours…' : 'Choisi dans l\'app' }}
+            </span>
+          </ng-container>
+        </div>
+
+        <ng-container *ngIf="selectedVehicleDossier.aiSuggestion?.status === 'done'">
+          <div class="row g-2 small mb-2">
+            <div class="col-6 col-md-4"><span class="text-muted d-block">Suggestion IA</span>
+              <strong class="text-white">{{ selectedVehicleDossier.aiSuggestion?.type || 'Aucune (à choisir)' }}</strong></div>
+            <div class="col-6 col-md-4"><span class="text-muted d-block">Immatriculation</span>
+              <strong class="text-white font-monospace">{{ selectedVehicleDossier.aiSuggestion?.plate || '—' }}</strong></div>
+            <div class="col-6 col-md-4"><span class="text-muted d-block">Genre</span>
+              <strong class="text-white">{{ selectedVehicleDossier.aiSuggestion?.genre || '—' }}</strong></div>
+            <div class="col-6 col-md-4"><span class="text-muted d-block">Marque / modèle</span>
+              <strong class="text-white">{{ (selectedVehicleDossier.aiSuggestion?.make || '—') + ' ' + (selectedVehicleDossier.aiSuggestion?.model || '') }}</strong></div>
+            <div class="col-6 col-md-4"><span class="text-muted d-block">PTAC</span>
+              <strong class="text-white">{{ selectedVehicleDossier.aiSuggestion?.ptacKg ? (selectedVehicleDossier.aiSuggestion?.ptacKg + ' kg') : '—' }}</strong></div>
+            <div class="col-6 col-md-4"><span class="text-muted d-block">Charge utile</span>
+              <strong class="text-white">{{ selectedVehicleDossier.aiSuggestion?.payloadKg ? (selectedVehicleDossier.aiSuggestion?.payloadKg + ' kg') : '—' }}</strong></div>
+          </div>
+          <div *ngIf="selectedVehicleDossier.aiSuggestion?.reason" class="text-muted small mb-2">
+            <i class="bi bi-chat-left-text me-1"></i>{{ selectedVehicleDossier.aiSuggestion?.reason }}
+          </div>
+          <!-- Auto-review outcome (functions lib/auto_review.js) -->
+          <div class="d-flex flex-wrap align-items-center gap-2 small mb-2">
+            <span class="text-muted">Avis IA</span>
+            <span class="status-pill fs-8 fw-bold text-uppercase" [ngClass]="verdictClass(selectedVehicleDossier.aiSuggestion?.verdict)">
+              {{ verdictLabel(selectedVehicleDossier.aiSuggestion?.verdict) }}
+            </span>
+            <span class="text-muted ms-2">Décision</span>
+            <span class="status-pill fs-8 fw-bold text-uppercase" [ngClass]="reviewStatusClass(selectedVehicleDossier.reviewStatus)">
+              {{ reviewStatusLabel(selectedVehicleDossier.reviewStatus) }}
+            </span>
+          </div>
+          <div *ngIf="(selectedVehicleDossier.aiSuggestion?.signals || selectedVehicleDossier.aiSuggestion?.fraudSignals)?.length"
+               class="alert alert-danger py-2 px-3 small mb-2">
+            <i class="bi bi-shield-exclamation me-1"></i>
+            <span *ngFor="let s of (selectedVehicleDossier.aiSuggestion?.signals || selectedVehicleDossier.aiSuggestion?.fraudSignals); let last = last">
+              {{ signalLabel(s) }}{{ last ? '' : ' · ' }}
+            </span>
+          </div>
+          <div *ngIf="selectedVehicleDossier.aiSuggestion?.photosMatchDocument === false" class="alert alert-warning py-2 px-3 small mb-2">
+            <i class="bi bi-exclamation-triangle me-1"></i> Les photos et la carte grise ne semblent pas correspondre au même véhicule.
+          </div>
+          <div *ngIf="selectedVehicleDossier.aiSuggestion?.documentsReadable === false" class="alert alert-warning py-2 px-3 small mb-2">
+            <i class="bi bi-exclamation-triangle me-1"></i> Carte grise peu lisible — vérifiez-la à l'œil.
+          </div>
+        </ng-container>
+
+        <label class="form-label text-muted small mb-1 mt-1">Type approuvé</label>
+        <select class="form-select form-select-sm" [(ngModel)]="selectedType" [disabled]="selectedVehicleDossier.isAdminApproved">
+          <option value="">— Choisir —</option>
+          <option *ngFor="let t of catalogTypes" [value]="t">
+            {{ t }}{{ t === selectedVehicleDossier.aiSuggestion?.type ? '  (suggestion IA)' : '' }}
+          </option>
+        </select>
+      </div>
+
       <!-- Asset Documents Inspection Viewer -->
       <div class="mb-4">
         <label class="form-label text-white fw-bold d-block mb-2">Asset Documents Inspection</label>
@@ -231,6 +305,19 @@
               <i class="bi bi-file-earmark-image me-1"></i> {{ extra.label }}
             </button>
           </li>
+          <!-- Carte grise (private papers) -->
+          <ng-container *ngIf="selectedPapers">
+            <li class="nav-item" *ngIf="selectedPapers.carteGriseFrontUrl">
+              <button class="nav-link btn-sm rounded-pill" [class.active]="activeAssetTab === 'cgFront'" (click)="activeAssetTab = 'cgFront'">
+                <i class="bi bi-file-earmark-text me-1"></i> Carte grise Recto
+              </button>
+            </li>
+            <li class="nav-item" *ngIf="selectedPapers.carteGriseBackUrl">
+              <button class="nav-link btn-sm rounded-pill" [class.active]="activeAssetTab === 'cgBack'" (click)="activeAssetTab = 'cgBack'">
+                <i class="bi bi-file-earmark-text me-1"></i> Carte grise Verso
+              </button>
+            </li>
+          </ng-container>
           <!-- Personal Verification Tabs -->
           <ng-container *ngIf="selectedDriverVerification">
             <li class="nav-item" *ngIf="selectedDriverVerification.cinFrontUrl">
@@ -293,6 +380,18 @@
                 (error)="onAssetImageError($event, 'extra')"
               />
               <div class="mt-2 text-muted small">{{ extra.label }}</div>
+            </div>
+          </ng-container>
+
+          <!-- Carte grise -->
+          <ng-container *ngIf="selectedPapers">
+            <div *ngIf="activeAssetTab === 'cgFront'" class="w-100">
+              <img [src]="selectedPapers.carteGriseFrontUrl" alt="Carte grise Recto" class="img-fluid rounded-3 shadow border border-subtle" style="max-height: 340px; object-fit: contain;" (error)="onAssetImageError($event, 'carte grise')" />
+              <div class="mt-2 text-muted small">Carte grise Recto</div>
+            </div>
+            <div *ngIf="activeAssetTab === 'cgBack'" class="w-100">
+              <img [src]="selectedPapers.carteGriseBackUrl" alt="Carte grise Verso" class="img-fluid rounded-3 shadow border border-subtle" style="max-height: 340px; object-fit: contain;" (error)="onAssetImageError($event, 'carte grise')" />
+              <div class="mt-2 text-muted small">Carte grise Verso</div>
             </div>
           </ng-container>
 

@@ -419,8 +419,9 @@ export class DashboardDataService {
     return (await httpsCallable<any, T>(this.functions, name)(data)).data;
   }
 
-  async updateVehicleApproval(vehicleId: string, approved: boolean): Promise<void> {
-    await this.adminCall('adminReviewVehicle', { vehicleId, approve: approved });
+  /** `type` (a settings/vehicles key) confirms or overrides the AI-suggested type. */
+  async updateVehicleApproval(vehicleId: string, approved: boolean, type?: string): Promise<void> {
+    await this.adminCall('adminReviewVehicle', { vehicleId, approve: approved, ...(type ? { type } : {}) });
   }
 
   async deleteVehicle(vehicleId: string): Promise<void> {

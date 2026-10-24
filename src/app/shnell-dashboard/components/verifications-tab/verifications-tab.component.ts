@@ -4,6 +4,8 @@ import { ShnellUser } from '../../models/dashboard.models';
 import { DashboardDataService } from '../../services/dashboard-data.service';
 import { FormsModule } from '@angular/forms';
 import { toastSuccess, toastError } from '../../../shared/swal';
+import { Firestore, doc, getDoc } from '@angular/fire/firestore';
+import { aiSignalLabel, aiVerdictLabel, aiVerdictClass, aiReviewStatusLabel, aiReviewStatusClass } from '../../../shared/ai-review-labels';
 
 @Component({
   selector: 'app-verifications-tab',
@@ -21,8 +23,17 @@ export class VerificationsTabComponent {
   processingId: string | null = null;
   selectedVerification: any = null;
   activeAssetTab: string = '';
+  /** drivers/{uid}/private/identity — the Gemini identity review (admin-only). */
+  identityReview: any = null;
+  identityLoading = false;
 
-  constructor(private dashboardDataService: DashboardDataService) {}
+  readonly verdictLabel = aiVerdictLabel;
+  readonly verdictClass = aiVerdictClass;
+  readonly reviewStatusLabel = aiReviewStatusLabel;
+  readonly reviewStatusClass = aiReviewStatusClass;
+  readonly signalLabel = aiSignalLabel;
+
+  constructor(private dashboardDataService: DashboardDataService, private firestore: Firestore) {}
 
   get filteredVerifications(): any[] {
     let filtered = this.verifications;
@@ -69,10 +80,26 @@ export class VerificationsTabComponent {
     if (v.cinFrontUrl) this.activeAssetTab = 'cinFront';
     else if (v.drivingLicenseFrontUrl) this.activeAssetTab = 'permitFront';
     else this.activeAssetTab = 'cinFront';
+    this.loadIdentityReview(v.uid);
+  }
+
+  private async loadIdentityReview(uid: string): Promise<void> {
+    this.identityReview = null;
+    if (!uid) return;
+    this.identityLoading = true;
+    try {
+      const snap = await getDoc(doc(this.firestore, 'drivers', uid, 'private', 'identity'));
+      if (this.selectedVerification?.uid === uid) this.identityReview = snap.exists() ? snap.data() : null;
+    } catch (e) {
+      console.error('Identity review load failed:', e);
+    } finally {
+      this.identityLoading = false;
+    }
   }
 
   closeDossier() {
     this.selectedVerification = null;
+    this.identityReview = null;
   }
 
   async toggleApproval(v: any): Promise<void> {

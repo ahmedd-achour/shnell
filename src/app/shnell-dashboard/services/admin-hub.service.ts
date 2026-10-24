@@ -164,7 +164,7 @@ export class AdminHubService {
   updateAccount = this.call<{ userId: string; isBan?: boolean; accType?: string; isVerified?: boolean; note?: string },
     { success: boolean; changed: string[] }>('adminUpdateAccount');
 
-  reviewVehicle = this.call<{ vehicleId: string; approve?: boolean; remove?: boolean }>('adminReviewVehicle');
+  reviewVehicle = this.call<{ vehicleId: string; approve?: boolean; type?: string; remove?: boolean }>('adminReviewVehicle');
 
   saveSettings = this.call<{ docId: 'config' | 'vehicles' | 'service_areas' | 'dispatch'; data: any },
     { success: boolean; changed: string[] }>('adminSaveSettings');

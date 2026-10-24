@@ -15,8 +15,9 @@ export class Vehicle {
     this.matVehicle = data.matVehicle || data.licensePlate || '';
     this.maxWeight = Number(data.maxWeight || 0);
     this.maxVolume = Number(data.maxVolume || 0);
-    this.type = data.type || data.vehicleTypeId || 'camion';
-    this.vehicleImage = data.vehicleImage || data.vehicleAssetUrl || data.vehiculeAsset || ("assets/trucks/" + (data.type || data.vehicleTypeId) + ".png");
+    // Empty while the AI classifier / admin has not set it (typeSource 'ai_pending').
+    this.type = data.type || data.vehicleTypeId || '';
+    this.vehicleImage = data.vehicleImage || data.vehicleAssetUrl || data.vehiculeAsset || ("assets/trucks/" + (data.type || data.vehicleTypeId || 'medium') + ".png");
     this.isAdminApproved = data.isAdminApproved ?? false;
     this.isAssetsApproved = data.isAssetsApproved ?? data.isAdminApproved ?? false;
     this.allAssets = Array.isArray(data.allAssets) ? data.allAssets : [];

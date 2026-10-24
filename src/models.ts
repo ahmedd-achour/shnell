@@ -206,6 +206,41 @@ export interface Vehicle {
   carteGriseAsset?: string;
   cinAsset?: string;
   driverName?: string;
+  /** "ai_pending" | "ai" | "admin" — absent on vehicles from older app builds. */
+  typeSource?: string;
+  licensePlate?: string;
+  aiSuggestion?: VehicleAiSuggestion;
+  /** Auto-review outcome (functions lib/auto_review.js) or the admin's call. */
+  reviewStatus?: 'approved' | 'rejected' | 'await_driver' | 'manual' | 'suspended';
+  /** Codes shown to the driver when refused (e.g. "not_original"). */
+  rejectionCodes?: string[];
+  /** "ai" when the Gemini review approved it, else the admin uid. */
+  approvedBy?: string;
+}
+
+/** Written by functions classifyRegisteredVehicle (lib/vehicle_classifier.js, Gemini). */
+export interface VehicleAiSuggestion {
+  status: 'done' | 'failed';
+  error?: string;
+  type?: string | null;
+  confidence?: 'high' | 'medium' | 'low';
+  verdict?: 'approve' | 'reject' | 'review';
+  /** What the model saw (vehicle_classifier FRAUD_SIGNALS). */
+  fraudSignals?: string[];
+  /** The policy's action and every signal it weighed (incl. server checks). */
+  decision?: 'approve' | 'await_driver' | 'reject' | 'manual';
+  signals?: string[];
+  ownerName?: string;
+  plate?: string;
+  genre?: string;
+  make?: string;
+  model?: string;
+  ptacKg?: number;
+  payloadKg?: number;
+  documentsReadable?: boolean;
+  photosMatchDocument?: boolean;
+  reason?: string;
+  servedBy?: string;
 }
 
 export interface Commission {

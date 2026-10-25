@@ -98,7 +98,7 @@
                 </div>
 
                 <div class="d-flex justify-content-between align-items-center mt-3 mb-1">
-                  <label class="form-label fs-9 mb-0">Message (<code>{{ '{' }}name{{ '}' }}</code> = first name, <code>{{ '{' }}km{{ '}' }}</code> = distance to pickup)</label>
+                  <label class="form-label fs-9 mb-0">Message (<code>{{ '{' }}name{{ '}' }}</code> = first name; better without a distance, stored positions can be old)</label>
                   <button type="button" class="btn btn-xs btn-link p-0 fs-9" (click)="resetReachText()">Reset to default</button>
                 </div>
                 <textarea class="form-control form-control-sm" rows="4" formControlName="whatsapp_job_reach_text"></textarea>

@@ -16,11 +16,11 @@ interface CountryPriceRow {
   currency: string;
 }
 
-/** Same default as functions/lib/whatsapp_reach.js ({name} {km} filled in). */
+/** Same default as functions/lib/whatsapp_reach.js ({name} filled in). */
 export const DEFAULT_REACH_TEXT =
   'Asslema {name} 👋\n' +
-  'Shnell t3lmek enou famma offre 3la tabi9a tawa 🚚 ({km} km mennek)\n' +
-  'Choufha 9bal ma y9blha chauffeur a5er w temchi 3lik! 👉 Ouvri Shnell Driver';
+  'Shnell t3lmek enou famma offre 9rib menek tawa 🚚\n' +
+  'Choufha 9bal ma y9blha chauffeur a5er w temchi 3lik! 👉 https://play.google.com/store/apps/details?id=com.shnell.shnell_driver';
 
 @Component({
   selector: 'app-settings-tab',

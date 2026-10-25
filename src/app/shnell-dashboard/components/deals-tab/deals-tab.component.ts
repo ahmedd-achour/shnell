@@ -135,8 +135,49 @@ export class DealsTabComponent implements OnInit {
       return { label: 'In-Transit (On the way)', badgeClass: 'bg-warning text-dark' };
     } else if (st === 'terminated') {
       return { label: 'Completed (Terminated)', badgeClass: 'bg-success text-white' };
+    } else if (st === 'canceled' || st === 'cancelled') {
+      return { label: 'Canceled', badgeClass: 'bg-danger text-white' };
     }
     return { label: 'Pending Matching', badgeClass: 'bg-secondary text-white' };
+  }
+
+  /** Extra trips the customer accepted, or a request still waiting for them
+   *  (functions/lib/trip_revision.js). Null when the trip is a single one. */
+  tripRevisionLine(deal: Deals): { text: string; tone: string } | null {
+    const d = deal as any;
+    const plan = d.tripPlan;
+    const rev = d.revision;
+    const cur = plan?.currency || rev?.currency || 'TND';
+    if (rev?.status === 'pending') {
+      return { text: `Asked: ${rev.trips} trips · ${rev.price} ${cur} (was ${rev.originalPrice})`, tone: 'text-warning' };
+    }
+    if (plan && Number(plan.trips) > 1) {
+      return { text: `${plan.trips} trips agreed · ${plan.price} ${cur}`, tone: 'text-success' };
+    }
+    if (rev?.status === 'declined') return { text: `Extra trips declined: one trip`, tone: 'text-muted' };
+    return null;
+  }
+
+  private static readonly CANCEL_REASONS: Record<string, string> = {
+    driver_asked: 'Driver asked to cancel',
+    driver_late: 'Driver late',
+    driver_early: 'Driver too early',
+    price_dispute: 'Price dispute',
+    changed_mind: 'Changed mind',
+    found_other: 'Found another way',
+    other: 'Other',
+    load_mismatch: 'Load needed more trips (no fault)',
+  };
+
+  /** Who canceled and why (the reason drives the blame: cancel_policy.js). */
+  cancelLine(deal: Deals): string | null {
+    const d = deal as any;
+    const st = String(d.status || '').toLowerCase();
+    if (st !== 'canceled' && st !== 'cancelled') return null;
+    const by = d.canceledBy || d.cancelledBy;
+    const who = by === d.idUser ? 'customer' : by === 'admin' || by === 'admin_reassign' ? 'admin' : 'driver';
+    const reason = d.cancelReason ? DealsTabComponent.CANCEL_REASONS[d.cancelReason] || d.cancelReason : '';
+    return `By ${who}${reason ? ': ' + reason : ''}${d.cancelNote ? ' (“' + d.cancelNote + '”)' : ''}`;
   }
 
   private tsToMs(ts: any): number {

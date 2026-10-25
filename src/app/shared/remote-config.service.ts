@@ -27,10 +27,7 @@ export class RemoteConfigService {
     this.rc.settings.minimumFetchIntervalMillis = 3600000;
     this.rc.defaultConfig = {
       mapbox_access_token: '',
-      gemini_api_key: '',
-      gemini_model: 'gemini-2.0-flash',
       google_maps_api_key: '',
-      brevo_api_key: '',
     };
     try {
       await fetchAndActivate(this.rc);
@@ -45,8 +42,5 @@ export class RemoteConfigService {
   }
 
   get mapboxAccessToken(): string { return this.value('mapbox_access_token'); }
-  get geminiApiKey(): string { return this.value('gemini_api_key'); }
-  get geminiModel(): string { return this.value('gemini_model') || 'gemini-2.0-flash'; }
   get googleMapsApiKey(): string { return this.value('google_maps_api_key'); }
-  get brevoApiKey(): string { return this.value('brevo_api_key'); }
 }

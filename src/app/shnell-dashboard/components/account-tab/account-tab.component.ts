@@ -152,6 +152,39 @@ export class AccountTabComponent implements OnChanges, OnDestroy {
     return Math.max(toMillis(this.user?.lastSeen), toMillis(this.user?.lastActive), ...this.devices.map(d => toMillis(d.updatedAt)), 0);
   }
 
+  /** Score given by customers (as a driver) / by drivers (as a customer):
+   *  kept apart by the server (onRatingCreated), one account can be both. */
+  get driverRating(): { avg: number; count: number } | null {
+    const count = Number(this.user?.ratingCount) || 0;
+    return count > 0 ? { avg: Number(this.user?.ratingAvg) || 0, count } : null;
+  }
+  get customerRating(): { avg: number; count: number } | null {
+    const count = Number(this.user?.clientRatingCount) || 0;
+    return count > 0 ? { avg: Number(this.user?.clientRatingAvg) || 0, count } : null;
+  }
+
+  /** Customer cancellation score (functions/lib/cancel_policy.js). */
+  get cancelPct(): number | null {
+    const s = this.user?.cancelStats;
+    return s && s.pct != null ? Number(s.pct) || 0 : null;
+  }
+  get cancelBlocked(): boolean { return toMillis(this.user?.cancelStats?.blockedUntil) > Date.now(); }
+
+  /** "The load needs more trips" requests (functions/lib/trip_revision.js).
+   *  A driver who asks often and is rarely accepted is worth a look. */
+  get revisionStats(): { proposed: number; accepted: number; declined: number; canceled: number; acceptPct: number | null; suspicious: boolean } | null {
+    const s = this.user?.revisionStats;
+    const proposed = Number(s?.proposed) || 0;
+    if (!proposed) return null;
+    const accepted = Number(s.accepted) || 0;
+    const declined = Number(s.declined) || 0;
+    const canceled = Number(s.canceled) || 0;
+    const answered = accepted + declined + canceled;
+    const acceptPct = answered ? Math.round((accepted / answered) * 100) : null;
+    const trips = Math.max(1, this.dealsAsDriver.length);
+    return { proposed, accepted, declined, canceled, acceptPct, suspicious: proposed >= 3 && proposed / trips > 0.3 && (acceptPct ?? 0) < 50 };
+  }
+
   /** The account as the movement form wants it (balances joined in). */
   get asShnellUser(): ShnellUser {
     return { ...(this.user || {}), uid: this.uid, balances: this.wallet?.balances || {} } as ShnellUser;

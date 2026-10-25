@@ -19,7 +19,6 @@ import {
   MAPBOX_TOKEN, MAPBOX_STYLE_STREET, MAPBOX_STYLE_SATELLITE,
   mapboxForwardGeocode, mapboxReverseGeocode, mapboxGeocodeOne, makeDotEl, tnLngLat,
 } from '../shared/mapbox';
-import { RemoteConfigService } from '../shared/remote-config.service';
 import * as XLSX from 'xlsx';
 
 const MAX_JOBS = 50;
@@ -150,7 +149,6 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit,
   private auth = inject(Auth);
   private functions = inject(Functions);
   private router = inject(Router);
-  private remoteConfig = inject(RemoteConfigService);
 
 
 
@@ -1143,8 +1141,6 @@ print(res.json())  # { success, orderId, price, currency, distanceKm, stopIds }`
   /** Runs the raw rows through Gemini in chunks, mapping arbitrary column
    *  names/languages/typos onto our stop schema. */
   private async aiMapRows(rawRows: any[]): Promise<ImportedStop[]> {
-    const key = this.remoteConfig.geminiApiKey;
-    if (!key) throw new Error('Clé Gemini absente (Remote Config: gemini_api_key).');
     const out: ImportedStop[] = [];
     for (let i = 0; i < rawRows.length; i += this.AI_CHUNK) {
       const chunk = rawRows.slice(i, i + this.AI_CHUNK);
@@ -1156,63 +1152,17 @@ print(res.json())  # { success, orderId, price, currency, distanceKm, stopIds }`
     return out.filter(r => r.address || r.phone);
   }
 
+  /** One chunk through the aiMapStops function (Gemini runs server-side,
+   *  the key never reaches the browser). */
   private async geminiMapChunk(rows: any[]): Promise<any[]> {
-    const model = this.remoteConfig.geminiModel;
-    const key = this.remoteConfig.geminiApiKey;
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(key)}`;
-
-    const prompt =
-`You normalise delivery-parcel spreadsheet rows for a Tunisian courier.
-Column headers vary wildly (French / Arabic / English, abbreviations, typos, extra columns, merged fields) — infer meaning from content, not just the header text.
-
-For EACH input row output one object with EXACTLY these keys:
-- "name": recipient / client name (string, "" if none)
-- "phone": primary phone. Digits only, keep a leading "+216" if present, otherwise 8 local digits. "" if none/invalid.
-- "phone2": a second phone if the row has one, else ""
-- "address": the fullest delivery address / location text you can assemble ("" if none)
-- "gov": Tunisian governorate, one of exactly: ${this.TN_GOVS.join(', ')}. "" if not derivable.
-- "description": parcel contents / notes ("" if none)
-- "parcelPrice": cash to collect / COD / "prix" / "montant" as a number (dot decimals), or null
-- "expeditorId": sender / shop / vendor / "expéditeur" reference ("" if none)
-
-Return ONLY a JSON array, same order and length as the input. No prose.
-
-INPUT ROWS:
-${JSON.stringify(rows)}`;
-
-    let res: Response;
     try {
-      res = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ role: 'user', parts: [{ text: prompt }] }],
-          generationConfig: { temperature: 0, responseMimeType: 'application/json' },
-        }),
-      });
+      const res = await httpsCallable<{ rows: any[]; govs: string[] }, { stops: any[] }>(
+        this.functions, 'aiMapStops', { timeout: 130_000 })({ rows, govs: [...this.TN_GOVS] });
+      if (Array.isArray(res.data?.stops)) return res.data.stops;
     } catch (e: any) {
-      throw new Error(`Appel Gemini échoué : ${e?.message || e}`);
+      throw new Error(`Appel IA échoué : ${e?.message || e}`);
     }
-    if (!res.ok) {
-      const body = await res.text().catch(() => '');
-      throw new Error(`Gemini ${res.status} : ${body.slice(0, 300)}`);
-    }
-    const data: any = await res.json();
-    const text: string =
-      data?.candidates?.[0]?.content?.parts?.map((p: any) => p?.text || '').join('') || '';
-    const parsed = this.parseJsonLoose(text);
-    if (Array.isArray(parsed)) return parsed;
-    if (Array.isArray(parsed?.stops)) return parsed.stops;
-    if (Array.isArray(parsed?.rows)) return parsed.rows;
     throw new Error('Réponse IA non exploitable (JSON attendu).');
-  }
-
-  private parseJsonLoose(text: string): any {
-    const t = (text || '').trim().replace(/^```(json)?/i, '').replace(/```$/, '').trim();
-    try { return JSON.parse(t); } catch { /* fall through */ }
-    const s = t.indexOf('['), e = t.lastIndexOf(']');
-    if (s >= 0 && e > s) { try { return JSON.parse(t.slice(s, e + 1)); } catch { /* noop */ } }
-    return null;
   }
 
   private normalizeImported(o: any): ImportedStop {

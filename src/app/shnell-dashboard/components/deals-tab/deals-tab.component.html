@@ -102,6 +102,12 @@
                     <i class="bi bi-person-check-fill me-1"></i>Driver: {{ getUserName(deal.idDriver) }}
                     <div class="text-muted mt-1" style="font-size: 10px;">{{ deal.timestamp?.seconds ? (deal.timestamp.seconds * 1000 | date:'short') : (deal.timestamp | date:'short') }}</div>
                   </div>
+                  <div class="small fs-8 mt-1" *ngIf="tripRevisionLine(deal) as tr" [ngClass]="tr.tone">
+                    <i class="bi bi-repeat me-1"></i>{{ tr.text }}
+                  </div>
+                  <div class="small fs-8 mt-1 text-danger" *ngIf="cancelLine(deal) as cl">
+                    <i class="bi bi-x-circle me-1"></i>{{ cl }}
+                  </div>
                 </ng-container>
                 <ng-template #noDeal>
                   <span class="badge {{ getPendingSubStatus(o).badgeClass }} px-2 py-1 fs-8 d-inline-block">

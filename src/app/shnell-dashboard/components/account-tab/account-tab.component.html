@@ -87,6 +87,30 @@
         <div class="hub-kpi__value">{{ tripCount }}</div>
         <div class="hub-kpi__sub">{{ dealsAsDriver.length }} driven · {{ orders.length }} ordered</div>
       </div>
+      <div class="hub-kpi" *ngIf="driverRating as r">
+        <div class="hub-kpi__label"><i class="bi bi-star-fill"></i> Rating as driver</div>
+        <div class="hub-kpi__value">{{ r.avg | number:'1.1-1' }}</div>
+        <div class="hub-kpi__sub">{{ r.count }} rating(s) from customers</div>
+      </div>
+      <div class="hub-kpi" *ngIf="customerRating as r">
+        <div class="hub-kpi__label"><i class="bi bi-star-half"></i> Rating as customer</div>
+        <div class="hub-kpi__value">{{ r.avg | number:'1.1-1' }}</div>
+        <div class="hub-kpi__sub">{{ r.count }} rating(s) from drivers</div>
+      </div>
+      <div class="hub-kpi" *ngIf="cancelPct !== null" [class.hub-kpi--alert]="cancelPct >= 75">
+        <div class="hub-kpi__label"><i class="bi bi-x-octagon"></i> Cancel score</div>
+        <div class="hub-kpi__value">{{ cancelPct }}%</div>
+        <div class="hub-kpi__sub">{{ cancelBlocked ? 'Booking blocked for 24 h' : 'Last 30 days · blocked at 100%' }}</div>
+      </div>
+      <div class="hub-kpi" *ngIf="revisionStats as rs" [class.hub-kpi--alert]="rs.suspicious">
+        <div class="hub-kpi__label"><i class="bi bi-repeat"></i> Extra-trip requests</div>
+        <div class="hub-kpi__value">{{ rs.proposed }}</div>
+        <div class="hub-kpi__sub">
+          {{ rs.accepted }} accepted · {{ rs.declined }} one trip · {{ rs.canceled }} canceled
+          <span *ngIf="rs.acceptPct !== null"> · {{ rs.acceptPct }}% accepted</span>
+          <span *ngIf="rs.suspicious"> · asks often, check it</span>
+        </div>
+      </div>
     </div>
 
     <!-- Sections -->

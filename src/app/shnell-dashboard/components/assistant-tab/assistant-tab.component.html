@@ -1,0 +1,49 @@
+<div class="hub-head">
+  <div>
+    <h3>Assistant</h3>
+    <p>Ask anything about the app in derja, French, Arabic or English. Answers come from live data (read-only); each one shows the queries it ran.</p>
+  </div>
+  <div class="hub-actions">
+    <button class="hub-btn" (click)="clear()" [disabled]="!messages.length || busy"><i class="bi bi-trash3"></i> New chat</button>
+  </div>
+</div>
+
+<div class="hub-card ai-card">
+  <div class="ai-scroll" #scroller>
+    <div *ngIf="!messages.length" class="ai-empty">
+      <span class="hub-ico tone-warning ai-empty__ico"><i class="bi bi-stars"></i></span>
+      <p>Try one of these:</p>
+      <div class="ai-examples">
+        <button *ngFor="let e of examples" class="hub-btn hub-btn--sm" (click)="send(e)" [disabled]="busy">{{ e }}</button>
+      </div>
+    </div>
+
+    <div *ngFor="let m of messages" class="ai-msg" [class.ai-msg--user]="m.role === 'user'" [class.ai-msg--error]="m.error">
+      <div class="ai-bubble" [innerHTML]="m.html" (click)="onAnswerClick($event)"></div>
+      <div *ngIf="m.steps?.length" class="ai-steps">
+        <button class="ai-steps__toggle" (click)="m.showSteps = !m.showSteps">
+          <i class="bi" [ngClass]="m.showSteps ? 'bi-chevron-down' : 'bi-chevron-right'"></i>
+          {{ m.steps!.length }} {{ m.steps!.length === 1 ? 'query' : 'queries' }}
+        </button>
+        <ul *ngIf="m.showSteps">
+          <li *ngFor="let s of m.steps">
+            <span class="hub-mono">{{ stepLabel(s) }}</span>
+            <span class="hub-tag" [ngClass]="s.summary.startsWith('error') ? 'tone-danger' : 'tone-success'">{{ s.summary }}</span>
+          </li>
+        </ul>
+      </div>
+    </div>
+
+    <div *ngIf="busy" class="ai-msg">
+      <div class="ai-bubble ai-typing"><span></span><span></span><span></span></div>
+    </div>
+  </div>
+
+  <form class="ai-composer" (ngSubmit)="send()">
+    <textarea class="hub-input" rows="2" [(ngModel)]="draft" name="draft" (keydown)="onKey($event)"
+      placeholder="Chkoun 3amel login lyoum ?" aria-label="Question for the assistant" [disabled]="busy"></textarea>
+    <button class="hub-btn hub-btn--primary" type="submit" [disabled]="busy || !draft.trim()">
+      <i class="bi bi-send-fill"></i> Ask
+    </button>
+  </form>
+</div>

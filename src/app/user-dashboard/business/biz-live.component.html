@@ -1,0 +1,86 @@
+<div class="bz">
+  <div class="bz-toolbar">
+    <div class="bz-toolbar__l">
+      <h2>Trajets en cours</h2>
+      <span class="bz-count">{{ count('open') + count('assigned') + count('in_progress') }} actifs</span>
+    </div>
+    <div class="bz-toolbar__r">
+      <input class="bz-input bz-search" [(ngModel)]="search" placeholder="Rechercher : commande, adresse, chauffeur…" aria-label="Rechercher un trajet">
+    </div>
+  </div>
+
+  <div class="bz-banner bz-banner--warn" *ngIf="revisionsWaiting">
+    <i class="bi bi-arrow-repeat"></i> {{ revisionsWaiting }} chauffeur(s) demandent plus de voyages : répondez sur la ligne concernée.
+  </div>
+
+  <div class="bz-kpis">
+    <button *ngFor="let f of filters" class="bz-kpi" [class.on]="filter === f.id" (click)="filter = f.id">
+      <span class="bz-kpi__n">{{ count(f.id) }}</span>
+      <span class="bz-kpi__l">{{ f.label }}</span>
+    </button>
+  </div>
+
+  <div class="bz-card bz-card--flush">
+    <div class="bz-empty" *ngIf="loading"><span class="spinner-border spinner-border-sm"></span> Chargement…</div>
+    <div class="bz-empty" *ngIf="!loading && !shown.length">Aucun trajet ici.</div>
+
+    <div class="bz-table-wrap" *ngIf="shown.length">
+      <table class="bz-table">
+        <thead>
+          <tr><th>Créé</th><th>Trajet</th><th>Véhicules</th><th>Prix</th><th>État</th><th>Chauffeur</th><th></th></tr>
+        </thead>
+        <tbody>
+          <ng-container *ngFor="let t of shown; trackBy: trackId">
+            <tr [class.bz-row--open]="expanded === t.orderId">
+              <td class="bz-nowrap">
+                {{ t.createdAtMs | date:'dd/MM HH:mm' }}
+                <div class="bz-mono">{{ t.orderId | slice:0:10 }}</div>
+              </td>
+              <td>
+                <div class="bz-trunc" [title]="t.pickup">{{ t.pickup || '—' }}</div>
+                <div class="bz-dim">→ {{ t.stopCount }} arrêt(s)<span *ngIf="t.scheduleAtMs > now"> · {{ t.scheduleAtMs | date:'dd/MM HH:mm' }}</span></div>
+              </td>
+              <td><span class="bz-dim">{{ t.types.join(', ') }}</span></td>
+              <td class="bz-nowrap"><b>{{ t.price | number:'1.0-2' }}</b> {{ t.currency }}</td>
+              <td>
+                <span class="bz-tag" [ngClass]="state[t.state].tone"><i class="bi" [ngClass]="state[t.state].icon"></i> {{ state[t.state].label }}<ng-container *ngIf="t.bids.length"> · {{ t.bids.length }}</ng-container></span>
+                <div class="bz-dim bz-small" *ngIf="progress(t)">{{ progress(t) }}</div>
+                <div class="bz-small" *ngIf="t.revision">
+                  <b>Révision :</b> {{ t.revision.trips }} voyages · {{ t.revision.price }} {{ t.revision.currency }}
+                </div>
+              </td>
+              <td>
+                <span *ngIf="t.driverId">{{ names[t.driverId] }}<span class="bz-tag tone-info bz-small" *ngIf="t.ownFleet">Ma flotte</span></span>
+                <span *ngIf="!t.driverId" class="bz-dim">—</span>
+              </td>
+              <td class="bz-actions">
+                <button class="bz-btn bz-btn--sm bz-btn--primary" *ngIf="t.bids.length && !t.driverId" (click)="expanded = expanded === t.orderId ? null : t.orderId">
+                  Offres ({{ t.bids.length }})
+                </button>
+                <ng-container *ngIf="t.revision">
+                  <button class="bz-btn bz-btn--sm bz-btn--primary" (click)="revision(t, 'accept')" [disabled]="busy.has(t.orderId)">Accepter</button>
+                  <button class="bz-btn bz-btn--sm" (click)="revision(t, 'decline')" [disabled]="busy.has(t.orderId)">Refuser</button>
+                </ng-container>
+                <button class="bz-btn bz-btn--sm" *ngIf="t.state === 'no_driver'" (click)="retry(t)" [disabled]="busy.has(t.orderId)"><i class="bi bi-arrow-clockwise"></i> Relancer</button>
+                <button class="bz-btn bz-btn--sm bz-btn--danger" *ngIf="canCancel(t)" (click)="cancel(t)" [disabled]="busy.has(t.orderId)" title="Annuler"><i class="bi bi-x-lg"></i></button>
+              </td>
+            </tr>
+            <tr *ngIf="expanded === t.orderId" class="bz-subrow">
+              <td colspan="7">
+                <div class="bz-bids">
+                  <div class="bz-bid" *ngFor="let b of t.bids">
+                    <span class="bz-bid__who">{{ names[b.driverId] }}</span>
+                    <span class="bz-dim" *ngIf="b.vehicleType">{{ b.vehicleType }}</span>
+                    <span class="bz-flex"></span>
+                    <b>{{ b.amount | number:'1.0-2' }} {{ b.currency }}</b>
+                    <button class="bz-btn bz-btn--sm bz-btn--primary" (click)="accept(t, b)" [disabled]="busy.has(t.orderId)">Accepter</button>
+                  </div>
+                </div>
+              </td>
+            </tr>
+          </ng-container>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>

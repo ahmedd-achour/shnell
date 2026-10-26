@@ -1,0 +1,201 @@
+<div class="bz">
+  <div class="bz-banner bz-banner--warn" *ngIf="biz.enabled === false">
+    <i class="bi bi-lock-fill"></i>
+    Shnell Business n’est pas encore activé sur ce compte. Vous pouvez préparer vos trajets ; la réservation sera possible dès l’activation par l’équipe Shnell.
+  </div>
+
+  <!-- Toolbar -->
+  <div class="bz-toolbar">
+    <div class="bz-toolbar__l">
+      <h2>Créer des trajets</h2>
+      <span class="bz-count">{{ trips.length }}/{{ maxTrips }}</span>
+    </div>
+    <div class="bz-toolbar__r">
+      <button class="bz-btn" (click)="addTrip()" [disabled]="trips.length >= maxTrips"><i class="bi bi-plus-lg"></i> Trajet</button>
+      <button class="bz-btn" (click)="quoteAll()" [disabled]="!staleCount"><i class="bi bi-calculator"></i> Calculer les prix<span *ngIf="staleCount"> ({{ staleCount }})</span></button>
+      <button class="bz-btn" (click)="clearBooked()" *ngIf="trips.length > 1"><i class="bi bi-check2-all"></i> Retirer les réservés</button>
+      <button class="bz-btn bz-btn--primary" (click)="bookAll()" [disabled]="!readyTrips.length || booking">
+        <span *ngIf="booking" class="spinner-border spinner-border-sm"></span>
+        <i *ngIf="!booking" class="bi bi-rocket-takeoff-fill"></i>
+        {{ booking ? 'Réservation ' + bookProgress : 'Réserver ' + readyTrips.length + ' prêt(s)' }}
+        <span *ngIf="readyTrips.length && !booking" class="bz-btn__sub">dès {{ readyTotal | number:'1.0-0' }} {{ readyTrips[0].quote?.currency }}</span>
+      </button>
+    </div>
+  </div>
+
+  <div class="bz-split">
+    <!-- Trip rail -->
+    <aside class="bz-rail">
+      <button *ngFor="let t of trips; let i = index; trackBy: trackKey" class="bz-rail__item" [class.on]="t.key === activeKey" (click)="open(t)">
+        <span class="bz-rail__n">{{ i + 1 }}</span>
+        <span class="bz-rail__main">
+          <span class="bz-rail__title">{{ t.title }}</span>
+          <span class="bz-rail__sub">{{ t.pickupAddress || 'Retrait ?' }} → {{ t.stops.length }} arrêt(s)</span>
+        </span>
+        <span class="bz-rail__state">
+          <span *ngIf="t.status === 'booked'" class="bz-tag tone-ok"><i class="bi bi-check2"></i> Réservé</span>
+          <span *ngIf="t.status === 'booking'" class="bz-tag tone-info">…</span>
+          <span *ngIf="t.status === 'error'" class="bz-tag tone-bad">Erreur</span>
+          <span *ngIf="t.status === 'draft' && t.quoting" class="bz-tag tone-info">Prix…</span>
+          <span *ngIf="t.status === 'draft' && !t.quoting && !problem(t)" class="bz-tag tone-ok">{{ t.quote?.minPrice }} {{ t.quote?.currency }}</span>
+          <span *ngIf="t.status === 'draft' && !t.quoting && problem(t)" class="bz-tag tone-muted" [title]="problem(t)">Brouillon</span>
+        </span>
+      </button>
+    </aside>
+
+    <!-- One trip, one page -->
+    <section class="bz-trip" *ngIf="active as t">
+      <div class="bz-trip__head">
+        <input class="bz-title" [(ngModel)]="t.title" (ngModelChange)="biz.save()" [disabled]="t.status === 'booked'" aria-label="Nom du trajet">
+        <div class="bz-trip__actions">
+          <button class="bz-btn bz-btn--sm" (click)="addTrip(t)" title="Dupliquer"><i class="bi bi-copy"></i> Dupliquer</button>
+          <button class="bz-btn bz-btn--sm bz-btn--danger" (click)="removeTrip(t)" title="Supprimer"><i class="bi bi-trash3"></i></button>
+        </div>
+      </div>
+
+      <div class="bz-banner bz-banner--ok" *ngIf="t.status === 'booked'">
+        <i class="bi bi-check-circle-fill"></i> Réservé — commande <code>{{ t.orderId }}</code>.
+        <button class="bz-link" (click)="openLive.emit()">Suivre dans « Trajets en cours »</button>
+      </div>
+      <div class="bz-banner bz-banner--bad" *ngIf="t.error"><i class="bi bi-exclamation-triangle-fill"></i> {{ t.error }}</div>
+
+      <fieldset [disabled]="t.status === 'booked' || t.status === 'booking'" class="bz-grid">
+        <!-- LEFT: where -->
+        <div class="bz-col">
+          <div class="bz-card">
+            <div class="bz-card__h"><span class="bz-dot bz-dot--pick">R</span> Point de retrait</div>
+            <div class="bz-addr">
+              <input class="bz-input" [(ngModel)]="t.pickupAddress" (input)="onType(t, null)" placeholder="Adresse de retrait" aria-label="Adresse de retrait"
+                [class.bz-input--ok]="t.pickupLat != null">
+              <button type="button" class="bz-icon" [class.on]="isPinFor(t, null)" (click)="armPin(t, null)" title="Placer sur la carte"><i class="bi bi-pin-map"></i></button>
+              <ul class="bz-suggest" *ngIf="isSuggestFor(t, null) && suggest!.items.length">
+                <li *ngFor="let h of suggest!.items" (mousedown)="choose(t, null, h)">{{ h.display_name }}</li>
+              </ul>
+            </div>
+            <div class="bz-recent" *ngIf="recentPickups.length && t.pickupLat == null">
+              <button type="button" *ngFor="let r of recentPickups" class="bz-chip" (click)="useRecent(t, r)">{{ r.address }}</button>
+            </div>
+          </div>
+
+          <div class="bz-card">
+            <div class="bz-card__h">
+              <span class="bz-dot">{{ t.stops.length }}</span> Arrêts <span class="bz-dim">({{ t.stops.length }}/{{ maxStops }}, téléphone obligatoire)</span>
+              <span class="bz-flex"></span>
+              <button type="button" class="bz-btn bz-btn--sm" (click)="pasteFor = pasteFor === t.key ? null : t.key"><i class="bi bi-clipboard-plus"></i> Coller depuis Excel</button>
+            </div>
+
+            <div class="bz-route" *ngIf="locatedCount(t) > 1">
+              <label class="bz-check">
+                <input type="checkbox" [ngModel]="!t.keepOrder" (ngModelChange)="setOptimize(t, $event)">
+                Itinéraire optimisé (ordre le plus court)
+              </label>
+              <span class="bz-dim" *ngIf="planning(t)"><span class="spinner-border spinner-border-sm"></span> calcul de l’itinéraire…</span>
+              <span class="bz-dim" *ngIf="!planning(t) && t.roadKm">
+                {{ t.roadKm | number:'1.0-1' }} km{{ t.roadExact ? '' : ' (estimé)' }}<ng-container *ngIf="!t.keepOrder && t.savedKm >= 0.1"> · <b class="bz-good">−{{ t.savedKm | number:'1.0-1' }} km</b> vs l’ordre saisi</ng-container>
+              </span>
+            </div>
+
+            <div class="bz-paste" *ngIf="pasteFor === t.key">
+              <p class="bz-dim">Une ligne par arrêt : <b>adresse</b> ⇥ <b>téléphone</b> ⇥ nom ⇥ montant à encaisser ⇥ note</p>
+              <textarea class="bz-input" rows="5" [(ngModel)]="pasteText" placeholder="Rue de Marseille, Tunis&#9;22123456&#9;Ahmed&#9;45&#9;fragile"></textarea>
+              <button type="button" class="bz-btn bz-btn--primary bz-btn--sm" (click)="applyPaste(t)" [disabled]="pasting || !pasteText.trim()">
+                <span *ngIf="pasting" class="spinner-border spinner-border-sm"></span> Ajouter les arrêts
+              </button>
+            </div>
+
+            <div class="bz-stops">
+              <div class="bz-stop" *ngFor="let s of t.stops; let i = index; trackBy: trackKey" [class.bz-stop--bad]="!s.phone.trim() && !s.phone2.trim() && s.address">
+                <div class="bz-stop__row">
+                  <span class="bz-dot bz-dot--stop">{{ i + 1 }}</span>
+                  <div class="bz-addr bz-grow">
+                    <input class="bz-input" [(ngModel)]="s.address" (input)="onType(t, s)" placeholder="Adresse de livraison" [attr.aria-label]="'Adresse arrêt ' + (i + 1)"
+                      [class.bz-input--ok]="s.lat != null">
+                    <button type="button" class="bz-icon" [class.on]="isPinFor(t, s)" (click)="armPin(t, s)" title="Placer sur la carte"><i class="bi bi-pin-map"></i></button>
+                    <ul class="bz-suggest" *ngIf="isSuggestFor(t, s) && suggest!.items.length">
+                      <li *ngFor="let h of suggest!.items" (mousedown)="choose(t, s, h)">{{ h.display_name }}</li>
+                    </ul>
+                  </div>
+                  <button type="button" class="bz-icon" (click)="moveStop(t, i, -1)" [disabled]="i === 0" title="Monter"><i class="bi bi-arrow-up"></i></button>
+                  <button type="button" class="bz-icon" (click)="moveStop(t, i, 1)" [disabled]="i === t.stops.length - 1" title="Descendre"><i class="bi bi-arrow-down"></i></button>
+                  <button type="button" class="bz-icon bz-icon--danger" (click)="removeStop(t, s)" title="Retirer"><i class="bi bi-x-lg"></i></button>
+                </div>
+                <div class="bz-stop__fields">
+                  <input class="bz-input" [(ngModel)]="s.phone" (ngModelChange)="biz.save()" placeholder="Téléphone *" inputmode="tel" [attr.aria-label]="'Téléphone arrêt ' + (i + 1)">
+                  <input class="bz-input" [(ngModel)]="s.name" (ngModelChange)="biz.save()" placeholder="Destinataire">
+                  <input class="bz-input" [(ngModel)]="s.phone2" (ngModelChange)="biz.save()" placeholder="2e téléphone" inputmode="tel">
+                  <input class="bz-input" type="number" min="0" [(ngModel)]="s.parcelPrice" (ngModelChange)="biz.save()" placeholder="À encaisser">
+                  <input class="bz-input" [(ngModel)]="s.expeditorId" (ngModelChange)="biz.save()" placeholder="Réf. expéditeur">
+                  <input class="bz-input bz-span2" [(ngModel)]="s.description" (ngModelChange)="biz.save()" placeholder="Note / colis">
+                </div>
+              </div>
+            </div>
+            <button type="button" class="bz-btn bz-btn--sm" (click)="addStop(t)" [disabled]="t.stops.length >= maxStops"><i class="bi bi-plus-lg"></i> Arrêt</button>
+          </div>
+        </div>
+
+        <!-- RIGHT: map, vehicles, when, who, price -->
+        <div class="bz-col">
+          <div class="bz-card bz-card--flush">
+            <div class="bz-map" #mapEl></div>
+            <div class="bz-map__hint" *ngIf="pinTarget">
+              <i class="bi bi-cursor-fill"></i> Cliquez sur la carte pour placer {{ pinTarget.stop === null ? 'le retrait' : 'cet arrêt' }}
+              <button type="button" class="bz-link" (click)="pinTarget = null">Annuler</button>
+            </div>
+          </div>
+
+          <div class="bz-card">
+            <div class="bz-card__h"><i class="bi bi-truck"></i> Véhicules acceptés <span class="bz-dim">(plusieurs possibles)</span></div>
+            <div class="bz-vehicles">
+              <button type="button" *ngFor="let v of biz.vehicles" class="bz-veh" [class.on]="t.vehicleTypes.includes(v.key)" (click)="toggleType(t, v.key)">
+                <img [src]="v.image" alt="" (error)="$any($event.target).src = 'assets/trucks/medium.png'">
+                <span class="bz-veh__name">{{ v.name }}</span>
+                <span class="bz-veh__kg" *ngIf="v.maxWeightKg">{{ v.maxWeightKg | number }} kg</span>
+                <span class="bz-veh__price" *ngIf="t.vehicleTypes.includes(v.key)">
+                  <ng-container *ngIf="priceOf(t, v.key) as p; else noP">{{ p }} {{ t.quote?.currency }}</ng-container>
+                  <ng-template #noP>{{ t.quoting ? '…' : '—' }}</ng-template>
+                </span>
+                <i class="bi bi-check-circle-fill bz-veh__on"></i>
+              </button>
+            </div>
+            <p class="bz-dim bz-note">Les chauffeurs de chaque type reçoivent la course au prix de leur véhicule ; ils peuvent aussi faire une offre.</p>
+          </div>
+
+          <div class="bz-card bz-two">
+            <label class="bz-field">
+              <span>Date de retrait</span>
+              <input class="bz-input" type="datetime-local" [(ngModel)]="t.scheduleAt" (ngModelChange)="biz.save()">
+              <small class="bz-dim">Vide = maintenant. Planifié : la recherche démarre 1 h avant.</small>
+            </label>
+            <label class="bz-field">
+              <span>Chauffeur</span>
+              <select class="bz-input" [ngModel]="t.driverId" (ngModelChange)="setDriver(t, $event)">
+                <option value="">Marketplace Shnell (recherche)</option>
+                <option *ngFor="let d of biz.fleet" [value]="d.id">Ma flotte · {{ d.name }}</option>
+              </select>
+              <small class="bz-dim" *ngIf="!biz.fleet.length">Aucun chauffeur dans votre flotte.</small>
+            </label>
+            <label class="bz-field bz-span2">
+              <span>Notes pour le chauffeur</span>
+              <textarea class="bz-input" rows="2" [(ngModel)]="t.notes" (ngModelChange)="biz.save()" placeholder="Accès, horaires, manutention…"></textarea>
+            </label>
+          </div>
+
+          <div class="bz-card bz-price">
+            <div>
+              <div class="bz-dim">Prix serveur{{ t.quote ? ' · ' + t.quote.distanceKm + ' km' : '' }}</div>
+              <div class="bz-price__v" *ngIf="t.quote && !problem(t); else needs">
+                {{ t.quote.minPrice }}<ng-container *ngIf="t.quote.maxPrice !== t.quote.minPrice">–{{ t.quote.maxPrice }}</ng-container>
+                <small>{{ t.quote.currency }}</small>
+              </div>
+              <ng-template #needs><div class="bz-price__need">{{ t.quoting ? 'Calcul…' : problem(t) }}</div></ng-template>
+              <div class="bz-dim" *ngIf="t.quote?.unpriced?.length">Sans tarif : {{ t.quote!.unpriced.join(', ') }}</div>
+            </div>
+            <button type="button" class="bz-btn bz-btn--primary" (click)="bookOne(t)" [disabled]="!!problem(t) || booking || t.status === 'booked'">
+              <i class="bi bi-send-fill"></i> {{ t.driverId ? 'Envoyer à ' + t.driverName : 'Réserver ce trajet' }}
+            </button>
+          </div>
+        </div>
+      </fieldset>
+    </section>
+  </div>
+</div>

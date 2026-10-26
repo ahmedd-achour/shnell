@@ -50,6 +50,7 @@
             <ul class="dropdown-menu dropdown-menu-end shadow-sm" [class.show]="menuOpen" style="right: 0; left: auto" (click)="menuOpen = false">
               <li *ngIf="isDriver"><button class="dropdown-item" [disabled]="busy" (click)="toggleVerified()"><i class="bi me-2" [ngClass]="verified ? 'bi-patch-exclamation' : 'bi-patch-check'"></i>{{ verified ? 'Revoke verification' : 'Mark as verified' }}</button></li>
               <li><button class="dropdown-item" [disabled]="busy" (click)="setTier(user.accType === 'pro' ? 'standard' : 'pro')"><i class="bi bi-award me-2"></i>Switch to {{ user.accType === 'pro' ? 'STANDARD' : 'PRO' }}</button></li>
+              <li *ngIf="!isDriver"><button class="dropdown-item" [disabled]="busy" (click)="toggleBusiness()"><i class="bi bi-briefcase me-2"></i>{{ business ? 'Disable Shnell Business' : 'Enable Shnell Business' }}</button></li>
               <li><button class="dropdown-item" [disabled]="busy" (click)="resetPassword()"><i class="bi bi-shield-lock me-2"></i>Set a new password</button></li>
               <li><hr class="dropdown-divider"></li>
               <li><button class="dropdown-item" [class.text-danger]="!banned" [disabled]="busy" (click)="toggleBan()"><i class="bi me-2" [ngClass]="banned ? 'bi-unlock' : 'bi-slash-circle'"></i>{{ banned ? 'Unban account' : 'Ban account' }}</button></li>

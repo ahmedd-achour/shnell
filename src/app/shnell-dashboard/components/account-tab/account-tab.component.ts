@@ -145,6 +145,7 @@ export class AccountTabComponent implements OnChanges, OnDestroy {
   get isDriver(): boolean { return this.role === 'driver'; }
   get banned(): boolean { return this.user?.isBan === true || this.user?.isBanned === true; }
   get verified(): boolean { return this.driverFile?.isVerified === true; }
+  get business(): boolean { return this.user?.business === true; }
   get initial(): string { return String(this.user?.name || '?').trim().charAt(0).toUpperCase(); }
   get photo(): string | null { return this.user?.photoUrl || this.user?.profilePic || this.user?.image || null; }
   get createdAt(): number { return toMillis(this.user?.createdAt || this.user?.timestamp); }
@@ -322,6 +323,11 @@ export class AccountTabComponent implements OnChanges, OnDestroy {
   async toggleVerified(): Promise<void> {
     const v = !this.verified;
     await this.run(() => this.hub.updateAccount({ userId: this.uid!, isVerified: v }), v ? 'Chauffeur vérifié' : 'Vérification révoquée');
+  }
+
+  async toggleBusiness(): Promise<void> {
+    const b = !this.business;
+    await this.run(() => this.hub.updateAccount({ userId: this.uid!, business: b }), b ? 'Shnell Business activé' : 'Shnell Business désactivé');
   }
 
   async setTier(t: string): Promise<void> {

@@ -1,9 +1,8 @@
-import { Component, OnInit, OnDestroy, AfterViewInit, AfterViewChecked, ElementRef, ViewChild, Renderer2, inject } from '@angular/core';
+import { Component, OnInit, OnDestroy, ElementRef, ViewChild, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { LottieComponent, AnimationOptions } from 'ngx-lottie';
-import Chart from 'chart.js/auto';
 import {
   Firestore, collection, addDoc, doc, getDoc, getDocs, setDoc,
   query, where, serverTimestamp, Timestamp, onSnapshot, getCountFromServer
@@ -20,6 +19,10 @@ import {
   mapboxForwardGeocode, mapboxReverseGeocode, mapboxGeocodeOne, makeDotEl, tnLngLat,
 } from '../shared/mapbox';
 import * as XLSX from 'xlsx';
+import { BizComposerComponent } from './business/biz-composer.component';
+import { BizLiveComponent } from './business/biz-live.component';
+import { BizService } from './business/biz.service';
+import { BIZ_MAX_STOPS, BIZ_MAX_TRIPS, newStop } from './business/biz-models';
 
 const MAX_JOBS = 50;
 const MAX_STOPS = 250;
@@ -140,27 +143,19 @@ interface ExpeditorRollup {
 @Component({
   selector: 'app-user-dashboard',
   standalone: true,
-  imports: [CommonModule, FormsModule, LottieComponent],
+  imports: [CommonModule, FormsModule, LottieComponent, BizComposerComponent, BizLiveComponent],
   templateUrl: './user-dashboard.component.html',
   styleUrls: ['./user-dashboard.component.css']
 })
-export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit, AfterViewChecked {
+export class UserDashboardComponent implements OnInit, OnDestroy {
   private firestore = inject(Firestore);
   private auth = inject(Auth);
   private functions = inject(Functions);
   private router = inject(Router);
 
-
-
   
-  @ViewChild('pinMapEl') pinMapRef!: ElementRef<HTMLDivElement>;
-  @ViewChild('pinModalRoot') pinModalRootRef?: ElementRef<HTMLDivElement>;
-  private renderer = inject(Renderer2);
-  @ViewChild('statusChartEl') statusChartRef?: ElementRef<HTMLCanvasElement>;
-  @ViewChild('stopsChartEl') stopsChartRef?: ElementRef<HTMLCanvasElement>;
+  private biz = inject(BizService);
   @ViewChild('parcelMapEl') parcelMapRef?: ElementRef<HTMLDivElement>;
-  private statusChart?: Chart;
-  private stopsChart?: Chart;
 
   // ---- parcels map ----
   private parcelMap: mapboxgl.Map | null = null;
@@ -181,11 +176,9 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit,
   banned = false;
   private banUnsub?: () => void;
 
-  // ---- my drivers roster (for direct-assign, see placeJob()) ----
+  // ---- my drivers roster (home KPI; trips use BizService.fleet) ----
   myDriverIds: string[] = [];
   myDrivers: { id: string; name: string; phone: string }[] = [];
-  filteredMyDrivers: { id: string; name: string; phone: string }[] = [];
-  driverAssignSearch = '';
 
   // ---- home / business overview ----
   companyName = '';
@@ -207,64 +200,13 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit,
   parcelSel = new Set<string>();
   parcelMapMode: 'street' | 'satellite' = 'street';
 
-  // ---- analytics ----
-  showInsights = true;
-
-  // ---- visual stop query / bulk tools (per active job, transient) ----
-  stopQ: { field: 'address' | 'name' | 'phone'; op: 'contains' | 'empty' | 'notEmpty' | 'located' | 'unlocated'; value: string } =
-    { field: 'address', op: 'contains', value: '' };
-  bulkSel = new Set<number>();
-
-  readonly maxJobs = MAX_JOBS;
-  readonly maxStops = MAX_STOPS;
-  readonly steps = ['Itinéraire', 'Véhicule', 'Tarif'];
-
   // 'home' is the business snapshot a professional should land on first
   // (KPIs, account status, money owed/collected) — 'parcels' (Manage Stops)
-  // is where you actually work: define/import stops, filter them, batch the
-  // ones you want into a mission. 'jobs' is reached from there
-  // (createOrderFromParcels) or directly for a one-off mission.
-  view: 'home' | 'jobs' | 'parcels' | 'api' = 'home';
+  // is where you work the stop pool; 'jobs' defines and books trips
+  // (biz-composer, server-priced), 'live' follows them (biz-live).
+  view: 'home' | 'jobs' | 'live' | 'parcels' | 'api' = 'home';
   userEmail = '';
   userUid = '';
-  countryCode = 'TN';
-  stopFee = 0.4;
-
-  vehicleOptions: VehicleOption[] = [];
-  loadingVehicles = true;
-
-  jobs: Job[] = [];
-  activeJobId = '';
-  dispatchingAll = false;
-
-  private searchTimer: any = null;
-
-  // ---- retention: local draft autosave + lifetime stats + recent pickups ----
-  private readonly LS_JOBS = 'sh_ud_jobs_v1';
-  private readonly LS_ACTIVE = 'sh_ud_active_v1';
-  private readonly LS_PLACED_TOTAL = 'sh_ud_placed_total';
-  private readonly LS_RECENT_PICKUPS = 'sh_ud_recent_pickups';
-  private saveTimer: any = null;
-  private autoSaveInterval: any = null;
-  private onBeforeUnload = () => this.persistNow();
-  lifetimePlaced = 0;
-  draftRestored = false;
-  recentPickups: { address: string; lat: number; lng: number }[] = [];
-
-  // ---- pin picker modal ----
-  pinOpen = false;
-  pinTarget: LocTarget = { kind: 'pickup' };
-  pinLat = TN_CENTER[0]; pinLng = TN_CENTER[1];
-  pinName = '';
-  pinLoading = false;
-  private pinMap: mapboxgl.Map | null = null;
-  private pinMarker: mapboxgl.Marker | null = null;
-  pinMode: 'street' | 'satellite' = 'street';
-
-  readonly equipmentOptions = [
-    'Heavy straps', 'Moving blankets', 'Hand truck / trolley',
-    'Extra helper', 'Packaging boxes', 'Disassembly tools'
-  ];
 
   // Lottie assets (src/assets/lotties) — spaces URL-encoded for the XHR loader.
   readonly lot: Record<'delivery' | 'emptyBox' | 'pin', AnimationOptions> = {
@@ -272,25 +214,7 @@ export class UserDashboardComponent implements OnInit, OnDestroy, AfterViewInit,
     emptyBox: { path: 'assets/lotties/Empty%20box.json', loop: true, autoplay: true },
     pin:      { path: 'assets/lotties/Map%20Location%20Pointer.json', loop: true, autoplay: true },
   };
-  /** Route-step hero shows only while the active job is still untouched. */
-  get activeJobUntouched(): boolean {
-    const j = this.activeJob;
-    return !!j && !j.pickupAddress.trim() && j.stops.length <= 1 && !(j.stops[0]?.address || '').trim();
-  }
 
-  /** Live Mapbox static thumbnail of the active job's route (pickup + located stops). */
-  get routeStaticUrl(): string | null {
-    const j = this.activeJob;
-    if (!j || j.pickupLat == null || j.pickupLng == null) return null;
-    const pins = [`pin-s-a+0E7A5F(${j.pickupLng},${j.pickupLat})`];
-    j.stops.forEach((s, i) => {
-      if (s.lat != null && s.lng != null && pins.length < 15) {
-        pins.push(`pin-s-${(i + 1) % 10}+FFB300(${s.lng},${s.lat})`);
-      }
-    });
-    return `https://api.mapbox.com/styles/v1/mapbox/light-v11/static/${pins.join(',')}`
-      + `/auto/560x300@2x?padding=44&access_token=${MAPBOX_TOKEN}`;
-  }
 
   // API section
   get apiEndpoint(): string {
@@ -437,19 +361,6 @@ print(res.json())  # { success, orderId, price, currency, distanceKm, stopIds }`
       );
     }
 
-    this.loadStats();
-    if (!this.restoreDraft()) {
-      this.jobs = [this.newJob(1)];
-      this.activeJobId = this.jobs[0].id;
-    } else {
-      this.draftRestored = true;
-      toastSuccess('Brouillon restauré');
-    }
-
-    window.addEventListener('beforeunload', this.onBeforeUnload);
-    this.autoSaveInterval = setInterval(() => this.persistNow(), 5000);
-
-    await Promise.all([this.loadVehicles(), this.loadConfig()]);
     this.loadParcels();
     this.loadMyDrivers();
     this.loadOverview();
@@ -463,7 +374,7 @@ print(res.json())  # { success, orderId, price, currency, distanceKm, stopIds }`
       const snap = await getDoc(doc(this.firestore, 'users', this.userUid));
       const ids: string[] = (snap.exists() ? (snap.data() as any)?.drivers : []) || [];
       this.myDriverIds = ids;
-      if (ids.length === 0) { this.myDrivers = []; this.filteredMyDrivers = []; return; }
+      if (ids.length === 0) { this.myDrivers = []; return; }
 
       const rows = await Promise.all(ids.map(async (id) => {
         const dSnap = await getDoc(doc(this.firestore, 'users', id));
@@ -471,22 +382,9 @@ print(res.json())  # { success, orderId, price, currency, distanceKm, stopIds }`
         return d ? { id, name: d.name || 'Chauffeur', phone: d.phone || '' } : null;
       }));
       this.myDrivers = rows.filter((r): r is { id: string; name: string; phone: string } => r !== null);
-      this.filterMyDrivers();
     } catch (err) {
       console.error('loadMyDrivers failed:', err);
     }
-  }
-
-  filterMyDrivers(): void {
-    const q = this.driverAssignSearch.trim().toLowerCase();
-    this.filteredMyDrivers = !q ? [...this.myDrivers]
-      : this.myDrivers.filter(d => d.name.toLowerCase().includes(q) || d.phone.includes(q));
-  }
-
-  assignJobToDriver(j: Job, driver: { id: string; name: string } | null): void {
-    j.assignedDriverId = driver?.id || null;
-    j.assignedDriverName = driver?.name || null;
-    this.scheduleSave();
   }
 
   /** The business snapshot for the home view — server-truth counts (not the
@@ -525,85 +423,8 @@ print(res.json())  # { success, orderId, price, currency, distanceKm, stopIds }`
   }
 
   ngOnDestroy(): void {
-    if (this.pinMap) { this.pinMap.remove(); this.pinMap = null; }
     if (this.parcelMap) { this.parcelMap.remove(); this.parcelMap = null; }
-    this.statusChart?.destroy();
-    this.stopsChart?.destroy();
     this.banUnsub?.();
-    clearInterval(this.autoSaveInterval);
-    clearTimeout(this.saveTimer);
-    window.removeEventListener('beforeunload', this.onBeforeUnload);
-    if (!this.banned) this.persistNow();
-  }
-
-  // ---------- local draft persistence (retention: never lose work) ----------
-  private loadStats(): void {
-    try {
-      this.lifetimePlaced = Number(localStorage.getItem(this.LS_PLACED_TOTAL)) || 0;
-      const rp = JSON.parse(localStorage.getItem(this.LS_RECENT_PICKUPS) || '[]');
-      if (Array.isArray(rp)) this.recentPickups = rp.filter(r => r && r.address && r.lat != null).slice(0, 4);
-    } catch { /* private mode / disabled storage */ }
-  }
-
-  /** Returns true when a meaningful draft was restored into `this.jobs`. */
-  private restoreDraft(): boolean {
-    try {
-      const raw = localStorage.getItem(this.LS_JOBS);
-      if (!raw) return false;
-      const arr = JSON.parse(raw);
-      if (!Array.isArray(arr) || !arr.length) return false;
-      const jobs = arr.slice(0, MAX_JOBS).map((j: any) => this.hydrateJob(j));
-      const meaningful = jobs.some((j: Job) =>
-        j.pickupAddress.trim() || j.stops.some(s => s.address.trim() || s.phone.trim()));
-      if (!meaningful) return false;
-      this.jobs = jobs;
-      const act = localStorage.getItem(this.LS_ACTIVE);
-      this.activeJobId = this.jobs.find(j => j.id === act)?.id || this.jobs[0].id;
-      return true;
-    } catch { return false; }
-  }
-
-  private hydrateJob(j: any): Job {
-    const base = this.newJob(1);
-    const stops = (Array.isArray(j?.stops) && j.stops.length ? j.stops : [null])
-      .map((s: any) => ({ ...this.newStop(), ...(s || {}), suggests: [], loading: false }));
-    return {
-      ...base, ...j,
-      pickupSuggests: [], pickupLoading: false, pricing: false,
-      equipment: Array.isArray(j?.equipment) ? j.equipment : [],
-      status: j?.status === 'placing' ? 'draft' : (j?.status || 'draft'),
-      stops,
-    };
-  }
-
-  scheduleSave(): void {
-    clearTimeout(this.saveTimer);
-    this.saveTimer = setTimeout(() => this.persistNow(), 700);
-  }
-  private persistNow(): void {
-    try {
-      const slim = this.jobs.map(j => ({
-        ...j, pickupSuggests: [], pickupLoading: false, pricing: false,
-        stops: j.stops.map(s => ({ ...s, suggests: [], loading: false })),
-      }));
-      localStorage.setItem(this.LS_JOBS, JSON.stringify(slim));
-      localStorage.setItem(this.LS_ACTIVE, this.activeJobId);
-    } catch { /* ignore */ }
-  }
-  private clearDraft(): void {
-    try { localStorage.removeItem(this.LS_JOBS); localStorage.removeItem(this.LS_ACTIVE); } catch { /* ignore */ }
-  }
-
-  private rememberPickup(address: string, lat: number | null, lng: number | null): void {
-    if (!address?.trim() || lat == null || lng == null) return;
-    const a = address.trim();
-    this.recentPickups = [{ address: a, lat, lng }, ...this.recentPickups.filter(r => r.address !== a)].slice(0, 4);
-    try { localStorage.setItem(this.LS_RECENT_PICKUPS, JSON.stringify(this.recentPickups)); } catch { /* ignore */ }
-  }
-  useRecentPickup(j: Job, r: { address: string; lat: number; lng: number }): void {
-    j.pickupAddress = r.address; j.pickupLat = r.lat; j.pickupLng = r.lng; j.pickupSuggests = [];
-    this.recalcDistance(j);
-    this.scheduleSave();
   }
 
   /** Immediate, refresh-free lockout: raise the ban wall, freeze the maps,
@@ -611,9 +432,7 @@ print(res.json())  # { success, orderId, price, currency, distanceKm, stopIds }`
   private enforceBanNow(): void {
     if (this.banned) return;
     this.banned = true;
-    try { this.pinMap?.remove(); this.pinMap = null; } catch { /* noop */ }
     try { this.parcelMap?.remove(); this.parcelMap = null; } catch { /* noop */ }
-    this.pinOpen = false;
     this.importStage = 'idle';
     Swal.fire({
       icon: 'error',
@@ -631,145 +450,17 @@ print(res.json())  # { success, orderId, price, currency, distanceKm, stopIds }`
     }, 2600);
   }
 
-  setView(v: 'home' | 'jobs' | 'parcels' | 'api'): void {
+  setView(v: 'home' | 'jobs' | 'live' | 'parcels' | 'api'): void {
     this.view = v;
     if (v === 'parcels') setTimeout(() => this.initParcelMap(), 60);
   }
 
-  ngAfterViewInit(): void {
-    setTimeout(() => this.refreshCharts(), 0);
-  }
-
-  private chartSig = '';
-  ngAfterViewChecked(): void {
-    if (this.view !== 'jobs' || !this.showInsights) return;
-    const sig = this.jobs.map(j => `${j.status}:${j.stops.length}:${j.stops.filter(s => s.lat != null).length}`).join('|');
-    if (sig !== this.chartSig) {
-      this.chartSig = sig;
-      setTimeout(() => this.refreshCharts(), 0);
-    }
-  }
-
-  // ---------- analytics ----------
-  get kpiTotalStops(): number { return this.jobs.reduce((n, j) => n + j.stops.length, 0); }
-  get kpiLocatedStops(): number { return this.jobs.reduce((n, j) => n + j.stops.filter(s => s.lat != null).length, 0); }
-  get kpiTotalDistance(): number { return Number(this.jobs.reduce((n, j) => n + (j.distanceKm || 0), 0).toFixed(1)); }
-  get kpiReady(): number { return this.jobs.filter(j => this.jobReady(j)).length; }
-  get kpiPlaced(): number { return this.jobs.filter(j => j.status === 'placed').length; }
-  /** Charts only earn their space once there's more than a single fresh draft. */
-  get insightsHaveData(): boolean {
-    return this.jobs.length > 1 || this.kpiPlaced > 0 || this.kpiTotalStops > 1;
-  }
-  get kpiValue(): number {
-    return Number(this.jobs.reduce((n, j) => n + (j.computedPrice || 0), 0).toFixed(2));
-  }
-
-  toggleInsights(): void {
-    this.showInsights = !this.showInsights;
-    if (this.showInsights) { this.chartSig = ''; setTimeout(() => this.refreshCharts(), 0); }
-  }
-
-  private refreshCharts(): void {
-    if (this.view !== 'jobs' || !this.showInsights) return;
-    const ink = getComputedStyle(document.documentElement).getPropertyValue('--sh-ink-500')?.trim() || '#6B6459';
-
-    // ---- status doughnut ----
-    if (this.statusChartRef?.nativeElement) {
-      const draft = this.jobs.filter(j => j.status === 'draft' && !this.jobReady(j)).length;
-      const ready = this.jobs.filter(j => j.status !== 'placed' && this.jobReady(j)).length;
-      const placed = this.jobs.filter(j => j.status === 'placed').length;
-      const errored = this.jobs.filter(j => j.status === 'error').length;
-      const data = {
-        labels: ['Draft', 'Ready', 'Placed', 'Needs attention'],
-        datasets: [{
-          data: [draft, ready, placed, errored],
-          backgroundColor: ['#DAD3C3', '#FFC107', '#12805C', '#D42F2F'],
-          borderWidth: 0,
-        }],
-      };
-      if (this.statusChart) { this.statusChart.data = data as any; this.statusChart.update(); }
-      else {
-        this.statusChart = new Chart(this.statusChartRef.nativeElement, {
-          type: 'doughnut',
-          data: data as any,
-          options: {
-            responsive: true, maintainAspectRatio: false, cutout: '62%',
-            plugins: { legend: { position: 'bottom', labels: { color: ink, boxWidth: 10, font: { size: 10 } } } },
-          },
-        });
-      }
-    }
-
-    // ---- stops per job bar ----
-    if (this.stopsChartRef?.nativeElement) {
-      const data = {
-        labels: this.jobs.map(j => j.title),
-        datasets: [{
-          label: 'Stops',
-          data: this.jobs.map(j => j.stops.length),
-          backgroundColor: '#FFB300',
-          borderRadius: 4,
-          maxBarThickness: 26,
-        }],
-      };
-      if (this.stopsChart) { this.stopsChart.data = data as any; this.stopsChart.update(); }
-      else {
-        this.stopsChart = new Chart(this.stopsChartRef.nativeElement, {
-          type: 'bar',
-          data: data as any,
-          options: {
-            responsive: true, maintainAspectRatio: false,
-            plugins: { legend: { display: false } },
-            scales: {
-              x: { ticks: { color: ink, font: { size: 10 } }, grid: { display: false } },
-              y: { beginAtZero: true, ticks: { color: ink, precision: 0 }, grid: { color: 'rgba(0,0,0,0.06)' } },
-            },
-          },
-        });
-      }
-    }
-  }
-
-  // ---------- visual stop query + bulk tools (active job) ----------
-  stopMatches(s: JobStop): boolean {
-    const q = this.stopQ;
-    switch (q.op) {
-      case 'located':   return s.lat != null;
-      case 'unlocated': return s.lat == null;
-      case 'empty':     return !String((s as any)[q.field] || '').trim();
-      case 'notEmpty':  return !!String((s as any)[q.field] || '').trim();
-      case 'contains':
-      default:          return String((s as any)[q.field] || '').toLowerCase().includes(q.value.toLowerCase().trim());
-    }
-  }
-  get matchedStopIdxs(): number[] {
-    return this.activeJob.stops.map((s, i) => (this.stopMatches(s) ? i : -1)).filter(i => i >= 0);
-  }
-  get matchedStopCount(): number { return this.matchedStopIdxs.length; }
-
-  selectMatches(): void { this.bulkSel = new Set(this.matchedStopIdxs); }
-  clearSelection(): void { this.bulkSel.clear(); }
-  toggleBulk(i: number): void { this.bulkSel.has(i) ? this.bulkSel.delete(i) : this.bulkSel.add(i); }
-
-  removeSelectedStops(): void {
-    const j = this.activeJob;
-    if (!this.bulkSel.size) return;
-    const keep = j.stops.filter((_, i) => !this.bulkSel.has(i));
-    j.stops = keep.length ? keep : [this.newStop()];
-    this.bulkSel.clear();
-    this.recalcDistance(j);
-  }
-  keepOnlySelectedStops(): void {
-    const j = this.activeJob;
-    if (!this.bulkSel.size) return;
-    const keep = j.stops.filter((_, i) => this.bulkSel.has(i));
-    j.stops = keep.length ? keep : [this.newStop()];
-    this.bulkSel.clear();
-    this.recalcDistance(j);
-  }
-  clearContactsOnSelected(): void {
-    const j = this.activeJob;
-    j.stops.forEach((s, i) => { if (this.bulkSel.has(i)) { s.name = ''; s.phone = ''; } });
+  /** Great-circle distance in km between two [lat, lng] points. */
+  private haversine(a: [number, number], b: [number, number]): number {
+    const R = 6371, rad = (d: number) => (d * Math.PI) / 180;
+    const dLat = rad(b[0] - a[0]), dLng = rad(b[1] - a[1]);
+    const h = Math.sin(dLat / 2) ** 2 + Math.cos(rad(a[0])) * Math.cos(rad(b[0])) * Math.sin(dLng / 2) ** 2;
+    return 2 * R * Math.asin(Math.sqrt(h));
   }
 
   // ==========================================================================
@@ -1261,34 +952,31 @@ print(res.json())  # { success, orderId, price, currency, distanceKm, stopIds }`
     else this.importStage = 'ready';
   }
 
-  /** Batch the selected parcels into a fresh order (Job) and jump to it. */
+  /** Selected pool stops -> a new trip draft in the composer (pickup = the map anchor). */
   async createOrderFromParcels(): Promise<void> {
+    await this.biz.init();
     const chosen = this.parcels.filter(p => this.parcelSel.has(p.id) && p.lat != null && p.lng != null);
-    if (!chosen.length) { toastError('Select at least one located parcel'); return; }
-    if (chosen.length > MAX_STOPS) { toastError(`Max ${MAX_STOPS} stops per order`); return; }
-    if (this.jobs.length >= MAX_JOBS) { toastError(`Max ${MAX_JOBS} orders — free a slot first`); return; }
+    if (!chosen.length) { toastError('Sélectionnez au moins un arrêt localisé'); return; }
+    if (chosen.length > BIZ_MAX_STOPS) { toastError(`${BIZ_MAX_STOPS} arrêts maximum par trajet`); return; }
+    if (this.biz.drafts.length >= BIZ_MAX_TRIPS) { toastError(`${BIZ_MAX_TRIPS} trajets maximum`); return; }
 
-    const j = this.newJob(this.jobs.length + 1);
-    j.title = `Batch · ${chosen.length} parcels`;
-    j.stops = chosen.map(p => ({
-      name: p.name, address: p.address || `${p.lat}, ${p.lng}`, phone: p.phone,
-      phone2: p.phone2 || '', description: p.description || '',
-      parcelPrice: p.parcelPrice ?? null,
-      expeditorId: p.expeditorId || '',
-      lat: p.lat, lng: p.lng, suggests: [], loading: false,
-    }));
-    if (this.parcelAnchor) {
-      j.pickupLat = this.parcelAnchor.lat;
-      j.pickupLng = this.parcelAnchor.lng;
-      j.pickupAddress = (await mapboxReverseGeocode(this.parcelAnchor.lat, this.parcelAnchor.lng))
-        || `${this.parcelAnchor.lat.toFixed(5)}, ${this.parcelAnchor.lng.toFixed(5)}`;
-    }
-    this.jobs.push(j);
-    this.recalcDistance(j);
-    this.activeJobId = j.id;
+    const anchor = this.parcelAnchor;
+    this.biz.addDraft({
+      title: `Lot · ${chosen.length} arrêt(s)`,
+      stops: chosen.map(p => ({
+        ...newStop(), poolId: p.id,
+        name: p.name, address: p.address || `${p.lat}, ${p.lng}`, phone: p.phone, phone2: p.phone2 || '',
+        description: p.description || '', parcelPrice: p.parcelPrice ?? null, expeditorId: p.expeditorId || '',
+        lat: p.lat, lng: p.lng,
+      })),
+      ...(anchor ? {
+        pickupLat: anchor.lat, pickupLng: anchor.lng,
+        pickupAddress: (await mapboxReverseGeocode(anchor.lat, anchor.lng)) || `${anchor.lat.toFixed(5)}, ${anchor.lng.toFixed(5)}`,
+      } : {}),
+    });
     this.parcelSel.clear();
     this.setView('jobs');
-    toastSuccess(`Order drafted from ${chosen.length} parcels — set a pickup & vehicle`);
+    toastSuccess(`Trajet préparé avec ${chosen.length} arrêt(s) — choisissez retrait et véhicules`);
   }
 
   async signOut(): Promise<void> {
@@ -1300,173 +988,18 @@ print(res.json())  # { success, orderId, price, currency, distanceKm, stopIds }`
     navigator.clipboard?.writeText(text).then(() => toastSuccess('Copied')).catch(() => {});
   }
 
-  // ---------- config / vehicles ----------
-  private async loadConfig(): Promise<void> {
-    try {
-      const snap = await getDoc(doc(this.firestore, 'settings', 'config'));
-      const c = snap.exists() ? (snap.data() as any) : {};
-      this.stopFee = Number(c.stop_fee ?? 0.4);
-    } catch { /* defaults */ }
-  }
-
-  private vehicleImage(key: string): string {
-    const k = (key || '').toLowerCase();
-    const known = ['super_light', 'light', 'light_medium', 'medium', 'medium_heavy', 'heavy', 'super_heavy', 'popular', 'isuzu'];
-    if (known.includes(k)) return `assets/trucks/${k}.png`;
-    if (k.includes('super_heavy')) return 'assets/trucks/super_heavy.png';
-    if (k.includes('medium_heavy')) return 'assets/trucks/medium_heavy.png';
-    if (k.includes('heavy')) return 'assets/trucks/heavy.png';
-    if (k.includes('medium')) return 'assets/trucks/medium.png';
-    if (k.includes('super_light') || k.includes('light')) return 'assets/trucks/light.png';
-    if (k.includes('popular')) return 'assets/trucks/popular.png';
-    return 'assets/trucks/medium.png';
-  }
-
-  private async loadVehicles(): Promise<void> {
-    this.loadingVehicles = true;
-    try {
-      const snap = await getDoc(doc(this.firestore, 'settings', 'vehicles'));
-      const dbData = snap.exists() ? (snap.data() as any) : {};
-      
-      const hardcoded = ['super_light', 'popular', 'light', 'medium', 'medium_heavy', 'heavy', 'super_heavy'];
-      
-      this.vehicleOptions = hardcoded.map((key) => {
-        const v = dbData[key] || {};
-        return {
-          key, 
-          name: v.name || key.replace('_', ' '), 
-          category: v.category || 'van',
-          maxWeight: Number(v.maxWeight ?? v.max_weight ?? 0),
-          volume: Number(v.volume ?? 0),
-          image: this.vehicleImage(key), 
-          raw: v // Retain raw pricing data if it exists in DB
-        } as VehicleOption;
-      });
-
-      if (this.vehicleOptions.length) {
-        for (const j of this.jobs) if (!j.vehicleKey) j.vehicleKey = this.vehicleOptions[0].key;
-      }
-    } catch (e) {
-      console.error('loadVehicles', e);
-      const hardcoded = ['super_light', 'popular', 'light', 'medium', 'medium_heavy', 'heavy', 'super_heavy'];
-      this.vehicleOptions = hardcoded.map((key) => ({
-        key, name: key.replace('_', ' '), category: 'van', maxWeight: 0, volume: 0, image: this.vehicleImage(key), raw: {}
-      } as VehicleOption));
-    } finally {
-      this.loadingVehicles = false;
-    }
-  }
-  vehicleFor(key: string): VehicleOption | undefined { return this.vehicleOptions.find(v => v.key === key); }
-  onImgError(ev: Event): void { (ev.target as HTMLImageElement).src = 'assets/trucks/medium.png'; }
-
-  // ---------- jobs ----------
-  private newJob(n: number): Job {
-    return {
-      id: 'job_' + Math.random().toString(36).slice(2, 9),
-      title: 'Job ' + n, step: 1, status: 'draft',
-      pickupName: '', pickupAddress: '', pickupLat: null, pickupLng: null, pickupSuggests: [], pickupLoading: false,
-      stops: [this.newStop()],
-      vehicleKey: this.vehicleOptions[0]?.key || '',
-      priceMode: 'fixed', computedPrice: 0, currency: 'TND', pricing: false,
-      scheduleAt: null, budget: null, notes: '', equipment: [], distanceKm: 0,
-      assignedDriverId: null, assignedDriverName: null,
-    };
-  }
-  private newStop(): JobStop {
-    return {
-      name: '', address: '', phone: '', phone2: '', description: '', parcelPrice: null, expeditorId: '',
-      lat: null, lng: null, suggests: [], loading: false
-    };
-  }
-
-  get activeJob(): Job { return this.jobs.find(j => j.id === this.activeJobId) || this.jobs[0]; }
-  selectJob(id: string): void { this.activeJobId = id; this.view = 'jobs'; this.scheduleSave(); }
-  addJob(): void {
-    if (this.jobs.length >= MAX_JOBS) { toastError(`Maximum ${MAX_JOBS} jobs`); return; }
-    const j = this.newJob(this.jobs.length + 1);
-    this.jobs.push(j);
-    this.selectJob(j.id);
-    this.scheduleSave();
-  }
-  async removeJob(id: string): Promise<void> {
-    if (this.jobs.length <= 1) return;
-    const j = this.jobs.find(x => x.id === id);
-    const hasWork = !!j && (j.pickupAddress.trim() !== '' || j.stops.some(s => s.address.trim() || s.phone.trim()));
-    if (hasWork) {
-      const ok = await confirmAction({
-        title: `Supprimer « ${j!.title} » ?`,
-        text: 'Cette commande et ses arrêts non enregistrés seront perdus.',
-        danger: true,
-      });
-      if (!ok) return;
-    }
-    const wasActive = this.activeJobId === id;
-    this.jobs = this.jobs.filter(x => x.id !== id);
-    if (wasActive) this.selectJob(this.jobs[0].id);
-    this.scheduleSave();
-  }
-
-  jobReady(j: Job): boolean {
-    return j.status !== 'placed'
-      && !!j.pickupAddress.trim() && j.pickupLat != null
-      && j.stops.length > 0
-      && j.stops.every(s => !!s.address.trim() && s.lat != null && !!s.phone.trim())
-      && !!j.vehicleKey;
-  }
-  /** A stop is missing its required phone number. */
-  stopPhoneMissing(s: JobStop): boolean { return !s.phone.trim(); }
-  get anyReady(): boolean { return this.jobs.some(j => this.jobReady(j)); }
   locatedStops(j: Job): number { return j.stops.filter(s => s.lat != null).length; }
   stopsWithPhone(j: Job): number { return j.stops.filter(s => s.phone.trim()).length; }
   stopsWithName(j: Job): number { return j.stops.filter(s => s.name.trim()).length; }
   stopsWithDesc(j: Job): number { return j.stops.filter(s => s.description.trim()).length; }
 
-  /** 0–100 score of how "driver-friendly" the job is: located + named + described
-   *  stops mean faster deliveries and higher acceptance — a driver-retention lever
-   *  surfaced to the professional user. */
-  driverQuality(j: Job): number {
-    const n = j.stops.length || 1;
-    const located = this.locatedStops(j) / n;
-    const named = this.stopsWithName(j) / n;
-    const described = this.stopsWithDesc(j) / n;
-    return Math.round(located * 55 + named * 25 + described * 20);
-  }
-  driverQualityLabel(j: Job): string {
-    const q = this.driverQuality(j);
-    return q >= 80 ? 'Excellente' : q >= 55 ? 'Correcte' : 'À enrichir';
-  }
 
-  goToStep(j: Job, n: number): void {
-    const step = Math.min(3, Math.max(1, n)) as 1 | 2 | 3;
-    if (step > j.step && j.step === 1 && !this.step1Ok(j)) return;
-    j.step = step;
-    if (step === 3) this.computePrice(j);
-    this.scheduleSave();
-  }
   step1Ok(j: Job): boolean {
     return !!j.pickupAddress.trim() && j.pickupLat != null
       && j.stops.length > 0
       && j.stops.every(s => !!s.address.trim() && s.lat != null && !!s.phone.trim());
   }
 
-  addStop(j: Job): void {
-    if (j.stops.length >= MAX_STOPS) { toastError(`Maximum ${MAX_STOPS} stops`); return; }
-    j.stops.push(this.newStop());
-  }
-  async removeStop(j: Job, i: number): Promise<void> {
-    if (j.stops.length <= 1) return;
-    const s = j.stops[i];
-    if (s && (s.address.trim() || s.phone.trim() || s.name.trim())) {
-      const ok = await confirmAction({
-        title: `Retirer l’arrêt ${i + 1} ?`,
-        text: s.address.trim() || s.name.trim() || 'Arrêt renseigné',
-        danger: true, confirmText: 'Retirer',
-      });
-      if (!ok) return;
-    }
-    j.stops.splice(i, 1);
-    this.recalcDistance(j);
-  }
 
   // ---------- Tunisia-only geocoding (Mapbox) ----------
   private async geocodeTN(q: string): Promise<any[]> {
@@ -1475,360 +1008,5 @@ print(res.json())  # { success, orderId, price, currency, distanceKm, stopIds }`
   private async reverseTN(lat: number, lng: number): Promise<string | null> {
     return mapboxReverseGeocode(lat, lng);
   }
-  private label(r: any): string {
-    return String(r?.display_name || '').split(',').slice(0, 3).join(', ').trim();
-  }
 
-  onPickupType(j: Job): void {
-    j.pickupLat = null; j.pickupLng = null;
-    clearTimeout(this.searchTimer);
-    const q = j.pickupAddress;
-    this.searchTimer = setTimeout(async () => {
-      j.pickupLoading = true;
-      j.pickupSuggests = await this.geocodeTN(q);
-      j.pickupLoading = false;
-    }, 320);
-  }
-  choosePickup(j: Job, r: any): void {
-    j.pickupAddress = this.label(r);
-    j.pickupLat = Number(parseFloat(r.lat).toFixed(6));
-    j.pickupLng = Number(parseFloat(r.lon).toFixed(6));
-    j.pickupSuggests = [];
-    this.recalcDistance(j);
-    this.rememberPickup(j.pickupAddress, j.pickupLat, j.pickupLng);
-    this.scheduleSave();
-  }
-  onStopType(j: Job, i: number): void {
-    const s = j.stops[i];
-    s.lat = null; s.lng = null;
-    clearTimeout(this.searchTimer);
-    const q = s.address;
-    this.searchTimer = setTimeout(async () => {
-      s.loading = true;
-      s.suggests = await this.geocodeTN(q);
-      s.loading = false;
-    }, 320);
-  }
-  chooseStop(j: Job, i: number, r: any): void {
-    const s = j.stops[i];
-    s.address = this.label(r);
-    s.lat = Number(parseFloat(r.lat).toFixed(6));
-    s.lng = Number(parseFloat(r.lon).toFixed(6));
-    s.suggests = [];
-    this.recalcDistance(j);
-    this.scheduleSave();
-  }
-
-  private async locateMissing(j: Job): Promise<void> {
-    if (j.pickupLat == null && j.pickupAddress.trim()) {
-      const r = await this.geocodeTN(j.pickupAddress);
-      if (r[0]) { j.pickupLat = Number(parseFloat(r[0].lat).toFixed(6)); j.pickupLng = Number(parseFloat(r[0].lon).toFixed(6)); }
-    }
-    for (const s of j.stops) {
-      if (s.lat == null && s.address.trim()) {
-        const r = await this.geocodeTN(s.address);
-        if (r[0]) { s.lat = Number(parseFloat(r[0].lat).toFixed(6)); s.lng = Number(parseFloat(r[0].lon).toFixed(6)); }
-      }
-    }
-  }
-
-  // ---------- pin picker (mobile-style full map) ----------
-  openPin(t: LocTarget): void {
-    const j = this.activeJob;
-    this.pinTarget = t;
-    if (t.kind === 'pickup') {
-      this.pinLat = j.pickupLat ?? TN_CENTER[0];
-      this.pinLng = j.pickupLng ?? TN_CENTER[1];
-      this.pinName = j.pickupName || j.pickupAddress || '';
-    } else {
-      const s = j.stops[t.index];
-      this.pinLat = s.lat ?? j.pickupLat ?? TN_CENTER[0];
-      this.pinLng = s.lng ?? j.pickupLng ?? TN_CENTER[1];
-      this.pinName = s.name || s.address || '';
-    }
-    this.pinOpen = true;
-    // In production this modal was rendering as a plain in-flow block at the
-    // bottom of the page instead of a full-screen overlay, despite
-    // `.ud-pinmodal` having `position: fixed` in its own stylesheet — i.e.
-    // something in the ancestor chain (a transform/filter/contain property
-    // establishes a containing block for `fixed` descendants) is stopping it
-    // from escaping to the viewport the way the CSS alone says it should.
-    // Re-parenting the modal to a direct child of <body> once it's rendered
-    // sidesteps that entirely — there's no ancestor left to interfere with.
-    setTimeout(() => {
-      this.initPinMap();
-      if (this.pinModalRootRef) {
-        this.renderer.appendChild(document.body, this.pinModalRootRef.nativeElement);
-      }
-    }, 60);
-  }
-  closePin(): void {
-    this.pinOpen = false;
-    if (this.pinMap) { this.pinMap.remove(); this.pinMap = null; this.pinMarker = null; }
-  }
-
-  private initPinMap(): void {
-    if (!this.pinMapRef?.nativeElement) return;
-    if (this.pinMap) { this.pinMap.remove(); this.pinMap = null; }
-
-    mapboxgl.accessToken = MAPBOX_TOKEN;
-    this.pinMap = new mapboxgl.Map({
-      container: this.pinMapRef.nativeElement,
-      style: this.pinMode === 'satellite' ? MAPBOX_STYLE_SATELLITE : MAPBOX_STYLE_STREET,
-      center: [this.pinLng, this.pinLat],
-      zoom: 14,
-      minZoom: 6,
-      maxBounds: TN_MAX_BOUNDS,
-      attributionControl: false,
-    });
-    this.pinMap.addControl(new mapboxgl.NavigationControl({ showCompass: false }), 'top-right');
-    this.pinMap.on('load', () => this.pinMap?.resize());
-
-    const el = document.createElement('div');
-    el.className = 'mbx-pin';
-    el.style.cssText = 'width:28px;height:28px;background:#FFA000';
-    el.innerHTML = '<span><i class="bi bi-geo-alt-fill"></i></span>';
-
-    this.pinMarker = new mapboxgl.Marker({ element: el, draggable: true, anchor: 'bottom' })
-      .setLngLat([this.pinLng, this.pinLat])
-      .addTo(this.pinMap);
-    this.pinMarker.on('dragend', () => {
-      const p = this.pinMarker!.getLngLat();
-      this.pinLat = Number(p.lat.toFixed(6));
-      this.pinLng = Number(p.lng.toFixed(6));
-    });
-    this.pinMap.on('click', (e) => {
-      this.pinLat = Number(e.lngLat.lat.toFixed(6));
-      this.pinLng = Number(e.lngLat.lng.toFixed(6));
-      this.pinMarker?.setLngLat(e.lngLat);
-    });
-  }
-  setPinMode(m: 'street' | 'satellite'): void {
-    if (!this.pinMap || m === this.pinMode) return;
-    this.pinMode = m;
-    this.pinMap.setStyle(m === 'satellite' ? MAPBOX_STYLE_SATELLITE : MAPBOX_STYLE_STREET);
-  }
-  async confirmPin(): Promise<void> {
-    this.pinLoading = true;
-    const name = (await this.reverseTN(this.pinLat, this.pinLng)) || `${this.pinLat.toFixed(5)}, ${this.pinLng.toFixed(5)}`;
-    const j = this.activeJob;
-    const target = this.pinTarget;
-    if (target.kind === 'pickup') {
-      j.pickupLat = this.pinLat; j.pickupLng = this.pinLng;
-      j.pickupAddress = name; j.pickupSuggests = [];
-      this.rememberPickup(name, this.pinLat, this.pinLng);
-    } else {
-      const s = j.stops[target.index];
-      if (s) { s.lat = this.pinLat; s.lng = this.pinLng; s.address = name; s.suggests = []; }
-    }
-    this.recalcDistance(j);
-    this.pinLoading = false;
-    this.closePin();
-    this.scheduleSave();
-
-    // The location is set, but the rest of the stop's fields (name, phone,
-    // price…) still need filling in — without this the user has to remember
-    // to scroll back down to find that row themselves once the modal closes.
-    const rowId = target.kind === 'pickup' ? 'pickup-row' : `stop-row-${target.index}`;
-    setTimeout(() => {
-      document.getElementById(rowId)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }, 0);
-  }
-
-  // ---------- distance ----------
-  private haversine(a: [number, number], b: [number, number]): number {
-    const R = 6371;
-    const dLat = (b[0] - a[0]) * Math.PI / 180;
-    const dLon = (b[1] - a[1]) * Math.PI / 180;
-    const h = Math.sin(dLat / 2) ** 2 +
-      Math.cos(a[0] * Math.PI / 180) * Math.cos(b[0] * Math.PI / 180) * Math.sin(dLon / 2) ** 2;
-    return R * 2 * Math.atan2(Math.sqrt(h), Math.sqrt(1 - h));
-  }
-  recalcDistance(j: Job): void {
-    if (j.pickupLat == null) { j.distanceKm = 0; return; }
-    let total = 0;
-    let prev: [number, number] = [j.pickupLat, j.pickupLng as number];
-    for (const s of j.stops) {
-      if (s.lat == null) continue;
-      total += this.haversine(prev, [s.lat, s.lng as number]);
-      prev = [s.lat, s.lng as number];
-    }
-    j.distanceKm = Number((total * ROAD_FACTOR).toFixed(2));
-  }
-
-  // ---------- pricing (same as mobile client: cloud fn + local fallback) ----------
-  async computePrice(j: Job): Promise<void> {
-    if (!j.vehicleKey || j.distanceKm <= 0) { j.computedPrice = this.localPrice(j); return; }
-    j.pricing = true;
-    try {
-      const callable = httpsCallable(this.functions, 'calculateTripPrice');
-      const res: any = await callable({ vehicleType: j.vehicleKey, distanceInKm: j.distanceKm, countryCode: this.countryCode });
-      const price = Number(res?.data?.price ?? 0);
-      if (price > 0) {
-        j.computedPrice = Number(price.toFixed(2));
-        j.currency = res?.data?.currency || j.currency;
-        return;
-      }
-      j.computedPrice = this.localPrice(j);
-    } catch (e) {
-      console.warn('calculateTripPrice failed, local fallback', e);
-      j.computedPrice = this.localPrice(j);
-    } finally {
-      j.pricing = false;
-    }
-  }
-  private localPrice(j: Job): number {
-    const v = this.vehicleFor(j.vehicleKey)?.raw || {};
-    const cc = this.countryCode.toUpperCase();
-    const perCountry = v.pricing?.[cc] || v.pricing?.[this.countryCode];
-    if (perCountry && (perCountry.base_price != null || perCountry.price_per_km != null)) {
-      const base = Number(perCountry.base_price) || 0;
-      const perKm = Number(perCountry.price_per_km) || 0;
-      j.currency = (perCountry.currency || j.currency || 'TND').toString().toUpperCase();
-      return Number((base + j.distanceKm * perKm).toFixed(2));
-    }
-    const base = Number(v.base_price ?? v.basePrice ?? 0);
-    const perKm = Number(v.price_per_km ?? 0);
-    if (base || perKm) return Number((base + j.distanceKm * perKm).toFixed(2));
-    // last-resort tiered fallback
-    const threshold = Number(v.short_dist_threshold ?? 30);
-    const shortMin = Number(v.short_dist_min ?? 0);
-    const shortMult = Number(v.short_dist_mult ?? 0);
-    const longRate = Number(v.long_dist_rate ?? 0);
-    return Number((j.distanceKm <= threshold
-      ? Math.max(shortMin, j.distanceKm * shortMult)
-      : j.distanceKm * longRate).toFixed(2));
-  }
-
-  toggleEquip(j: Job, a: string): void {
-    const i = j.equipment.indexOf(a);
-    if (i >= 0) j.equipment.splice(i, 1); else j.equipment.push(a);
-  }
-
-  // ---------- place ----------
-  async placeJob(j: Job): Promise<boolean> {
-    j.error = undefined;
-    await this.locateMissing(j);
-    this.recalcDistance(j);
-    if (!this.jobReady(j)) {
-      j.error = j.stops.some(s => this.stopPhoneMissing(s))
-        ? 'Chaque arrêt doit avoir au moins un numéro de téléphone.'
-        : 'Add a pickup and at least one stop that resolves to a place, plus a vehicle.';
-      j.status = 'error';
-      return false;
-    }
-    const uid = this.auth.currentUser?.uid;
-    if (!uid) { this.router.navigateByUrl('/sign-in'); return false; }
-
-    j.status = 'placing';
-    try {
-      await this.computePrice(j);
-
-      const stopIds: string[] = [];
-      for (const s of j.stops) {
-        const ref = await addDoc(collection(this.firestore, 'stops'), {
-          destination: { latitude: Number(s.lat), longitude: Number(s.lng) },
-          destinationName: s.address.trim(),
-          name: s.name.trim() ? s.name.trim() : null,
-          receiverPhone: s.phone.trim() ? s.phone.trim() : null,
-          receiverPhone2: s.phone2.trim() ? s.phone2.trim() : null,
-          description: s.description.trim() ? s.description.trim() : null,
-          parcelPrice: (s.parcelPrice != null && !isNaN(Number(s.parcelPrice))) ? Number(s.parcelPrice) : 0,
-          expeditorId: s.expeditorId.trim() ? s.expeditorId.trim() : null,
-          expeditorPayout: 'unpaid' as ExpeditorPayout,
-          definedBy: uid,            // professional user who created this stop
-          createdBy: uid,
-          clientId: uid,
-          state: 'pending' as StopState,
-          isDelivered: false   // legacy mirror
-        });
-        stopIds.push(ref.id);
-      }
-
-      const orderRef = doc(collection(this.firestore, 'orders'));
-      const orderId = orderRef.id;
-      const scheduleAtVal = j.scheduleAt?.trim()
-        ? Timestamp.fromDate(new Date(j.scheduleAt)) : Timestamp.now();
-
-      await setDoc(orderRef, {
-        clientId: uid,
-        userID: uid,
-        price: Number(j.computedPrice) || 0,
-        distance: Number(j.distanceKm) || 0,
-        namePickUp: j.pickupAddress.trim(),
-        id: orderId,
-        pickUpLocation: { coordinates: [Number(j.pickupLng), Number(j.pickupLat)], type: 'Point' },
-        stops: stopIds,
-        timestamp: serverTimestamp(),
-        vehicleType: j.vehicleKey,
-        isAccepted: false,
-        isAcepted: false,
-        scheduleAt: scheduleAtVal,
-        category: 'eco',
-        optionalAssets: [...j.equipment],
-        budget: (j.budget != null && !isNaN(Number(j.budget))) ? Number(j.budget) : 0,
-        notes: j.notes.trim(),
-        currencyCode: j.currency || 'TND',
-        // A direct-assigned job is never biddable and always goes straight to
-        // one driver — chosenDriver below is what actually routes it there,
-        // this just keeps the marketplace/bidding UI from treating it as open.
-        isBiddingMode: j.assignedDriverId ? false : j.priceMode === 'bidding',
-        isAdministrative: true,   // created from the web portal -> driver in-app calling disabled
-        ...(j.assignedDriverId ? { chosenDriver: j.assignedDriverId } : {}),
-      });
-
-      // Direct assignment: push straight into that driver's inbox, bypassing
-      // the open marketplace/bidding entirely — only this driver ever sees it.
-      if (j.assignedDriverId) {
-        await addDoc(collection(this.firestore, 'users', j.assignedDriverId, 'assigned_jobs'), {
-          orderId,
-          category: 'eco',
-          status: 'pending',
-          assignedAt: serverTimestamp(),
-        }).catch(err => console.warn('assigned_jobs write failed:', err));
-      }
-
-      j.placedOrderId = orderId;
-      j.status = 'placed';
-      this.lifetimePlaced++;
-      try { localStorage.setItem(this.LS_PLACED_TOTAL, String(this.lifetimePlaced)); } catch { /* ignore */ }
-      // if nothing is left to work on, drop the saved draft
-      if (this.jobs.every(x => x.status === 'placed')) this.clearDraft();
-      else this.persistNow();
-      toastSuccess(`${j.title} publiée`);
-      return true;
-    } catch (err: any) {
-      console.error('placeJob', err);
-      j.error = err?.message || 'Failed to place this job.';
-      j.status = 'error';
-      return false;
-    }
-  }
-
-  async dispatchAll(): Promise<void> {
-    if (this.dispatchingAll) return;
-    this.dispatchingAll = true;
-    let ok = 0, fail = 0;
-    for (const j of this.jobs) {
-      if (j.status === 'placed' || !this.jobReady(j)) continue;
-      (await this.placeJob(j)) ? ok++ : fail++;
-    }
-    this.dispatchingAll = false;
-    if (ok) toastSuccess(`${ok} job(s) placed${fail ? `, ${fail} failed` : ''}`);
-    else if (fail) toastError(`${fail} job(s) failed`);
-    else toastError('No ready jobs to place');
-  }
-
-  async resetJob(j: Job): Promise<void> {
-    const ok = await confirmAction({
-      title: 'Nouvelle commande dans ce créneau ?',
-      text: 'La commande placée reste active — vous repartez d’une feuille blanche ici.',
-      confirmText: 'Recommencer',
-    });
-    if (!ok) return;
-    const idx = this.jobs.findIndex(x => x.id === j.id);
-    const fresh = this.newJob(idx + 1);
-    fresh.id = j.id;
-    this.jobs[idx] = fresh;
-  }
 }

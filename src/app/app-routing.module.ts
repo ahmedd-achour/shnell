@@ -13,19 +13,19 @@ import { SidebarComponent } from './components/sidebar/sidebar.component';
 import { FleetIntelligenceDashboardComponent } from './components/fleet-intelligence/fleet-intelligence.component';
 import { DriverDetailsComponent } from './components/fleet-intelligence/driver-details/driver-details.component';
 import { ProfileComponent } from './components/profile/profile.component';
-import { PartnerdashComponent } from './components/partnerdash/partnerdash.component';
+// import { PartnerdashComponent } from './components/partnerdash/partnerdash.component';   // PARTNERS HIDDEN
 import { RetourspaymentsComponent } from './components/retourspayments/retourspayments.component';
 import { SignInComponent } from './components/auth/sign-in/sign-in.component';
-import { SignUpComponent } from './components/auth/sign-up/sign-up.component';
+// import { SignUpComponent } from './components/auth/sign-up/sign-up.component';   // PARTNERS HIDDEN
 import { PublicLayoutComponent } from './public-layout/public-layout.component';
 import { AdminDriverManagementComponent } from './admin-driver-management/admin-driver-management.component';
 import { AdminCompanyManagementComponent } from './admin-company-management/admin-company-management.component';
-import { AdminGuard, AuthedGuard, ApprovedCompanyGuard } from './roleguard';
+import { AdminGuard, AuthedGuard } from './roleguard';   // + ApprovedCompanyGuard when partners return
 import { ExpiredOrdersComponent } from './expired-orders/expired-orders.component';
 import { UpdateStopLocationComponent } from './update-stop-location/update-stop-location.component';
 import { ShnellDashboardComponent } from './shnell-dashboard/shnell-dashboard.component';
 import { UserDashboardComponent } from './user-dashboard/user-dashboard.component';
-import { PendingApprovalComponent } from './components/pending-approval/pending-approval.component';
+// import { PendingApprovalComponent } from './components/pending-approval/pending-approval.component';   // PARTNERS HIDDEN
 
 const routes: Routes = [
   // Default route
@@ -45,8 +45,15 @@ const routes: Routes = [
   // CIN + company-paper verification docs submitted at sign-up. Previously
   // this route lived inside the admin-only sidebar group below, which meant
   // no professional account (only 'admin') could ever actually reach it.
-  { path: 'stops-management', component: PartnerdashComponent, canActivate: [ApprovedCompanyGuard] },
-  { path: 'pending-approval', component: PendingApprovalComponent, canActivate: [AuthedGuard] },
+  // PARTNERS HIDDEN (custom partnerships for now) — restore by uncommenting
+  // these two routes, the sign-up route below and the "Espace pro" links
+  // (header, home, footer).
+  // { path: 'stops-management', component: PartnerdashComponent, canActivate: [ApprovedCompanyGuard] },
+  // { path: 'pending-approval', component: PendingApprovalComponent, canActivate: [AuthedGuard] },
+  // Old links land on the home page meanwhile (remove these three when restoring).
+  { path: 'stops-management', redirectTo: '', pathMatch: 'full' },
+  { path: 'pending-approval', redirectTo: '', pathMatch: 'full' },
+  { path: 'sign-up', redirectTo: '', pathMatch: 'full' },
 
 
 
@@ -75,7 +82,8 @@ const routes: Routes = [
 
 
   // Auth pages
-    { path: 'sign-up', component: SignUpComponent },
+    // PARTNERS HIDDEN: partner self sign-up is off for now.
+    // { path: 'sign-up', component: SignUpComponent },
 
 
 

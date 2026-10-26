@@ -161,7 +161,7 @@ export class AdminHubService {
 
   /* ------------------------------ audited server actions ------------------------------ */
 
-  updateAccount = this.call<{ userId: string; isBan?: boolean; accType?: string; isVerified?: boolean; note?: string },
+  updateAccount = this.call<{ userId: string; isBan?: boolean; accType?: string; isVerified?: boolean; business?: boolean; note?: string },
     { success: boolean; changed: string[] }>('adminUpdateAccount');
 
   reviewVehicle = this.call<{ vehicleId: string; approve?: boolean; type?: string; remove?: boolean }>('adminReviewVehicle');
@@ -176,4 +176,14 @@ export class AdminHubService {
   resetPassword = this.call<{ email: string; newPassword: string }>('updateUserPasswordAdmin');
 
   broadcast = this.call<{ title: string; body: string; userIds?: string[]; topic?: string; category?: string }>('adminBroadcast');
+
+  /** Admin assistant (Gemini over live data). Several tool rounds: allow 3 min. */
+  async askAssistant(question: string, history: AssistantTurn[]): Promise<AssistantAnswer> {
+    const fn = httpsCallable<{ question: string; history: AssistantTurn[] }, AssistantAnswer>(this.fns, 'adminAssistant', { timeout: 180000 });
+    return (await fn({ question, history })).data;
+  }
 }
+
+export interface AssistantTurn { role: 'user' | 'model'; text: string; }
+export interface AssistantStep { tool: string; args: any; summary: string; ms: number; }
+export interface AssistantAnswer { answer: string; steps: AssistantStep[]; model: string | null; tokens: number; }

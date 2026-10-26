@@ -74,6 +74,7 @@ export class SidebarComponent implements OnInit {
         } else if (this.user.role === 'admin') {
           this.navItems = [
             { group: 'Command', label: 'Overview & Analytics', path: 'home-admin', queryParams: { tab: 'overview' }, icon: 'bi-grid-1x2-fill' },
+            { group: 'Command', label: 'AI Assistant', path: 'home-admin', queryParams: { tab: 'assistant' }, icon: 'bi-stars' },
             { group: 'Command', label: 'Alerts', path: 'home-admin', queryParams: { tab: 'alerts' }, icon: 'bi-bell-fill', badge: 'alerts' },
             { group: 'Command', label: 'Realtime Map', path: 'home-admin', queryParams: { tab: 'live-map' }, icon: 'bi-geo-alt-fill' },
 

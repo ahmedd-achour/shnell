@@ -23,13 +23,14 @@ import { AttentionStripComponent } from './components/attention-strip/attention-
 import { SettingsTabComponent } from './components/settings-tab/settings-tab.component';
 import { DispatchOrderTabComponent } from './components/dispatch-order-tab/dispatch-order-tab.component';
 import { DispatchCenterTabComponent } from './components/dispatch-center-tab/dispatch-center-tab.component';
+import { AssistantTabComponent } from './components/assistant-tab/assistant-tab.component';
 
 import { VerificationsTabComponent } from './components/verifications-tab/verifications-tab.component';
 
-export type DashboardTab = 'overview' | 'users' | 'vehicles' | 'verifications' | 'deals' | 'live-map' | 'account' | 'settings' | 'notifications' | 'dispatch-order' | 'dispatch-center' | 'finance' | 'activity' | 'alerts';
+export type DashboardTab = 'overview' | 'users' | 'vehicles' | 'verifications' | 'deals' | 'live-map' | 'account' | 'settings' | 'notifications' | 'dispatch-order' | 'dispatch-center' | 'finance' | 'activity' | 'alerts' | 'assistant';
 
 const TABS: DashboardTab[] = ['overview', 'users', 'vehicles', 'verifications', 'deals', 'live-map', 'account', 'settings',
-  'notifications', 'dispatch-order', 'dispatch-center', 'finance', 'activity', 'alerts'];
+  'notifications', 'dispatch-order', 'dispatch-center', 'finance', 'activity', 'alerts', 'assistant'];
 
 @Component({
   selector: 'app-shnell-dashboard',
@@ -51,7 +52,8 @@ const TABS: DashboardTab[] = ['overview', 'users', 'vehicles', 'verifications', 
     AttentionStripComponent,
     SettingsTabComponent,
     DispatchOrderTabComponent,
-    DispatchCenterTabComponent
+    DispatchCenterTabComponent,
+    AssistantTabComponent
   ],
   templateUrl: './shnell-dashboard.component.html',
   styleUrls: ['./shnell-dashboard.component.css']
@@ -100,6 +102,7 @@ export class ShnellDashboardComponent implements OnInit, OnDestroy {
     'notifications':  { label: 'FCM Notifications',     icon: 'bi-bell-fill' },
     'dispatch-order': { label: 'Assign Order',          icon: 'bi-send-plus-fill' },
     'dispatch-center': { label: 'Dispatch Center',      icon: 'bi-signpost-split-fill' },
+    'assistant':      { label: 'AI Assistant',          icon: 'bi-stars' },
   };
 
   get activeTabLabel(): string {

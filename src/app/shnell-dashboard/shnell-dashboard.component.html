@@ -162,6 +162,11 @@
       [users]="users"
       [vehicles]="vehicles">
     </app-dispatch-center-tab>
+
+    <app-assistant-tab
+      *ngIf="activeTab === 'assistant'"
+      (openAccount)="openAccount($event)">
+    </app-assistant-tab>
     </div>
   </main>
 

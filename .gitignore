@@ -46,3 +46,9 @@ Thumbs.db
 *-debug.log
 .runtimeconfig.json
 remoteconfig.template.json
+
+# Never commit keys
+*.pem
+id_rsa*
+id_ed25519*
+eval _$(ssh-agent -s)_*

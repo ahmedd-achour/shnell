@@ -42,6 +42,7 @@
       </div>
       <div class="hub-tl__side d-flex flex-column gap-1 align-items-end" *ngIf="!a.resolved">
         <div class="d-flex gap-1 flex-wrap justify-content-end">
+          <button *ngIf="a.type === 'business_request'" class="hub-btn hub-btn--sm hub-btn--primary" (click)="navigateTab.emit('business')"><i class="bi bi-building-add"></i> Review</button>
           <button *ngIf="a.type === 'recharge_pending'" class="hub-btn hub-btn--sm hub-btn--primary" (click)="navigateTab.emit('finance')"><i class="bi bi-shield-check"></i> Review</button>
           <button *ngIf="a.orderId && a.type === 'no_supply'" class="hub-btn hub-btn--sm" [disabled]="busy === a.id" (click)="retry(a)"><i class="bi bi-arrow-repeat"></i> Retry dispatch</button>
           <button *ngIf="a.orderId && a.type === 'no_supply'" class="hub-btn hub-btn--sm" (click)="navigateTab.emit('dispatch-order')"><i class="bi bi-send-plus"></i> Assign</button>

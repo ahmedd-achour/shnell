@@ -14,10 +14,11 @@ import { getDoc,
 } from '@angular/fire/firestore';
 
 import { ActivatedRoute, Router, NavigationEnd } from '@angular/router';
-import { Observable, of, Subject } from 'rxjs';
+import { Observable, from, of, Subject } from 'rxjs';
 import { confirmAction, notify, toastSuccess, toastError } from '../shared/swal';
 import { DashboardDataService } from '../shnell-dashboard/services/dashboard-data.service';
 import { withLicenseUrls } from '../../Models/driver_verification';
+import { Vehicle } from '../../models';
 import { walletBalances, rechargeCurrencies, rechargeConfirmHtml, rechargeResultText, validReceiptRef } from '../shnell-dashboard/services/wallet';
 import { 
   catchError,
@@ -35,7 +36,10 @@ import {
 export class AdminDriverManagementComponent implements OnInit, OnDestroy {
 
   driver$!: Observable<any>;
-  vehicles$!: Observable<any[]>;
+  /** The driver's trucks, each with its carte grise (vehicles/{id}/private/papers). */
+  vehicles$!: Observable<(Vehicle & { id: string; carteGriseUrl: string })[]>;
+  /** The driver's CIN (drivers/{uid}), shown once — it belongs to the person, not a truck. */
+  cinUrl$!: Observable<string>;
   ratings$!: Observable<any[]>;
   bids$!: Observable<any[]>;
   deals$!: Observable<any[]>;
@@ -120,12 +124,25 @@ export class AdminDriverManagementComponent implements OnInit, OnDestroy {
         const vQuery = query(vCol, where('idDriver', '==', driver.id));
 
         return collectionData(vQuery, { idField: 'id' }).pipe(
+          switchMap(list => from(Promise.all((list as (Vehicle & { id: string })[]).map(async v => {
+            const papers = await getDoc(doc(this.firestore, `vehicles/${v.id}/private/papers`)).catch(() => null);
+            return { ...v, carteGriseUrl: (papers?.exists() && papers.data()['carteGriseFrontUrl']) || '' };
+          })))),
           catchError(err => {
             console.error('Vehicle fetch error:', err);
             return of([]);
           })
         );
       }),
+      takeUntil(this.destroy$)
+    );
+
+    this.cinUrl$ = this.driver$.pipe(
+      switchMap(driver => driver?.id
+        ? docData(doc(this.firestore, 'drivers', driver.id)).pipe(
+            map((d: any) => String(d?.cinFrontUrl || '')),
+            catchError(() => of('')))
+        : of('')),
       takeUntil(this.destroy$)
     );
 
@@ -203,8 +220,8 @@ export class AdminDriverManagementComponent implements OnInit, OnDestroy {
     this.isUpdating = true;
     try {
       const userRef = doc(this.firestore, `users/${driver.id}`);
-      const newStatus = !driver.isBan;
-      await updateDoc(userRef, { isBan: newStatus });
+      const newStatus = !driver.isBanned;
+      await updateDoc(userRef, { isBanned: newStatus });
       toastSuccess(`Chauffeur ${newStatus ? 'banni' : 'débanni'} avec succès`);
     } catch (err) {
       console.error('Ban status update failed:', err);

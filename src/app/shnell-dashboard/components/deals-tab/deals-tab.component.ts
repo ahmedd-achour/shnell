@@ -71,9 +71,9 @@ export class DealsTabComponent implements OnInit {
 
     this.assigningDriverId = driverId;
     try {
-      await this.dashboardDataService.assignDriverToOrder(order.id, driverId, order.userId || order.userID);
+      await this.dashboardDataService.assignDriverToOrder(order.id, driverId, order.clientId);
       toastSuccess('Chauffeur assigné');
-      order.isAcepted = true;
+      order.isAccepted = true;
     } catch(e) {
       console.error(e);
       toastError('Échec de l\'assignation du chauffeur');
@@ -93,7 +93,7 @@ export class DealsTabComponent implements OnInit {
 
       const matchesStatus =
         this.statusFilter === 'all' ||
-        (this.statusFilter === 'accepted' && (dealStatus === 'accepted' || dealStatus === 'acepted')) ||
+        (this.statusFilter === 'accepted' && dealStatus === 'accepted') ||
         (this.statusFilter === 'almost' && dealStatus === 'almost') ||
         (this.statusFilter === 'terminated' && dealStatus === 'terminated') ||
         (this.statusFilter === 'pending' && (!dealStatus || dealStatus === 'pending'));
@@ -102,7 +102,7 @@ export class DealsTabComponent implements OnInit {
         o.id?.toLowerCase().includes(this.searchQuery.toLowerCase()) ||
         o.namePickUp?.toLowerCase().includes(this.searchQuery.toLowerCase()) ||
         o.vehicleType?.toLowerCase().includes(this.searchQuery.toLowerCase()) ||
-        (o.userId || o.userID)?.toLowerCase().includes(this.searchQuery.toLowerCase());
+        o.clientId?.toLowerCase().includes(this.searchQuery.toLowerCase());
 
       return matchesStatus && matchesQuery;
     });
@@ -129,13 +129,13 @@ export class DealsTabComponent implements OnInit {
 
   getNormalizedStatus(dealStatus?: string): { label: string; badgeClass: string } {
     const st = (dealStatus || '').toLowerCase().trim();
-    if (st === 'accepted' || st === 'acepted') {
+    if (st === 'accepted') {
       return { label: 'Accepted (Active)', badgeClass: 'bg-primary text-white' };
     } else if (st === 'almost') {
       return { label: 'In-Transit (On the way)', badgeClass: 'bg-warning text-dark' };
     } else if (st === 'terminated') {
       return { label: 'Completed (Terminated)', badgeClass: 'bg-success text-white' };
-    } else if (st === 'canceled' || st === 'cancelled') {
+    } else if (st === 'canceled') {
       return { label: 'Canceled', badgeClass: 'bg-danger text-white' };
     }
     return { label: 'Pending Matching', badgeClass: 'bg-secondary text-white' };
@@ -173,8 +173,8 @@ export class DealsTabComponent implements OnInit {
   cancelLine(deal: Deals): string | null {
     const d = deal as any;
     const st = String(d.status || '').toLowerCase();
-    if (st !== 'canceled' && st !== 'cancelled') return null;
-    const by = d.canceledBy || d.cancelledBy;
+    if (st !== 'canceled') return null;
+    const by = d.canceledBy;
     const who = by === d.idUser ? 'customer' : by === 'admin' || by === 'admin_reassign' ? 'admin' : 'driver';
     const reason = d.cancelReason ? DealsTabComponent.CANCEL_REASONS[d.cancelReason] || d.cancelReason : '';
     return `By ${who}${reason ? ': ' + reason : ''}${d.cancelNote ? ' (“' + d.cancelNote + '”)' : ''}`;
@@ -235,7 +235,7 @@ export class DealsTabComponent implements OnInit {
     this.processingDeleteId = order.id;
     try {
       await this.dashboardDataService.softDeleteOrder(order.id);
-      order.isAcepted = true;
+      order.isAccepted = true;
       toastSuccess('Commande archivée');
     } catch (err) {
       console.error('Failed to soft delete order:', err);

@@ -31,6 +31,7 @@ import { SidebarComponent } from './components/sidebar/sidebar.component';
 import { ProfileComponent } from './components/profile/profile.component';
 import { RetourspaymentsComponent } from './components/retourspayments/retourspayments.component';
 import { SignInComponent } from './components/auth/sign-in/sign-in.component';
+import { BizVideoComponent } from './shared/biz-video.component';
 import { SignUpComponent } from './components/auth/sign-up/sign-up.component';
 import { PublicLayoutComponent } from './public-layout/public-layout.component';
 import { getDatabase, provideDatabase } from '@angular/fire/database';
@@ -79,6 +80,7 @@ export function playerFactory() {
     UpdateStopLocationComponent,
   ],
   imports: [
+    BizVideoComponent,
     BrowserModule,
     AppRoutingModule,
     MatButtonModule,

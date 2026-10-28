@@ -143,7 +143,7 @@ export class AccountTabComponent implements OnChanges, OnDestroy {
     return ({ driver: 'Driver', user: 'Customer', company: 'Partner', admin: 'Admin' } as any)[this.role] || this.role;
   }
   get isDriver(): boolean { return this.role === 'driver'; }
-  get banned(): boolean { return this.user?.isBan === true || this.user?.isBanned === true; }
+  get banned(): boolean { return this.user?.isBanned === true; }
   get verified(): boolean { return this.driverFile?.isVerified === true; }
   get business(): boolean { return this.user?.business === true; }
   get initial(): string { return String(this.user?.name || '?').trim().charAt(0).toUpperCase(); }
@@ -242,14 +242,14 @@ export class AccountTabComponent implements OnChanges, OnDestroy {
     const st = String(s || '').toLowerCase();
     if (st === 'terminated') return { label: 'Completed', tone: 'success' };
     if (st === 'almost') return { label: 'On the way', tone: 'warning' };
-    if (st === 'accepted' || st === 'acepted') return { label: 'Accepted', tone: 'info' };
+    if (st === 'accepted') return { label: 'Accepted', tone: 'info' };
     if (st.startsWith('cancel')) return { label: 'Cancelled', tone: 'danger' };
     return { label: s || 'Pending', tone: 'muted' };
   }
 
   orderStatus(o: any): { label: string; tone: string } {
-    if (o.status === 'cancelled' || o.isCancelled) return { label: 'Cancelled', tone: 'danger' };
-    if (o.isAcepted || o.isAccepted) return { label: 'Taken', tone: 'success' };
+    if (o.status === 'canceled') return { label: 'Cancelled', tone: 'danger' };
+    if (o.isAccepted) return { label: 'Taken', tone: 'success' };
     return { label: 'Open', tone: 'warning' };
   }
 
@@ -317,7 +317,7 @@ export class AccountTabComponent implements OnChanges, OnDestroy {
       danger: ban,
     });
     if (!ok) return;
-    await this.run(() => this.hub.updateAccount({ userId: this.uid!, isBan: ban }), ban ? 'Compte banni' : 'Compte débanni');
+    await this.run(() => this.hub.updateAccount({ userId: this.uid!, isBanned: ban }), ban ? 'Compte banni' : 'Compte débanni');
   }
 
   async toggleVerified(): Promise<void> {

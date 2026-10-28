@@ -13,14 +13,10 @@ export function expeditorPayoutFromDoc(data: any): ExpeditorPayout {
   return (data?.expeditorPayout ?? '').toString().trim() === 'paid' ? 'paid' : 'unpaid';
 }
 
-/** Normalise a raw Firestore stop doc into a `StopState`.
- *  Prefers the new `state` string, falls back to the legacy `isDelivered` /
- *  `isdelivered` boolean (true -> delivered, false/absent -> pending). */
+/** The `state` of a raw Firestore stop doc (absent or unknown -> 'pending'). */
 export function stopStateFromDoc(data: any): StopState {
   const raw = (data?.state ?? '').toString().trim();
-  if (STOP_STATES.includes(raw as StopState)) return raw as StopState;
-  const legacy = data?.isdelivered ?? data?.isDelivered;
-  return legacy === true ? 'delivered' : 'pending';
+  return STOP_STATES.includes(raw as StopState) ? raw as StopState : 'pending';
 }
 
 export interface DropOffData {
@@ -35,8 +31,6 @@ export interface DropOffData {
   description?: string;
   parcelPrice?: number;
   state?: StopState;
-  /** @deprecated legacy mirror — read `state` instead */
-  isdelivered?: boolean | null;
   expeditorId?: string;
   quantity?: number;
   /** UID of the professional / company user who created this stop. */
@@ -63,7 +57,7 @@ export class DropOffDataModel implements DropOffData {
     public destinationName: string,
     public name?: string,
     public phoneNumber?: string,
-    isdelivered?: boolean | null | StopState,
+    initialState?: boolean | null | StopState,
     public gov?: string,
     public expeditorId?: string,
     public price?: number,
@@ -79,13 +73,13 @@ export class DropOffDataModel implements DropOffData {
     public failureReason?: string,
     public proofOfDelivery?: { photoUrl?: string; signatureUrl?: string; deliveredAt?: any; note?: string }
   ) {
-    // Accept an explicit `state`, or an old-style `isdelivered` (bool | 'delivered' string).
+    // An explicit `state`, else `initialState` (a StopState, or true = delivered).
     if (state && STOP_STATES.includes(state)) {
       this.state = state;
-    } else if (typeof isdelivered === 'string' && STOP_STATES.includes(isdelivered as StopState)) {
-      this.state = isdelivered as StopState;
+    } else if (typeof initialState === 'string' && STOP_STATES.includes(initialState as StopState)) {
+      this.state = initialState as StopState;
     } else {
-      this.state = isdelivered === true ? 'delivered' : 'pending';
+      this.state = initialState === true ? 'delivered' : 'pending';
     }
 
     // FIXED: Validate LatLng on construction
@@ -93,11 +87,6 @@ export class DropOffDataModel implements DropOffData {
       console.warn('Invalid LatLng provided; defaulting to Tunis center (36.8065, 10.1815)');
       this.destination = new LatLng(36.8065, 10.1815); // Fallback to Tunis
     }
-  }
-
-  /** @deprecated compat accessor — new code should read `state` */
-  get isdelivered(): boolean {
-    return this.state === 'delivered';
   }
 
   private _isValidLatLng(latlng: LatLng | any): boolean {
@@ -119,8 +108,6 @@ export class DropOffDataModel implements DropOffData {
       },
       destinationName: this.destinationName,
       state: this.state,
-      // legacy mirror so older driver / client builds keep working
-      isDelivered: this.state === 'delivered',
       description: this.description,
       parcelPrice: this.parcelPrice,
       gov: this.gov,

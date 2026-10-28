@@ -1,0 +1,79 @@
+<div class="bz">
+  <div class="bz-toolbar">
+    <div class="bz-toolbar__l">
+      <h2>Historique &amp; relevés</h2>
+      <span class="bz-count">{{ summary.orders }} commande(s)</span>
+    </div>
+    <div class="bz-toolbar__r">
+      <button class="bz-btn" (click)="exportXlsx()" [disabled]="!shown.length"><i class="bi bi-file-earmark-excel"></i> Export Excel</button>
+      <button class="bz-btn bz-btn--primary" (click)="printStatement()" [disabled]="!summary.delivered"><i class="bi bi-printer"></i> Relevé PDF</button>
+    </div>
+  </div>
+
+  <div class="bz-card" style="margin-bottom: 14px;">
+    <div style="display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end;">
+      <label class="bz-field">Du <input class="bz-input" type="date" [(ngModel)]="from" (change)="load()"></label>
+      <label class="bz-field">Au <input class="bz-input" type="date" [(ngModel)]="to" (change)="load()"></label>
+      <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+        <button class="bz-btn bz-btn--sm" (click)="preset('month')">Ce mois</button>
+        <button class="bz-btn bz-btn--sm" (click)="preset('last')">Mois dernier</button>
+        <button class="bz-btn bz-btn--sm" (click)="preset('30')">30 jours</button>
+        <button class="bz-btn bz-btn--sm" (click)="preset('year')">Cette année</button>
+      </div>
+      <span class="bz-flex"></span>
+      <label class="bz-field">État
+        <select class="bz-input" [(ngModel)]="stateFilter">
+          <option value="">Tous</option>
+          <option *ngFor="let s of states" [value]="s">{{ stateLabel[s].label }}</option>
+        </select>
+      </label>
+      <label class="bz-field">Source
+        <select class="bz-input" [(ngModel)]="sourceFilter">
+          <option value="">Toutes</option>
+          <option>Tableau de bord</option>
+          <option>API</option>
+          <option>Application</option>
+        </select>
+      </label>
+      <label class="bz-field">Recherche <input class="bz-input bz-search" [(ngModel)]="search" placeholder="Commande, adresse, chauffeur…"></label>
+    </div>
+  </div>
+
+  <div class="bz-kpis">
+    <div class="bz-kpi"><span class="bz-kpi__n">{{ summary.delivered }}</span><span class="bz-kpi__l">Livrées</span></div>
+    <div class="bz-kpi"><span class="bz-kpi__n">{{ summary.spent | number:'1.0-2' }}</span><span class="bz-kpi__l">Dépensé ({{ summary.currency }})</span></div>
+    <div class="bz-kpi"><span class="bz-kpi__n">{{ summary.avg | number:'1.0-2' }}</span><span class="bz-kpi__l">Moyenne / livraison</span></div>
+    <div class="bz-kpi"><span class="bz-kpi__n">{{ summary.stops }}</span><span class="bz-kpi__l">Arrêts livrés</span></div>
+    <div class="bz-kpi"><span class="bz-kpi__n">{{ summary.open }}</span><span class="bz-kpi__l">En cours</span></div>
+    <div class="bz-kpi"><span class="bz-kpi__n">{{ summary.canceled }}</span><span class="bz-kpi__l">Annulées / expirées</span></div>
+  </div>
+
+  <div class="bz-card" style="margin-bottom: 14px;" *ngIf="byMonth.length > 1">
+    <div class="bz-card__h"><i class="bi bi-calendar3"></i> Par mois (livrées)</div>
+    <table class="bz-table">
+      <thead><tr><th>Mois</th><th>Livraisons</th><th>Montant</th></tr></thead>
+      <tbody><tr *ngFor="let m of byMonth"><td>{{ m.month }}</td><td>{{ m.orders }}</td><td><b>{{ m.spent | number:'1.0-2' }}</b> {{ summary.currency }}</td></tr></tbody>
+    </table>
+  </div>
+
+  <div class="bz-card bz-card--flush">
+    <div class="bz-empty" *ngIf="loading"><span class="spinner-border spinner-border-sm"></span> Chargement…</div>
+    <div class="bz-empty" *ngIf="!loading && !shown.length">Aucune commande sur cette période.</div>
+    <div class="bz-table-wrap" *ngIf="!loading && shown.length">
+      <table class="bz-table">
+        <thead><tr><th>Date</th><th>Trajet</th><th>Véhicules</th><th>Source</th><th>État</th><th>Chauffeur</th><th>Prix</th></tr></thead>
+        <tbody>
+          <tr *ngFor="let r of shown; trackBy: trackId">
+            <td class="bz-nowrap">{{ r.atMs | date:'dd/MM/yy HH:mm' }}<div class="bz-mono">{{ r.id | slice:0:14 }}</div></td>
+            <td><div class="bz-trunc" [title]="r.pickup">{{ r.pickup || '—' }}</div><div class="bz-dim">→ {{ r.stops }} arrêt(s)</div></td>
+            <td><span class="bz-dim">{{ r.types }}</span></td>
+            <td><span class="bz-tag tone-muted">{{ r.source }}</span></td>
+            <td><span class="bz-tag" [ngClass]="stateLabel[r.state].tone">{{ stateLabel[r.state].label }}</span></td>
+            <td>{{ r.driver || '—' }}<span class="bz-tag tone-info bz-small" *ngIf="r.ownFleet">Ma flotte</span></td>
+            <td class="bz-nowrap"><b>{{ r.price | number:'1.0-2' }}</b> {{ r.currency }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>

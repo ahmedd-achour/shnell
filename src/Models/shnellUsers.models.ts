@@ -9,7 +9,6 @@ export class ShnellUser {
   uid?: string;
   id?: string;
   accType?: string;
-  isBan?: boolean;
   isBanned?: boolean;
   isPhoneVerified?: boolean;
 
@@ -30,8 +29,7 @@ export class ShnellUser {
     this.uid = data.uid || data.id;
     this.id = data.id || data.uid;
     this.accType = data.accType || 'standard';
-    this.isBan = data.isBan ?? data.isBanned ?? false;
-    this.isBanned = data.isBanned ?? data.isBan ?? false;
+    this.isBanned = data.isBanned ?? false;
     this.isPhoneVerified = data.isPhoneVerified ?? false;
   }
 
@@ -49,7 +47,6 @@ export class ShnellUser {
       darkMode: this.darkMode,
       platform: this.platform,
       accType: this.accType,
-      isBan: this.isBan,
       isBanned: this.isBanned,
       isPhoneVerified: this.isPhoneVerified,
       language: 'ar'

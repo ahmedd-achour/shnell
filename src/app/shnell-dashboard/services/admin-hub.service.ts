@@ -40,17 +40,10 @@ export class AdminHubService {
     return this.safe(collectionData(q, { idField: 'id' }).pipe(map(l => l.map(normalizeLedger))), []);
   }
 
-  /** Every ledger line of one account, whatever owner field the line uses. */
+  /** Every ledger line of one account (newest first). */
   userLedger$(uid: string): Observable<LedgerRow[]> {
-    const one = (field: string) => this.safe(collectionData(
-      query(collection(this.fs, 'commissions'), where(field, '==', uid), orderBy('time', 'desc'), limit(300)),
-      { idField: 'id' }), [] as any[]).pipe(startWith([] as any[]));
-    return combineLatest(['uid', 'DriverId', 'driverId', 'userId'].map(one)).pipe(
-      map(lists => {
-        const byId = new Map<string, any>();
-        lists.flat().forEach(d => byId.set(d.id, d));
-        return [...byId.values()].map(normalizeLedger).sort((a, b) => b.time - a.time);
-      }));
+    const q = query(collection(this.fs, 'commissions'), where('uid', '==', uid), orderBy('time', 'desc'), limit(300));
+    return this.safe(collectionData(q, { idField: 'id' }).pipe(map(l => l.map(normalizeLedger))), []);
   }
 
   /* ------------------------------ audit ------------------------------ */
@@ -143,7 +136,7 @@ export class AdminHubService {
 
   /** Orders the account placed (customer / partner side). */
   ordersOf$(uid: string): Observable<any[]> {
-    return this.safe(collectionData(query(collection(this.fs, 'orders'), where('userID', '==', uid), limit(300)), { idField: 'id' }), []);
+    return this.safe(collectionData(query(collection(this.fs, 'orders'), where('clientId', '==', uid), limit(300)), { idField: 'id' }), []);
   }
 
   /** Deals the account drove (driver side) and deals on its orders (customer side). */
@@ -161,7 +154,7 @@ export class AdminHubService {
 
   /* ------------------------------ audited server actions ------------------------------ */
 
-  updateAccount = this.call<{ userId: string; isBan?: boolean; accType?: string; isVerified?: boolean; business?: boolean; note?: string },
+  updateAccount = this.call<{ userId: string; isBanned?: boolean; accType?: string; isVerified?: boolean; business?: boolean; note?: string },
     { success: boolean; changed: string[] }>('adminUpdateAccount');
 
   reviewVehicle = this.call<{ vehicleId: string; approve?: boolean; type?: string; remove?: boolean }>('adminReviewVehicle');

@@ -34,7 +34,7 @@
             <tr [class.bz-row--open]="expanded === t.orderId">
               <td class="bz-nowrap">
                 {{ t.createdAtMs | date:'dd/MM HH:mm' }}
-                <div class="bz-mono">{{ t.orderId | slice:0:10 }}</div>
+                <div class="bz-mono">{{ t.orderId | slice:0:10 }}<span class="bz-tag tone-muted bz-small" *ngIf="t.viaApi">API</span></div>
               </td>
               <td>
                 <div class="bz-trunc" [title]="t.pickup">{{ t.pickup || '—' }}</div>
@@ -51,7 +51,14 @@
               </td>
               <td>
                 <span *ngIf="t.driverId">{{ names[t.driverId] }}<span class="bz-tag tone-info bz-small" *ngIf="t.ownFleet">Ma flotte</span></span>
-                <span *ngIf="!t.driverId" class="bz-dim">—</span>
+                <button class="bz-btn bz-btn--sm" *ngIf="t.driverId && ['assigned', 'in_progress'].includes(t.state)" (click)="callDriver(t)"
+                  [disabled]="busy.has(t.orderId)" title="Appeler le chauffeur (téléphone ou WhatsApp)" style="margin-left:6px">
+                  <i class="bi bi-telephone-fill"></i> Appeler
+                </button>
+                <span *ngIf="!t.driverId && !t.fleetDeclinedBy" class="bz-dim">—</span>
+                <span *ngIf="!t.driverId && t.fleetDeclinedBy" class="bz-small" style="color:var(--sh-danger)">
+                  Refusé par {{ names[t.fleetDeclinedBy] || 'votre chauffeur' }} — relancez sur le réseau Shnell ou annulez
+                </span>
               </td>
               <td class="bz-actions">
                 <button class="bz-btn bz-btn--sm bz-btn--primary" *ngIf="t.bids.length && !t.driverId" (click)="expanded = expanded === t.orderId ? null : t.orderId">

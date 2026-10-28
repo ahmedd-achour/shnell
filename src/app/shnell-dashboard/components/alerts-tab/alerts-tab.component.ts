@@ -15,8 +15,8 @@ export const ALERT_TYPES: Record<string, { label: string; icon: string }> = {
   trip_aborted:        { label: 'Trip aborted',            icon: 'bi-exclamation-octagon' },
   recharge_pending:    { label: 'Recharge to approve',     icon: 'bi-shield-lock' },
   endpoint_down:       { label: 'Service down',            icon: 'bi-hdd-network' },
-  api_legacy_key:      { label: 'Legacy API key used',     icon: 'bi-key' },
   wallet_legacy_value: { label: 'Wallet value to check',   icon: 'bi-wallet2' },
+  business_request:    { label: 'Business access request', icon: 'bi-building-add' },
 };
 
 export function alertType(t: string) { return ALERT_TYPES[t] || { label: (t || 'alert').replace(/_/g, ' '), icon: 'bi-bell' }; }

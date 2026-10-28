@@ -25,6 +25,7 @@ import { ExpiredOrdersComponent } from './expired-orders/expired-orders.componen
 import { UpdateStopLocationComponent } from './update-stop-location/update-stop-location.component';
 import { ShnellDashboardComponent } from './shnell-dashboard/shnell-dashboard.component';
 import { UserDashboardComponent } from './user-dashboard/user-dashboard.component';
+import { DevelopersPageComponent } from './user-dashboard/business/api-docs.component';
 // import { PendingApprovalComponent } from './components/pending-approval/pending-approval.component';   // PARTNERS HIDDEN
 
 const routes: Routes = [
@@ -36,7 +37,7 @@ const routes: Routes = [
 
   { path: 'home', redirectTo: '', pathMatch: 'full' }, 
 
-  // Authenticated user dashboard (web port of the mobile client order flow).
+  // Shnell Business — the professional console (trips, live board, history, API).
   { path: 'app', component: UserDashboardComponent, canActivate: [AuthedGuard] },
 
   // Professional partner console — bulk stop dispatch, smart filters, driver
@@ -76,6 +77,7 @@ const routes: Routes = [
     { path: 'sign-in', component: SignInComponent },
     { path: 'blog', component: BlogComponent },
     { path: 'privacy-policy', component: PrivacyPolicyComponent },
+    { path: 'developers', component: DevelopersPageComponent },
   ]
 },
 

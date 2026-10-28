@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Subject, combineLatest } from 'rxjs';
-import { takeUntil } from 'rxjs/operators';
+import { auditTime, takeUntil } from 'rxjs/operators';
 import { DashboardDataService } from './services/dashboard-data.service';
 import { CrossTabSyncService, CrossTabEvent } from '../services/cross-tab-sync.service';
 import { ShnellUser, Vehicle, Orders, Deals, Commission, DriverRTDBLocation, Bid , CallLog } from './models/dashboard.models';
@@ -24,13 +24,15 @@ import { SettingsTabComponent } from './components/settings-tab/settings-tab.com
 import { DispatchOrderTabComponent } from './components/dispatch-order-tab/dispatch-order-tab.component';
 import { DispatchCenterTabComponent } from './components/dispatch-center-tab/dispatch-center-tab.component';
 import { AssistantTabComponent } from './components/assistant-tab/assistant-tab.component';
+import { ApiAccessTabComponent } from './components/api-access-tab/api-access-tab.component';
+import { BusinessRequestsTabComponent } from './components/business-requests-tab/business-requests-tab.component';
 
 import { VerificationsTabComponent } from './components/verifications-tab/verifications-tab.component';
 
-export type DashboardTab = 'overview' | 'users' | 'vehicles' | 'verifications' | 'deals' | 'live-map' | 'account' | 'settings' | 'notifications' | 'dispatch-order' | 'dispatch-center' | 'finance' | 'activity' | 'alerts' | 'assistant';
+export type DashboardTab = 'overview' | 'users' | 'vehicles' | 'verifications' | 'deals' | 'live-map' | 'account' | 'settings' | 'notifications' | 'dispatch-order' | 'dispatch-center' | 'finance' | 'activity' | 'alerts' | 'assistant' | 'api' | 'business';
 
 const TABS: DashboardTab[] = ['overview', 'users', 'vehicles', 'verifications', 'deals', 'live-map', 'account', 'settings',
-  'notifications', 'dispatch-order', 'dispatch-center', 'finance', 'activity', 'alerts', 'assistant'];
+  'notifications', 'dispatch-order', 'dispatch-center', 'finance', 'activity', 'alerts', 'assistant', 'api', 'business'];
 
 @Component({
   selector: 'app-shnell-dashboard',
@@ -53,7 +55,9 @@ const TABS: DashboardTab[] = ['overview', 'users', 'vehicles', 'verifications', 
     SettingsTabComponent,
     DispatchOrderTabComponent,
     DispatchCenterTabComponent,
-    AssistantTabComponent
+    AssistantTabComponent,
+    ApiAccessTabComponent,
+    BusinessRequestsTabComponent
   ],
   templateUrl: './shnell-dashboard.component.html',
   styleUrls: ['./shnell-dashboard.component.css']
@@ -103,6 +107,8 @@ export class ShnellDashboardComponent implements OnInit, OnDestroy {
     'dispatch-order': { label: 'Assign Order',          icon: 'bi-send-plus-fill' },
     'dispatch-center': { label: 'Dispatch Center',      icon: 'bi-signpost-split-fill' },
     'assistant':      { label: 'AI Assistant',          icon: 'bi-stars' },
+    'api':            { label: 'API Access',            icon: 'bi-key-fill' },
+    'business':       { label: 'Business Requests',     icon: 'bi-building-add' },
   };
 
   get activeTabLabel(): string {
@@ -172,7 +178,7 @@ export class ShnellDashboardComponent implements OnInit, OnDestroy {
       this.dashboardDataService.getBids(),
       this.dashboardDataService.getCallLogs()
     ])
-      .pipe(takeUntil(this.destroy$))
+      .pipe(auditTime(300), takeUntil(this.destroy$))
       .subscribe({
         next: ([users, vehicles, verifications, orders, deals, commissions, locations, bids, callLogs]) => {
           this.users = users;

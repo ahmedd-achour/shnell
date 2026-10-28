@@ -30,6 +30,7 @@ export class SidebarComponent implements OnInit {
   pendingRecharges: any[] = [];
   private allUsers: any[] = [];
   private hubSubs: Subscription[] = [];
+  private userDocSub?: Subscription;
   readonly toMillis = toMillis;
   sidebarCollapsed = false;
   unauthorizedMessage: string | null = null;
@@ -41,6 +42,7 @@ export class SidebarComponent implements OnInit {
   ngOnInit(): void {
     // Subscribe to Firebase Auth changes
     this.authSubscription = this.auth.onAuthStateChanged(firebaseUser => {
+      this.userDocSub?.unsubscribe();
       if (!firebaseUser) {
         this.user = null;
         this.navItems = []; // Clear nav items
@@ -51,7 +53,7 @@ export class SidebarComponent implements OnInit {
 
       // Fetch user document from Firestore
       const userDocRef = doc(this.firestore, `users/${firebaseUser.uid}`);
-      const docSub = docData(userDocRef).subscribe(data => {
+      this.userDocSub = docData(userDocRef).subscribe(data => {
         if (!data) {
           this.user = null;
           this.navItems = [];
@@ -87,6 +89,8 @@ export class SidebarComponent implements OnInit {
             { group: 'People & Fleet', label: 'Account 360', path: 'home-admin', queryParams: { tab: 'account' }, icon: 'bi-person-badge-fill' },
             { group: 'People & Fleet', label: 'Driver Verifications', path: 'home-admin', queryParams: { tab: 'verifications' }, icon: 'bi-person-vcard' },
             { group: 'People & Fleet', label: 'Fleet Applications', path: 'home-admin', queryParams: { tab: 'vehicles' }, icon: 'bi-truck' },
+            { group: 'People & Fleet', label: 'Business Requests', path: 'home-admin', queryParams: { tab: 'business' }, icon: 'bi-building-add' },
+            { group: 'People & Fleet', label: 'API Access', path: 'home-admin', queryParams: { tab: 'api' }, icon: 'bi-key-fill' },
 
             { group: 'Money & Audit', label: 'Finance & Ledger', path: 'home-admin', queryParams: { tab: 'finance' }, icon: 'bi-bank', badge: 'recharges' },
             { group: 'Money & Audit', label: 'Activity Log', path: 'home-admin', queryParams: { tab: 'activity' }, icon: 'bi-journal-text' },
@@ -108,8 +112,6 @@ export class SidebarComponent implements OnInit {
         }
       });
 
-      // Store doc subscription for potential cleanup (optional, as component destroy will handle)
-      // Note: Angular Fire handles unsub on destroy, but explicit is better
     });
   }
 
@@ -118,6 +120,7 @@ export class SidebarComponent implements OnInit {
     if (this.authSubscription) {
       this.authSubscription();
     }
+    this.userDocSub?.unsubscribe();
     this.hubSubs.forEach(s => s.unsubscribe());
   }
 
@@ -153,7 +156,7 @@ export class SidebarComponent implements OnInit {
       .slice(0, 7)
       .map(u => ({
         kind: 'account', label: u.name || u.uid, icon: u.role === 'driver' ? 'bi-truck' : u.role === 'company' ? 'bi-buildings' : 'bi-person',
-        sub: [u.role, u.phone || u.email, (u.isBan || u.isBanned) ? 'banned' : ''].filter(Boolean).join(' · '),
+        sub: [u.role, u.phone || u.email, (u.isBanned) ? 'banned' : ''].filter(Boolean).join(' · '),
         go: () => this.openAccount(u.uid || u.id),
       }));
     return [...accounts, ...pages];

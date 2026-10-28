@@ -931,7 +931,7 @@ async deleteSelectedStops() {
         const since = Timestamp.fromMillis(Date.now() - 24 * 60 * 60 * 1000);
         const recentOrdersQuery = query(
           collection(this.firestore, 'orders'),
-          where('userID', '==', uid),
+          where('clientId', '==', uid),
           where('timestamp', '>=', since),
         );
         const countSnap = await getCountFromServer(recentOrdersQuery);

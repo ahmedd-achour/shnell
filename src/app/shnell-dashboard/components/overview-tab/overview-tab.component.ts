@@ -1,4 +1,4 @@
-import { Component, Input, OnInit, OnDestroy, OnChanges, SimpleChanges, ViewChild, ElementRef, Output, EventEmitter } from '@angular/core';
+import { Component, Input, OnInit, OnDestroy, OnChanges, SimpleChanges, ViewChild, ElementRef, Output, EventEmitter, NgZone, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import Chart from 'chart.js/auto';
@@ -82,12 +82,17 @@ export class OverviewTabComponent implements OnInit, OnChanges, OnDestroy {
     this.calculateOverviewData();
   }
 
+  private zone = inject(NgZone);
+  private renderTimer: ReturnType<typeof setTimeout> | null = null;
+
   ngOnChanges(changes: SimpleChanges): void {
     this.calculateOverviewData();
-    setTimeout(() => this.renderCharts(), 150);
+    if (this.renderTimer) clearTimeout(this.renderTimer);
+    this.renderTimer = setTimeout(() => { this.renderTimer = null; this.renderCharts(); }, 150);
   }
 
   ngOnDestroy(): void {
+    if (this.renderTimer) clearTimeout(this.renderTimer);
     this.destroyCharts();
   }
 
@@ -109,7 +114,7 @@ export class OverviewTabComponent implements OnInit, OnChanges, OnDestroy {
       this.deals
         .filter(d => {
           const st = (d.status || '').toLowerCase().trim();
-          return st === 'accepted' || st === 'acepted' || st === 'almost';
+          return st === 'accepted' || st === 'almost';
         })
         .map(d => d.idDriver)
         .filter(Boolean)
@@ -123,7 +128,7 @@ export class OverviewTabComponent implements OnInit, OnChanges, OnDestroy {
     const fleetUtilisationVal = onlineCount > 0 ? Math.round((busyCount / onlineCount) * 100) : 0;
 
     const totalOrdersCount = this.orders.length;
-    const acceptedOrdersCount = this.orders.filter(o => o.isAcepted).length;
+    const acceptedOrdersCount = this.orders.filter(o => o.isAccepted).length;
     const acceptanceRateVal = totalOrdersCount > 0 ? Math.round((acceptedOrdersCount / totalOrdersCount) * 100) : 0;
 
     const terminatedDealsCount = this.deals.filter(d => (d.status || '').toLowerCase().trim() === 'terminated').length;
@@ -131,11 +136,13 @@ export class OverviewTabComponent implements OnInit, OnChanges, OnDestroy {
     const completionRateVal = totalDealsCount > 0 ? Math.round((terminatedDealsCount / totalDealsCount) * 100) : 0;
     const cancellationRateVal = totalDealsCount > 0 ? Math.max(0, 100 - completionRateVal) : 0;
 
-    const grossFromCommissions = this.commissions.reduce((sum, c) => sum + (c.DealAmount || 0), 0);
+    // Trip lines only: recharges and adjustments are not revenue.
+    const tripLines = this.commissions.filter(c => c.kind === 'commission');
+    const grossFromCommissions = tripLines.reduce((sum, c) => sum + (c.dealAmount || 0), 0);
     const grossFromOrders = this.orders.reduce((sum, o) => sum + (o.price || 0), 0);
     const gross = grossFromCommissions || grossFromOrders;
 
-    const netFromCommissions = this.commissions.reduce((sum, c) => sum + (c.commissionDeducted || 0), 0);
+    const netFromCommissions = tripLines.reduce((sum, c) => sum - (c.delta || 0), 0);
     const net = netFromCommissions || Math.round(gross * 0.15);
 
     const now = Date.now();
@@ -259,14 +266,18 @@ export class OverviewTabComponent implements OnInit, OnChanges, OnDestroy {
       percentage: Math.round((data.count / totalVehiclesCount) * 100)
     }));
 
+    const dealsByDriver = new Map<string, number>();
+    this.deals.forEach(dl => { if (dl.idDriver) dealsByDriver.set(dl.idDriver, (dealsByDriver.get(dl.idDriver) || 0) + 1); });
+    const vehicleByDriver = new Map<string, Vehicle>();
+    this.vehicles.forEach(v => { if (v.idDriver && !vehicleByDriver.has(v.idDriver)) vehicleByDriver.set(v.idDriver, v); });
+
     this.topDrivers = drivers
       .map(d => {
         const driverId = d.uid || d.id || '';
-        const dDeals = this.deals.filter(dl => dl.idDriver === driverId);
-        const vehicle = this.vehicles.find(v => v.idDriver === driverId);
+        const vehicle = vehicleByDriver.get(driverId);
         return {
           driver: d,
-          dealCount: dDeals.length,
+          dealCount: dealsByDriver.get(driverId) || 0,
           vehicleType: vehicle ? vehicle.type : 'N/A'
         };
       })
@@ -279,7 +290,13 @@ export class OverviewTabComponent implements OnInit, OnChanges, OnDestroy {
     this.renderCharts();
   }
 
+  /** Chart.js animates and listens for resizes on every frame; inside Angular's zone each of
+      those runs a full change-detection pass over the console, which locks the tab. */
   private renderCharts(): void {
+    this.zone.runOutsideAngular(() => this.buildCharts());
+  }
+
+  private buildCharts(): void {
     this.destroyCharts();
 
     if (this.financeChartRef?.nativeElement) {
@@ -402,11 +419,11 @@ export class OverviewTabComponent implements OnInit, OnChanges, OnDestroy {
     if (this.orderChartRef?.nativeElement) {
       const ctx = this.orderChartRef.nativeElement.getContext('2d');
       if (ctx) {
-        const accepted = this.orders.filter(o => o.isAcepted).length;
-        const pending = this.orders.filter(o => !o.isAcepted).length;
+        const accepted = this.orders.filter(o => o.isAccepted).length;
+        const pending = this.orders.filter(o => !o.isAccepted).length;
         const activeDealsCount = this.deals.filter(d => {
           const st = (d.status || '').toLowerCase().trim();
-          return st === 'accepted' || st === 'acepted' || st === 'almost';
+          return st === 'accepted' || st === 'almost';
         }).length;
         const terminatedDealsCount = this.deals.filter(d => (d.status || '').toLowerCase().trim() === 'terminated').length;
 
@@ -493,7 +510,7 @@ export class OverviewTabComponent implements OnInit, OnChanges, OnDestroy {
           const ord = this.orders.find(o => o.id === b.idOrder);
           const cat = ord?.category || 'General Freight';
           const curr = catSum.get(cat) || { total: 0, count: 0 };
-          curr.total += b.ammount || 0;
+          curr.total += b.amount || 0;
           curr.count += 1;
           catSum.set(cat, curr);
         });

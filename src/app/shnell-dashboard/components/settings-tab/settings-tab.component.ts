@@ -155,6 +155,8 @@ export class SettingsTabComponent implements OnInit, OnDestroy {
       currency_symbol: ['DT', Validators.required],
       commission_percentage: [0.15, [Validators.required, Validators.min(0), Validators.max(1)]],
       stop_fee: [0.4, [Validators.required, Validators.min(0)]],
+      // Shortest return trip and customer leg (functions/lib/returns.js)
+      return_min_km: [20, [Validators.required, Validators.min(1), Validators.max(500)]],
       update_link_customer_app: [''],
       update_link_driver_app: ['']
     });
@@ -231,6 +233,7 @@ export class SettingsTabComponent implements OnInit, OnDestroy {
               currency_symbol: configDoc.currency_symbol || 'DT',
               commission_percentage: configDoc.commission_percentage ?? 0.15,
               stop_fee: configDoc.stop_fee ?? 0.4,
+              return_min_km: configDoc.return_min_km ?? 20,
               update_link_customer_app: configDoc.update_link_customer_app || '',
               update_link_driver_app: configDoc.update_link_driver_app || ''
             });

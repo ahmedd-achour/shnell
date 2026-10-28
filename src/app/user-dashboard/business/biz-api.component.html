@@ -1,0 +1,102 @@
+<div class="bz">
+  <div class="bz-toolbar">
+    <div class="bz-toolbar__l">
+      <h2>API &amp; intégrations</h2>
+      <span class="bz-count">{{ keys.length }}/{{ maxKeys }} clés</span>
+    </div>
+    <div class="bz-toolbar__r">
+      <a class="bz-btn" href="/developers" target="_blank" rel="noopener"><i class="bi bi-box-arrow-up-right"></i> Documentation publique</a>
+    </div>
+  </div>
+
+  <div class="bz-banner bz-banner--bad" *ngIf="apiBlocked">
+    <i class="bi bi-shield-x"></i> L’accès API de ce compte a été bloqué par Shnell. Vos clés sont refusées : contactez le support.
+  </div>
+  <div class="bz-banner bz-banner--warn" *ngIf="businessOn === false">
+    <i class="bi bi-lock"></i> Shnell Business n’est pas activé sur ce compte : l’API sera disponible dès son activation.
+  </div>
+
+  <div class="bz-grid" style="margin-bottom: 14px;">
+    <!-- keys -->
+    <section class="bz-card">
+      <div class="bz-card__h"><i class="bi bi-key-fill"></i> Clés API</div>
+      <p class="bz-dim" style="margin: 0 0 10px;">
+        Une clé par système (site, ERP, entrepôt…). Elles n’expirent pas : révoquez-en une dès qu’elle n’est plus utilisée ou si elle a fuité.
+      </p>
+
+      <div class="bz-banner bz-banner--ok" *ngIf="freshKey" style="flex-direction: column; align-items: stretch;">
+        <b><i class="bi bi-exclamation-circle"></i> Copiez cette clé maintenant : elle ne sera plus jamais affichée.</b>
+        <div style="display: flex; gap: 6px; align-items: center;">
+          <code class="bz-input" style="font-family: var(--sh-font-mono); overflow-x: auto; white-space: nowrap;">{{ freshKey }}</code>
+          <button class="bz-btn" (click)="copy(freshKey)"><i class="bi bi-clipboard"></i> Copier</button>
+          <button class="bz-icon" (click)="freshKey = ''" title="Masquer"><i class="bi bi-x-lg"></i></button>
+        </div>
+      </div>
+
+      <div style="display: flex; gap: 6px; margin-bottom: 12px;">
+        <input class="bz-input" [(ngModel)]="newKeyName" maxlength="60" placeholder="Nom de la clé (ex. Site e-commerce)" aria-label="Nom de la clé">
+        <button class="bz-btn bz-btn--primary" (click)="createKey()" [disabled]="busy || keys.length >= maxKeys || apiBlocked || businessOn === false">
+          <span class="spinner-border spinner-border-sm" *ngIf="busy"></span><i class="bi bi-plus-lg" *ngIf="!busy"></i> Créer
+        </button>
+      </div>
+
+      <div class="bz-empty" *ngIf="loadingKeys"><span class="spinner-border spinner-border-sm"></span></div>
+      <div class="bz-empty" *ngIf="!loadingKeys && !keys.length">Aucune clé pour l’instant.</div>
+      <div class="bz-table-wrap" *ngIf="keys.length">
+        <table class="bz-table">
+          <thead><tr><th>Clé</th><th>Utilisation</th><th>Dernier appel</th><th></th></tr></thead>
+          <tbody>
+            <tr *ngFor="let k of keys">
+              <td>
+                <b>{{ k.name }}</b>
+                <div class="bz-mono">{{ k.prefix }}… · créée {{ k.createdAtMs | date:'dd/MM/yy' }}</div>
+                <span class="bz-tag tone-bad bz-small" *ngIf="k.suspended"><i class="bi bi-pause-circle"></i> Suspendue par Shnell</span>
+              </td>
+              <td class="bz-nowrap">{{ k.calls | number }} appels<div class="bz-dim">{{ k.ordersCreated | number }} commande(s)</div></td>
+              <td class="bz-nowrap">{{ k.lastUsedAtMs ? (k.lastUsedAtMs | date:'dd/MM HH:mm') : 'jamais' }}</td>
+              <td class="bz-actions"><button class="bz-btn bz-btn--sm bz-btn--danger" (click)="revoke(k)">Révoquer</button></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- webhook -->
+    <section class="bz-card">
+      <div class="bz-card__h"><i class="bi bi-broadcast-pin"></i> Webhook</div>
+      <p class="bz-dim" style="margin: 0 0 10px;">
+        Shnell appelle cette adresse à chaque changement d’état d’une commande (chauffeur trouvé, en route, livrée…), signée avec votre secret.
+      </p>
+      <label class="bz-field">URL (https)
+        <input class="bz-input" [(ngModel)]="hookUrl" placeholder="https://votre-serveur.com/shnell-webhook" aria-label="URL du webhook">
+      </label>
+      <div class="bz-actions" style="justify-content: flex-start; margin-top: 8px;">
+        <button class="bz-btn bz-btn--primary" (click)="saveHook()" [disabled]="hookBusy || !hookUrl.trim() || apiBlocked || businessOn === false">Enregistrer</button>
+        <ng-container *ngIf="hook">
+          <button class="bz-btn" (click)="testHook()" [disabled]="hookBusy"><i class="bi bi-send"></i> Envoyer un test</button>
+          <button class="bz-btn" (click)="saveHook(true)" [disabled]="hookBusy"><i class="bi bi-arrow-repeat"></i> Nouveau secret</button>
+          <button class="bz-btn bz-btn--danger" (click)="removeHook()" [disabled]="hookBusy">Supprimer</button>
+        </ng-container>
+      </div>
+
+      <ng-container *ngIf="hook">
+        <label class="bz-field" style="margin-top: 12px;">Secret de signature
+          <div style="display: flex; gap: 6px;">
+            <code class="bz-input" style="font-family: var(--sh-font-mono); overflow-x: auto; white-space: nowrap;">{{ showSecret ? hook.secret : 'whsec_••••••••••••••••' }}</code>
+            <button class="bz-icon" (click)="showSecret = !showSecret" [title]="showSecret ? 'Masquer' : 'Afficher'"><i class="bi" [ngClass]="showSecret ? 'bi-eye-slash' : 'bi-eye'"></i></button>
+            <button class="bz-icon" (click)="copy(hook.secret)" title="Copier"><i class="bi bi-clipboard"></i></button>
+          </div>
+        </label>
+        <div class="bz-small" style="margin-top: 10px;" *ngIf="hook.last">
+          Dernier envoi : <code>{{ hook.last.type }}</code> · {{ hook.last.atMs | date:'dd/MM HH:mm' }} ·
+          <span class="bz-tag" [ngClass]="hook.last.ok ? 'tone-ok' : 'tone-bad'">{{ hook.last.status || 'pas de réponse' }}</span>
+        </div>
+        <div class="bz-banner bz-banner--warn" style="margin-top: 10px;" *ngIf="hook.failures >= 3">
+          <i class="bi bi-exclamation-triangle"></i> {{ hook.failures }} envois échoués d’affilée : vérifiez votre serveur.
+        </div>
+      </ng-container>
+    </section>
+  </div>
+
+  <app-api-docs [apiKey]="freshKey"></app-api-docs>
+</div>

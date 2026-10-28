@@ -1,0 +1,92 @@
+<div class="hub-head">
+  <div>
+    <h3>API access</h3>
+    <p>Business accounts that run Shnell from their own software. Keys never expire: if one is misused, suspend it (reversible) or revoke it (permanent), or block the whole account's API access. Every action is written to the Activity Log. Business itself is switched on per account in Account 360.</p>
+  </div>
+  <div class="hub-actions">
+    <div class="hub-seg">
+      <button [class.on]="view === 'accounts'" (click)="view = 'accounts'">Accounts</button>
+      <button [class.on]="view === 'keys'" (click)="view = 'keys'">Keys</button>
+    </div>
+  </div>
+</div>
+
+<div class="hub-kpis">
+  <div class="hub-kpi"><span class="hub-kpi__label">Accounts with keys</span><span class="hub-kpi__value">{{ kpis.accounts }}</span></div>
+  <div class="hub-kpi"><span class="hub-kpi__label">Active keys</span><span class="hub-kpi__value">{{ kpis.keys }}</span><span class="hub-kpi__sub">{{ kpis.active24h }} used in 24 h</span></div>
+  <div class="hub-kpi"><span class="hub-kpi__label">Orders via API</span><span class="hub-kpi__value">{{ kpis.orders }}</span></div>
+  <div class="hub-kpi" [class.hub-kpi--alert]="kpis.suspended"><span class="hub-kpi__label">Suspended keys</span><span class="hub-kpi__value">{{ kpis.suspended }}</span></div>
+  <div class="hub-kpi" [class.hub-kpi--alert]="kpis.blocked"><span class="hub-kpi__label">Blocked accounts</span><span class="hub-kpi__value">{{ kpis.blocked }}</span></div>
+</div>
+
+<div class="hub-card">
+  <div class="hub-card__body hub-toolbar">
+    <input class="hub-input hub-input--search" [(ngModel)]="search" placeholder="Search account, email, key prefix…" aria-label="Search">
+    <label class="hub-dim" *ngIf="view === 'keys'"><input type="checkbox" [(ngModel)]="showRevoked"> Show revoked</label>
+  </div>
+
+  <div class="hub-empty" *ngIf="loading"><span class="spinner-border spinner-border-sm"></span></div>
+
+  <!-- accounts -->
+  <div class="hub-table-wrap" *ngIf="!loading && view === 'accounts'">
+    <div class="hub-empty" *ngIf="!accounts.length">No business account yet. Turn Business on for an account in Account 360.</div>
+    <table class="hub-table" *ngIf="accounts.length">
+      <thead><tr><th>Account</th><th>Keys</th><th>Usage</th><th>Last call</th><th>Webhook</th><th>API</th><th></th></tr></thead>
+      <tbody>
+        <tr *ngFor="let a of accounts">
+          <td><a class="hub-link" (click)="openAccount.emit(a.uid)">{{ a.name }}</a><div class="hub-dim">{{ a.email }}</div></td>
+          <td>
+            {{ a.keys }}
+            <div class="hub-mono" *ngFor="let k of keysOf(a.uid)">{{ k.prefix }}…<span class="hub-tag tone-danger" *ngIf="k.suspended">suspended</span></div>
+          </td>
+          <td>{{ a.calls | number }} calls<div class="hub-dim">{{ a.orders | number }} orders</div></td>
+          <td>{{ a.lastUsedAt ? (a.lastUsedAt | date:'dd MMM, HH:mm') : '—' }}</td>
+          <td>
+            <span *ngIf="!a.webhook" class="hub-dim">—</span>
+            <ng-container *ngIf="a.webhook">
+              <span class="hub-tag" [ngClass]="a.webhook.failures >= 3 ? 'tone-danger' : a.webhook.ok === false ? 'tone-warning' : 'tone-success'">
+                {{ a.webhook.failures >= 3 ? a.webhook.failures + ' failures' : a.webhook.ok === null ? 'not used yet' : a.webhook.ok ? 'ok' : 'last failed' }}
+              </span>
+              <div class="hub-mono" [title]="a.webhook.url">{{ a.webhook.url | slice:0:40 }}</div>
+            </ng-container>
+          </td>
+          <td><span class="hub-tag" [ngClass]="a.apiBlocked ? 'tone-danger' : 'tone-success'">{{ a.apiBlocked ? 'blocked' : 'allowed' }}</span></td>
+          <td class="text-end">
+            <button class="hub-btn hub-btn--sm hub-btn--danger" *ngIf="!a.apiBlocked" (click)="accountAction(a, 'block')" [disabled]="busy === a.uid">Block API</button>
+            <button class="hub-btn hub-btn--sm" *ngIf="a.apiBlocked" (click)="accountAction(a, 'unblock')" [disabled]="busy === a.uid">Unblock</button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- keys -->
+  <div class="hub-table-wrap" *ngIf="!loading && view === 'keys'">
+    <div class="hub-empty" *ngIf="!shownKeys.length">No key.</div>
+    <table class="hub-table" *ngIf="shownKeys.length">
+      <thead><tr><th>Key</th><th>Account</th><th>Created</th><th>Last call</th><th>Usage</th><th>State</th><th></th></tr></thead>
+      <tbody>
+        <tr *ngFor="let k of shownKeys" [style.opacity]="k.revoked ? .55 : 1">
+          <td><span class="hub-mono">{{ k.prefix }}…</span><div class="hub-dim">{{ k.name }}</div></td>
+          <td><a class="hub-link" (click)="openAccount.emit(k.uid)">{{ name(k.uid) }}</a></td>
+          <td>{{ k.createdAt | date:'dd MMM yyyy' }}</td>
+          <td>{{ k.lastUsedAt ? (k.lastUsedAt | date:'dd MMM, HH:mm') : '—' }}<div class="hub-mono" *ngIf="k.lastIp">{{ k.lastIp }}</div></td>
+          <td>{{ k.calls | number }} calls<div class="hub-dim">{{ k.ordersCreated | number }} orders</div></td>
+          <td>
+            <span class="hub-tag" [ngClass]="k.revoked ? 'tone-muted' : k.suspended ? 'tone-danger' : 'tone-success'">
+              {{ k.revoked ? 'revoked' : k.suspended ? 'suspended' : 'active' }}
+            </span>
+            <div class="hub-dim" *ngIf="k.suspended && k.suspendNote">“{{ k.suspendNote }}”</div>
+          </td>
+          <td class="text-end">
+            <ng-container *ngIf="!k.revoked">
+              <button class="hub-btn hub-btn--sm" *ngIf="!k.suspended" (click)="keyAction(k, 'suspend')" [disabled]="busy === k.id">Suspend</button>
+              <button class="hub-btn hub-btn--sm" *ngIf="k.suspended" (click)="keyAction(k, 'reactivate')" [disabled]="busy === k.id">Reactivate</button>
+              <button class="hub-btn hub-btn--sm hub-btn--danger" (click)="keyAction(k, 'revoke')" [disabled]="busy === k.id">Revoke</button>
+            </ng-container>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>

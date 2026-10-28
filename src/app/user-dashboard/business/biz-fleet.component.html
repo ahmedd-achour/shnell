@@ -1,0 +1,107 @@
+<div class="bz">
+  <div class="bz-toolbar">
+    <div class="bz-toolbar__l">
+      <h2>Ma flotte</h2>
+      <span class="bz-count">{{ active.length }} chauffeur{{ active.length > 1 ? 's' : '' }}</span>
+    </div>
+  </div>
+
+  <section class="bz-card" style="margin-bottom:16px">
+    <div class="bz-card__h">
+      <i class="bi bi-briefcase-fill"></i> Votre offre :
+      <span class="bz-tag" [ngClass]="pastDue ? 'tone-bad' : isPro ? 'tone-ok' : 'tone-info'">
+        {{ pastDue ? 'Pro — impayé' : isPro ? 'Pro' : 'Gratuite' }}
+      </span>
+      <span class="bz-flex"></span>
+      <span class="bz-dim">Portefeuille : <b>{{ balance | number:'1.0-2' }} TND</b></span>
+    </div>
+
+    <ng-container *ngIf="!isPro">
+      <p class="bz-dim" style="margin:0 0 10px">
+        Offre gratuite : jusqu’à <b>{{ P.freeDrivers }} chauffeurs</b> dans votre flotte ({{ fleetSize }}/{{ P.freeDrivers }}).
+        <b>Pro : {{ P.proBase }} TND / mois pour {{ P.proIncluded }} chauffeurs</b>, puis {{ P.proPerExtra }} TND par chauffeur supplémentaire et par mois,
+        prélevés automatiquement sur votre portefeuille Shnell.
+      </p>
+      <div class="bz-toolbar__l">
+        <button class="bz-btn bz-btn--primary" (click)="subscribe()" [disabled]="paying">
+          <i class="bi" [ngClass]="paying ? 'bi-hourglass-split' : 'bi-rocket-takeoff-fill'"></i> Passer à Pro — {{ nextPrice }} TND / mois
+        </button>
+        <span class="bz-small bz-dim" *ngIf="freeFull">Limite atteinte : passez à Pro pour inviter d’autres chauffeurs.</span>
+      </div>
+    </ng-container>
+
+    <ng-container *ngIf="isPro">
+      <p class="bz-dim" style="margin:0 0 10px" *ngIf="!pastDue">
+        {{ plan.seats }} chauffeurs payés ({{ fleetSize }} dans votre flotte) — prochain prélèvement :
+        <b>{{ nextPrice }} TND</b> le <b>{{ plan.periodEndMs | date:'dd/MM/yyyy' }}</b>
+        <ng-container *ngIf="!plan.autoRenew"> — <b>renouvellement arrêté</b>, retour à l’offre gratuite à cette date</ng-container>.
+        Un chauffeur ajouté au-delà de {{ plan.seats }} coûte {{ P.proPerExtra }} TND / mois (au prorata jusqu’à la fin du mois en cours).
+      </p>
+      <p style="margin:0 0 10px" *ngIf="pastDue">
+        <b>Solde insuffisant pour {{ nextPrice }} TND.</b> Les trajets confiés à votre flotte sont en pause : rechargez votre portefeuille auprès de Shnell,
+        le prélèvement se fera automatiquement (ou payez maintenant). Sans paiement sous 7 jours, retour à l’offre gratuite.
+      </p>
+      <div class="bz-toolbar__l">
+        <button class="bz-btn bz-btn--primary" *ngIf="pastDue" (click)="subscribe()" [disabled]="paying">
+          <i class="bi bi-credit-card-fill"></i> Payer {{ nextPrice }} TND maintenant
+        </button>
+        <button class="bz-btn bz-btn--sm" *ngIf="!pastDue && plan.autoRenew" (click)="setAutoRenew(false)">Arrêter le renouvellement</button>
+        <button class="bz-btn bz-btn--sm" *ngIf="!pastDue && !plan.autoRenew" (click)="setAutoRenew(true)">Réactiver le renouvellement</button>
+      </div>
+    </ng-container>
+    <p class="bz-small bz-dim" style="margin:10px 0 0">
+      Les trajets confiés au réseau Shnell ne sont jamais facturés par l’abonnement : vous payez le chauffeur au prix du trajet, comme dans l’application.
+    </p>
+  </section>
+
+  <div class="bz-two">
+    <section class="bz-card">
+      <div class="bz-card__h"><i class="bi bi-person-plus-fill"></i> Inviter un chauffeur</div>
+      <p class="bz-dim" style="margin:0 0 10px">
+        Vos chauffeurs installent l’application <b>Shnell Driver</b> et vérifient leur numéro. Vous les invitez avec ce numéro :
+        ils acceptent dans l’application, puis vous pouvez leur confier vos trajets directement (« Créer des trajets » ou l’API, champ <code>driverId</code>).
+      </p>
+      <form class="bz-toolbar__l" (ngSubmit)="invite()">
+        <input class="bz-input bz-flex" name="phone" [(ngModel)]="phone" inputmode="tel" dir="ltr" placeholder="+216 20 123 456" style="max-width:280px" />
+        <button class="bz-btn bz-btn--primary" type="submit" [disabled]="busy || !phone.trim()">
+          <i class="bi" [ngClass]="busy ? 'bi-hourglass-split' : 'bi-send-fill'"></i> Inviter
+        </button>
+      </form>
+    </section>
+
+    <section class="bz-card">
+      <div class="bz-card__h"><i class="bi bi-graph-up"></i> Ce mois-ci ({{ month }})</div>
+      <div class="bz-toolbar__l" style="gap:28px">
+        <div><div style="font-size:1.6rem;font-weight:800">{{ usage.trips }}</div><span class="bz-dim">trajets par votre flotte</span></div>
+        <div><div style="font-size:1.6rem;font-weight:800">{{ usage.drivers }}</div><span class="bz-dim">chauffeurs actifs</span></div>
+      </div>
+    </section>
+  </div>
+
+  <section class="bz-card" style="margin-top:16px">
+    <div class="bz-empty" *ngIf="loading">Chargement…</div>
+    <div class="bz-empty" *ngIf="!loading && !links.length">Aucun chauffeur pour l’instant. Invitez le premier avec son numéro.</div>
+    <div class="bz-table-wrap" *ngIf="links.length">
+      <table class="bz-table">
+        <thead><tr><th>Chauffeur</th><th>Téléphone</th><th>État</th><th></th></tr></thead>
+        <tbody>
+          <tr *ngFor="let l of links">
+            <td><b>{{ l.driverName }}</b></td>
+            <td dir="ltr">{{ l.phone }}</td>
+            <td>
+              <span class="bz-tag" [ngClass]="l.status === 'active' ? 'tone-ok' : 'tone-warn'">
+                {{ l.status === 'active' ? 'Dans votre flotte' : 'Invitation envoyée' }}
+              </span>
+              <div class="bz-small bz-dim" *ngIf="l.status === 'pending'">En attente de son accord dans Shnell Driver</div>
+            </td>
+            <td style="text-align:right">
+              <button class="bz-btn bz-btn--sm bz-btn--danger" (click)="remove(l)" [disabled]="removing === l.driverUid">
+                {{ l.status === 'pending' ? 'Annuler' : 'Retirer' }}
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+</div>

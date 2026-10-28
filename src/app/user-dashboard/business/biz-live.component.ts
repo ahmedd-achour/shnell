@@ -15,7 +15,7 @@ const STATE: Record<LiveState, { label: string; tone: string; icon: string }> = 
   assigned:    { label: 'Assigné',         tone: 'tone-info',  icon: 'bi-person-check' },
   in_progress: { label: 'En cours',        tone: 'tone-ok',    icon: 'bi-truck' },
   delivered:   { label: 'Livré',           tone: 'tone-ok',    icon: 'bi-check2-all' },
-  cancelled:   { label: 'Annulé',          tone: 'tone-muted', icon: 'bi-x-circle' },
+  canceled:    { label: 'Annulé',          tone: 'tone-muted', icon: 'bi-x-circle' },
   expired:     { label: 'Expiré',          tone: 'tone-muted', icon: 'bi-hourglass-bottom' },
 };
 
@@ -75,7 +75,7 @@ export class BizLiveComponent implements OnInit, OnDestroy {
       this.trips = trips;
       this.loading = false;
       for (const t of trips) {
-        for (const id of [t.driverId, ...t.bids.map((b) => b.driverId)]) {
+        for (const id of [t.driverId, t.fleetDeclinedBy, ...t.bids.map((b) => b.driverId)]) {
           if (id && !(id in this.names)) {
             this.names[id] = '…';
             this.biz.driverName(id).then((n) => (this.names[id] = n));
@@ -98,7 +98,7 @@ export class BizLiveComponent implements OnInit, OnDestroy {
       case 'assigned': return t.state === 'assigned';
       case 'in_progress': return t.state === 'in_progress';
       case 'delivered': return t.state === 'delivered';
-      case 'closed': return t.state === 'cancelled' || t.state === 'expired';
+      case 'closed': return t.state === 'canceled' || t.state === 'expired';
       default: return true;
     }
   }
@@ -174,6 +174,31 @@ export class BizLiveComponent implements OnInit, OnDestroy {
 
   revision(t: LiveTrip, decision: 'accept' | 'decline'): Promise<void> {
     return this.run(t.orderId, () => this.biz.respondRevision(t.dealId, decision), decision === 'accept' ? 'Révision acceptée' : 'Révision refusée');
+  }
+
+  /** Regular phone / WhatsApp to the trip's driver (the in-app calls live in the mobile apps). */
+  async callDriver(t: LiveTrip): Promise<void> {
+    this.busy.add(t.orderId);
+    try {
+      const { phone, name } = await this.biz.driverPhone(t.orderId);
+      const wa = 'https://wa.me/' + phone.replace(/D/g, '');
+      const esc = (x: string) => x.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]!));
+      Swal.fire({
+        title: esc(name || this.names[t.driverId!] || 'Chauffeur'),
+        html: `<p style="font-size:1.5rem;font-weight:800;margin:6px 0 14px" dir="ltr">${esc(phone)}</p>
+          <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap">
+            <a class="bz-btn bz-btn--primary" href="tel:${esc(phone)}"><i class="bi bi-telephone-fill"></i> Appeler</a>
+            <a class="bz-btn" href="${wa}" target="_blank" rel="noopener"><i class="bi bi-whatsapp"></i> WhatsApp</a>
+          </div>`,
+        showConfirmButton: false,
+        showCloseButton: true,
+        customClass: { popup: 'sh-swal' },
+      });
+    } catch (e: any) {
+      toastError('Numéro indisponible', e?.message);
+    } finally {
+      this.busy.delete(t.orderId);
+    }
   }
 
   canCancel(t: LiveTrip): boolean { return ['scheduled', 'searching', 'offers', 'no_driver', 'assigned', 'in_progress'].includes(t.state); }

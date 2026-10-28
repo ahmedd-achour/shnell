@@ -167,6 +167,17 @@
       *ngIf="activeTab === 'assistant'"
       (openAccount)="openAccount($event)">
     </app-assistant-tab>
+
+    <app-api-access-tab
+      *ngIf="activeTab === 'api'"
+      [users]="users"
+      (openAccount)="openAccount($event)">
+    </app-api-access-tab>
+
+    <app-business-requests-tab
+      *ngIf="activeTab === 'business'"
+      (openAccount)="openAccount($event)">
+    </app-business-requests-tab>
     </div>
   </main>
 

@@ -1,27 +1,26 @@
-export class Vehicle {
+import { Vehicle as VehicleDoc } from '../models';
+
+/** vehicles/{id} for the fleet screens (canonical fields only, see models.ts). */
+export class Vehicle implements VehicleDoc {
+  id?: string;
   idDriver: string;
-  matVehicle?: string; // corresponds to licensePlate
-  maxWeight: number;
-  maxVolume: number;
-  type: string; // corresponds to vehicleTypeId
-  vehicleImage?: string; // corresponds to vehicleAssetUrl
+  type: string;
+  vehicleAssetUrl: string;
+  licensePlate?: string;
   isAdminApproved: boolean;
   isAssetsApproved: boolean;
   allAssets: string[];
-  id?: string;
 
   constructor(data: any) {
+    this.id = data.id;
     this.idDriver = data.idDriver || '';
-    this.matVehicle = data.matVehicle || data.licensePlate || '';
-    this.maxWeight = Number(data.maxWeight || 0);
-    this.maxVolume = Number(data.maxVolume || 0);
     // Empty while the AI classifier / admin has not set it (typeSource 'ai_pending').
-    this.type = data.type || data.vehicleTypeId || '';
-    this.vehicleImage = data.vehicleImage || data.vehicleAssetUrl || data.vehiculeAsset || ("assets/trucks/" + (data.type || data.vehicleTypeId || 'medium') + ".png");
-    this.isAdminApproved = data.isAdminApproved ?? false;
-    this.isAssetsApproved = data.isAssetsApproved ?? data.isAdminApproved ?? false;
+    this.type = data.type || '';
+    this.vehicleAssetUrl = data.vehicleAssetUrl || '';
+    this.licensePlate = data.licensePlate || undefined;
+    this.isAdminApproved = data.isAdminApproved === true;
+    this.isAssetsApproved = data.isAssetsApproved === true;
     this.allAssets = Array.isArray(data.allAssets) ? data.allAssets : [];
-    this.id = data.id || data.uid;
   }
 
   static fromJson(json: any): Vehicle {

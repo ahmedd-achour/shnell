@@ -1,4 +1,4 @@
-import { Injectable, inject } from '@angular/core';
+import { Injectable, NgZone, inject } from '@angular/core';
 import {
   Firestore,
   collection,
@@ -24,7 +24,6 @@ import { Observable, BehaviorSubject, of, combineLatest } from 'rxjs';
 import { map, startWith, catchError, switchMap, tap, shareReplay } from 'rxjs/operators';
 import {
   Bid,
-  Cancelation,
   Deals,
   DropOffData,
   CountryServiceArea,
@@ -90,6 +89,7 @@ export class DashboardDataService {
   private firestore = inject(Firestore);
   private functions = inject(Functions);
   private database = inject(Database);
+  private zone = inject(NgZone);
 
   private driverLocations$ = new BehaviorSubject<DriverRTDBLocation[]>([]);
 
@@ -97,7 +97,25 @@ export class DashboardDataService {
     this.initRTDBListener();
   }
 
+  /** Driver heartbeats arrive many times a second; publish at most once a second and
+      keep the raw listener outside Angular so each heartbeat doesn't re-render the console. */
   private initRTDBListener(): void {
+    let pending: DriverRTDBLocation[] | null = null;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    const publish = (list: DriverRTDBLocation[]) => {
+      pending = list;
+      if (timer) return;
+      timer = setTimeout(() => {
+        timer = null;
+        const latest = pending!;
+        pending = null;
+        this.zone.run(() => this.driverLocations$.next(latest));
+      }, 1000);
+    };
+    this.zone.runOutsideAngular(() => this.listenToLocations(publish));
+  }
+
+  private listenToLocations(publish: (list: DriverRTDBLocation[]) => void): void {
     try {
       const locationsRef = ref(this.database, 'locations');
       onValue(locationsRef, (snapshot) => {
@@ -133,7 +151,7 @@ export class DashboardDataService {
           });
         });
 
-        this.driverLocations$.next(parsed);
+        publish(parsed);
       }, (error) => {
         console.error('RTDB locations error:', error);
       });
@@ -158,8 +176,9 @@ export class DashboardDataService {
       collectionData(walletsCol, { idField: 'uid' })
     ]).pipe(
       map(([usersList, walletsList]) => {
+        const walletsByUid = new Map(walletsList.map(w => [w.uid, w]));
         return usersList.map(u => {
-          const w = walletsList.find(wallet => wallet.uid === u.uid);
+          const w = walletsByUid.get(u.uid);
           // Normalise legacy role strings so the whole admin sees one vocabulary:
           // platform roles are 'user' / 'driver' ('admin'/'company' console-only).
           const rawRole = (u['role'] || '').toString().trim().toLowerCase();
@@ -189,26 +208,15 @@ export class DashboardDataService {
 
     return collectionData(q, { idField: 'id' }).pipe(
       map(list => list.map(item => {
-        const idDriver = item['idDriver'] || item['driverId'] || item['userId'] || '';
-        const isAdminApproved = item['isAdminApproved'] === true || item['isAdminApproved'] === 'true';
-        const isAssetsApproved = item['isAssetsApproved'] === true || item['isAssetsApproved'] === 'true';
-        const type = item['type'] || item['vehicleType'] || 'camion';
-        const carteGrise = item['carteGrise'] || item['carteGriseFront'] || item['carteGriseAsset'] || '';
-        const cin = item['cin'] || item['carteIdentityFront'] || item['cinAsset'] || '';
-        const vehiculeAsset = item['vehiculeAsset'] || item['vehicleAsset'] || item['vehicleImage'] || item['photo'] || '';
-        const allAssets = Array.isArray(item['allAssets']) ? item['allAssets'] : [];
-
         return {
           ...item,
-          id: item['id'] || item['__id'] || item['uid'],
-          idDriver,
-          isAdminApproved,
-          isAssetsApproved,
-          type,
-          carteGrise,
-          cin,
-          vehiculeAsset,
-          allAssets
+          id: item['id'],
+          idDriver: item['idDriver'] || '',
+          isAdminApproved: item['isAdminApproved'] === true,
+          isAssetsApproved: item['isAssetsApproved'] === true,
+          type: item['type'] || '',
+          vehicleAssetUrl: item['vehicleAssetUrl'] || '',
+          allAssets: Array.isArray(item['allAssets']) ? item['allAssets'] : [],
         } as Vehicle;
       })),
       startWith([]),
@@ -313,18 +321,6 @@ export class DashboardDataService {
     );
   }
 
-  getCancelations(): Observable<Cancelation[]> {
-    const colRef = collection(this.firestore, 'cancelations');
-    return collectionData(colRef, { idField: 'id' }).pipe(
-      map(list => list as Cancelation[]),
-      startWith([]),
-      catchError(err => {
-        console.error('Error fetching cancelations:', err);
-        return of([]);
-      })
-    );
-  }
-
   getCommissions(): Observable<Commission[]> {
     const colRef = collection(this.firestore, 'commissions');
     return collectionData(colRef, { idField: 'id' }).pipe(
@@ -339,7 +335,7 @@ export class DashboardDataService {
 
   getDriverCommissions(driverId: string): Observable<Commission[]> {
     const colRef = collection(this.firestore, 'commissions');
-    const q = query(colRef, where('DriverId', '==', driverId));
+    const q = query(colRef, where('uid', '==', driverId));
     return collectionData(q, { idField: 'id' }).pipe(
       map(list => list as Commission[]),
       startWith([]),
@@ -436,7 +432,7 @@ export class DashboardDataService {
   async assignDriverToOrder(orderId: string, driverId: string, userId: string): Promise<void> {
     try {
       const orderRef = doc(this.firestore, 'orders', orderId);
-      await updateDoc(orderRef, { isAcepted: true });
+      await updateDoc(orderRef, { isAccepted: true });
 
       const dealRef = doc(collection(this.firestore, 'deals'));
       await setDoc(dealRef, {
@@ -485,13 +481,13 @@ export class DashboardDataService {
 
   async softDeleteOrder(orderId: string): Promise<void> {
     const docRef = doc(this.firestore, `orders/${orderId}`);
-    await updateDoc(docRef, { isAcepted: true });
+    await updateDoc(docRef, { isAccepted: true });
   }
 
 
   async toggleUserBan(userId: string, currentBanState: boolean): Promise<boolean> {
     const newBanState = !currentBanState;
-    await this.adminCall('adminUpdateAccount', { userId, isBan: newBanState });
+    await this.adminCall('adminUpdateAccount', { userId, isBanned: newBanState });
     return newBanState;
   }
 
@@ -538,6 +534,7 @@ export class DashboardDataService {
     version_driver_app?: string;
     commission_percentage?: number;
     stop_fee?: number;
+    return_min_km?: number;
     update_link_customer_app?: string;
     update_link_driver_app?: string;
   }): Promise<void> {

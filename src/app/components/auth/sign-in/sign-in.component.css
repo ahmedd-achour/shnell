@@ -30,6 +30,8 @@
 .auth__logo img { width: 36px; height: 36px; object-fit: contain; }
 
 .auth__pitch { margin-top: auto; margin-bottom: auto; max-width: 30ch; }
+.auth__video { display: block; width: min(440px, 100%); margin-top: 1.75rem; color: rgba(255, 255, 255, 0.75); }
+.auth__pitch:has(.auth__video) { max-width: 440px; }
 .auth__pitch h2 { color: #fff; font-size: clamp(1.6rem, 3vw, 2.3rem); margin: 0.75rem 0 1.5rem; }
 .auth__pitch ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.9rem; }
 .auth__pitch li {
@@ -135,3 +137,35 @@
   .auth { grid-template-columns: 1fr; }
   .auth__brand { display: none; }
 }
+
+/* ---------- Business sign-in: steps, WhatsApp, code boxes ---------- */
+.auth__steps { display: flex; gap: 0.5rem; margin-bottom: 1.5rem; }
+.auth__steps span { flex: 1; font-size: 0.75rem; font-weight: 700; color: var(--sh-ink-400); padding-top: 0.5rem; border-top: 3px solid var(--sh-line-2); }
+.auth__steps span.on { color: var(--sh-ink-900); border-color: var(--sh-amber-500); }
+.auth__steps span.done { color: var(--sh-green-700, #0E7A5F); border-color: var(--sh-green-700, #0E7A5F); }
+.auth__hint { margin-top: 1rem; font-size: 0.82rem; color: var(--sh-ink-500); }
+.auth__wa { width: 60px; height: 60px; border-radius: 18px; display: grid; place-items: center; background: rgba(37, 211, 102, 0.14); color: #25D366; font-size: 2rem; margin-bottom: 1rem; }
+.auth__phone { display: flex; gap: 0.5rem; }
+.auth__phone select {
+  flex: 0 0 auto; padding: 0.8rem 0.6rem; border: 1px solid var(--sh-line-2); border-radius: var(--sh-r-sm);
+  background: var(--sh-card); color: var(--sh-ink-900); font-size: 0.95rem;
+}
+.auth__phone input { flex: 1 1 auto; min-width: 0; }
+.sh-btn--wa { background: #25D366; border-color: #25D366; color: #08361A; }
+.sh-btn--wa:hover:not([disabled]) { filter: brightness(0.96); }
+.sh-btn[disabled] { opacity: 0.6; cursor: not-allowed; }
+.auth__chip { border: 1px solid var(--sh-line-2); background: var(--sh-card); border-radius: 999px; padding: 0.15rem 0.7rem; cursor: pointer; color: var(--sh-ink-900); }
+.auth__chip i { font-size: 0.7rem; color: var(--sh-ink-400); margin-left: 0.25rem; }
+.auth__otp { position: relative; display: grid; grid-template-columns: repeat(6, 1fr); gap: 0.5rem; cursor: text; }
+.auth__otp-input { position: absolute; inset: 0; opacity: 0; width: 100%; height: 100%; font-size: 16px; }
+.auth__otp-box {
+  height: 56px; display: grid; place-items: center; border: 1.5px solid var(--sh-line-2); border-radius: 12px;
+  background: var(--sh-card); font-size: 1.5rem; font-weight: 800; color: var(--sh-ink-900); font-family: var(--sh-font-mono, monospace);
+  transition: border-color var(--sh-t-fast), box-shadow var(--sh-t-fast);
+}
+.auth__otp-box.filled { border-color: var(--sh-ink-700); }
+.auth__otp-input:focus ~ .auth__otp-box.cur { border-color: var(--sh-amber-500); box-shadow: var(--sh-ring); }
+.auth__otp-box.err { border-color: var(--sh-danger); }
+.auth__textbtn { background: none; border: 0; color: var(--sh-ink-500); font-weight: 600; font-size: 0.88rem; cursor: pointer; }
+.auth__textbtn:hover:not([disabled]) { color: var(--sh-ink-900); }
+.auth__textbtn[disabled] { opacity: 0.6; cursor: default; }

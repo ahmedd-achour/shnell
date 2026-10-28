@@ -2,19 +2,6 @@
   "remoteconfig": {
     "template": "remoteconfig.template.json"
   },
-  "functions": [
-    {
-      "source": "functions",
-      "codebase": "default",
-      "ignore": [
-        "node_modules",
-        ".git",
-        "firebase-debug.log",
-        "firebase-debug.*.log",
-        "*.local"
-      ]
-    }
-  ],
   "hosting": {
     "public": "dist/angular-firebase-auth/browser",
     "ignore": [

@@ -12,11 +12,6 @@
     </div>
   </div>
 
-
-
-
-
-  
   <header class="ud-top">
     <div class="ud-top__in">
       <div class="ud-brand">
@@ -24,29 +19,32 @@
         <span class="ud-logo__tag">Business</span>
       </div>
 
-      <nav class="ud-nav">
+      <nav class="ud-nav" *ngIf="biz.enabled === true">
         <button [class.on]="view === 'home'" (click)="setView('home')" title="Vue d'ensemble de votre activité">
           <i class="bi bi-speedometer2"></i> Accueil
-        </button>
-        <button [class.on]="view === 'parcels'" (click)="setView('parcels')" title="Importer, filtrer et assigner vos arrêts">
-          <i class="bi bi-geo-alt-fill"></i> Gérer les Arrêts
-          <span class="ud-nav__badge" *ngIf="parcels.length">{{ parcels.length }}</span>
         </button>
         <button [class.on]="view === 'jobs'" (click)="setView('jobs')" title="Définir et réserver jusqu’à 100 trajets (prix calculés par Shnell)">
           <i class="bi bi-plus-square-fill"></i> Créer des trajets
         </button>
         <button [class.on]="view === 'live'" (click)="setView('live')" title="Suivre la recherche, les offres et les chauffeurs de vos trajets">
           <i class="bi bi-broadcast"></i> Trajets en cours
+          <span class="ud-nav__badge" *ngIf="ordersOpen">{{ ordersOpen }}</span>
         </button>
-        <button [class.on]="view === 'api'" (click)="setView('api')" title="Intégration API pour créer des missions depuis votre propre système">
+        <button [class.on]="view === 'fleet'" (click)="setView('fleet')" title="Vos propres chauffeurs : invitez-les, puis confiez-leur vos trajets">
+          <i class="bi bi-people-fill"></i> Ma flotte
+        </button>
+        <button [class.on]="view === 'history'" (click)="setView('history')" title="Toutes vos commandes, dépenses, export Excel et relevé">
+          <i class="bi bi-clock-history"></i> Historique
+        </button>
+        <button [class.on]="view === 'api'" (click)="setView('api')" title="Clés API, webhooks et documentation">
           <i class="bi bi-code-slash"></i> API
         </button>
       </nav>
 
       <span class="ud-flex"></span>
 
-      <span class="ud-verified" *ngIf="companyApproved === true" title="Compte vérifié par Shnell">
-        <i class="bi bi-patch-check-fill"></i> Vérifié
+      <span class="ud-verified" *ngIf="biz.enabled === true" title="Shnell Business activé">
+        <i class="bi bi-patch-check-fill"></i> Business
       </span>
       <span class="ud-user" [title]="userEmail">{{ userEmail }}</span>
       <button class="ud-btn ud-btn--ghost" (click)="signOut()" title="Se déconnecter">
@@ -55,133 +53,27 @@
     </div>
   </header>
 
+  <!-- Not a business account yet: only the access request. -->
+  <div class="ud-shell ud-shell--wide" *ngIf="biz.enabled === false">
+    <app-biz-request (activated)="onActivated()"></app-biz-request>
+  </div>
 
-  <!-- One shell, always wide — every view (home/parcels/jobs/api) now shares
-       the same full-width layout instead of 'jobs' alone carrying an extra
-       326px sidebar column no other screen has. -->
-  <div class="ud-shell ud-shell--wide">
+  <div class="ud-shell ud-shell--wide" *ngIf="biz.enabled === true">
 
-    <!-- ============ SHNELL BUSINESS · trips (server-priced, server-booked) ============ -->
     <app-biz-composer *ngIf="view === 'jobs'" (openLive)="setView('live')"></app-biz-composer>
     <app-biz-live *ngIf="view === 'live'"></app-biz-live>
+    <app-biz-fleet *ngIf="view === 'fleet'"></app-biz-fleet>
+    <app-biz-history *ngIf="view === 'history'"></app-biz-history>
+    <app-biz-api *ngIf="view === 'api'"></app-biz-api>
 
-    <!-- ============ WORKSPACE · API ============ -->
-    <main class="ud-work ud-work--api" *ngIf="view === 'api'">
-      <div class="ud-workhead ud-workhead--editorial">
-        <div class="ud-workhead__main">
-          <span class="sh-eyebrow">Développeurs</span>
-          <h1 class="ud-title">API de commande</h1>
-          <p class="ud-lede">Créez des commandes Shnell depuis votre propre système, avec la même logique d’attribution des chauffeurs.</p>
-          <div class="ud-facts">
-            <span class="ud-fact"><i class="bi bi-hdd-network"></i> One HTTP call per order</span>
-            <span class="ud-fact"><i class="bi bi-geo"></i> Tunisia only</span>
-            <span class="ud-fact ok"><i class="bi bi-magic"></i> Same driver-matching logic</span>
-          </div>
-        </div>
-      </div>
-
-      <div class="ud-apigrid">
-        <section class="ud-panel">
-          <div class="ud-panel__head"><h6><i class="bi bi-key-fill me-2"></i>Authentication</h6></div>
-          <div class="ud-panel__pad">
-            <p class="ud-sub">
-              Create Shnell orders straight from your own system and have drivers auto-assigned.
-              Authenticate with an API key created here — every order created this way is attributed to you.
-            </p>
-
-            <span class="ud-lbl">Your API key</span>
-            <div class="ud-keyrow" *ngIf="newApiKey">
-              <code class="ud-key">{{ newApiKey }}</code>
-              <button class="ud-btn ud-btn--soft" (click)="copy(newApiKey)"><i class="bi bi-clipboard"></i> Copy</button>
-            </div>
-            <p class="ud-mini" *ngIf="newApiKey"><b>Copy it now: it will never be shown again.</b></p>
-            <div class="ud-keyrow" *ngIf="!newApiKey">
-              <code class="ud-key">{{ apiKeyPrefix ? apiKeyPrefix + '…' : 'No key yet' }}</code>
-              <button class="ud-btn ud-btn--soft" [disabled]="apiKeyBusy" (click)="createApiKey()">
-                <i class="bi bi-key"></i> {{ apiKeyPrefix ? 'Replace key' : 'Create key' }}
-              </button>
-            </div>
-            <p class="ud-mini">Send it as the <code>x-api-key</code> header on every request. Keep it secret — it can place paid orders. Keys based on your account UID stop working on 15 Nov 2026.</p>
-
-            <span class="ud-lbl">Endpoint</span>
-            <div class="ud-keyrow">
-              <code class="ud-key"><span class="ud-method">POST</span> {{ apiEndpoint }}</code>
-              <button class="ud-btn ud-btn--soft" (click)="copy(apiEndpoint)"><i class="bi bi-clipboard"></i> Copy</button>
-            </div>
-
-            <p class="ud-mini">
-              <i class="bi bi-shield-check me-1"></i>
-              All coordinates must be inside Tunisia. Pricing uses your fleet's per-country rates
-              (<code>settings/vehicles</code>). Orders are flagged administrative, so drivers won't call in-app.
-            </p>
-          </div>
-        </section>
-
-        <section class="ud-panel">
-          <div class="ud-panel__head">
-            <h6><i class="bi bi-terminal-fill me-2"></i>Quickstart</h6>
-            <div class="ud-langtabs">
-              <button [class.on]="apiLang === 'curl'" (click)="apiLang = 'curl'">cURL</button>
-              <button [class.on]="apiLang === 'node'" (click)="apiLang = 'node'">Node</button>
-              <button [class.on]="apiLang === 'python'" (click)="apiLang = 'python'">Python</button>
-            </div>
-          </div>
-          <div class="ud-panel__pad">
-            <div class="ud-code-wrap">
-              <button class="ud-copybtn" (click)="copy(apiSnippet)"><i class="bi bi-clipboard"></i></button>
-              <pre class="ud-code">{{ apiSnippet }}</pre>
-            </div>
-          </div>
-        </section>
-
-        <section class="ud-panel">
-          <div class="ud-panel__head"><h6><i class="bi bi-braces me-2"></i>Request body</h6></div>
-          <div class="ud-panel__pad">
-            <div class="ud-code-wrap">
-              <button class="ud-copybtn" (click)="copy(sampleBody)"><i class="bi bi-clipboard"></i></button>
-              <pre class="ud-code">{{ sampleBody }}</pre>
-            </div>
-            <table class="ud-ptable">
-              <thead><tr><th>Field</th><th>Type</th><th>Required</th><th>Notes</th></tr></thead>
-              <tbody>
-                <tr *ngFor="let p of apiParams">
-                  <td><code>{{ p.k }}</code></td>
-                  <td class="ud-ptable__t">{{ p.t }}</td>
-                  <td><span class="ud-req" [class.no]="!p.req">{{ p.req ? 'yes' : 'no' }}</span></td>
-                  <td>{{ p.d }}</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </section>
-
-        <section class="ud-panel">
-          <div class="ud-panel__head"><h6><i class="bi bi-check2-circle me-2"></i>Response &amp; errors</h6></div>
-          <div class="ud-panel__pad">
-            <span class="ud-lbl">200 OK</span>
-            <pre class="ud-code">{{ '{' }} "success": true, "orderId": "…", "price": 42.5, "currency": "TND", "distanceKm": 128.4, "stopIds": ["…"] {{ '}' }}</pre>
-            <table class="ud-ptable mt-3">
-              <thead><tr><th>Status</th><th>Meaning</th></tr></thead>
-              <tbody>
-                <tr *ngFor="let e of apiErrors">
-                  <td><code>{{ e.c }}</code></td>
-                  <td>{{ e.m }}</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </section>
-      </div>
-    </main>
-
-    <!-- ============ WORKSPACE · HOME / OVERVIEW ============ -->
+    <!-- ============ HOME / OVERVIEW ============ -->
     <main class="ud-work ud-work--home" *ngIf="view === 'home'">
       <div class="ud-workhead ud-workhead--editorial">
         <div class="ud-workhead__main">
           <span class="sh-eyebrow">Tableau de bord</span>
           <h1 class="ud-title">Bonjour{{ companyName ? ', ' + companyName : '' }}</h1>
           <p class="ud-lede">
-            Vue d'ensemble de votre activité Shnell — missions, arrêts en attente, et encaissement (COD).
+            Réservez jusqu’à 100 trajets à la fois aux prix Shnell, suivez chaque chauffeur en direct, et branchez votre propre logiciel avec l’API.
           </p>
         </div>
       </div>
@@ -190,311 +82,64 @@
         <div class="ud-kpi">
           <i class="bi bi-send-check-fill ud-kpi__i"></i>
           <span class="ud-kpi__n">{{ loadingOverview ? '—' : ordersTotal }}</span>
-          <span class="ud-kpi__l">Missions au total</span>
+          <span class="ud-kpi__l">Commandes au total</span>
         </div>
         <div class="ud-kpi ud-kpi--ok">
           <i class="bi bi-calendar-week-fill ud-kpi__i"></i>
           <span class="ud-kpi__n">{{ loadingOverview ? '—' : ordersThisWeek }}</span>
           <span class="ud-kpi__l">Cette semaine</span>
         </div>
-        <div class="ud-kpi">
-          <i class="bi bi-geo-alt-fill ud-kpi__i"></i>
-          <span class="ud-kpi__n">{{ parcelKpis.total }}</span>
-          <span class="ud-kpi__l">Arrêts dans le pool</span>
+        <div class="ud-kpi ud-kpi--amber">
+          <i class="bi bi-broadcast ud-kpi__i"></i>
+          <span class="ud-kpi__n">{{ loadingOverview ? '—' : ordersOpen }}</span>
+          <span class="ud-kpi__l">En attente d’un chauffeur</span>
         </div>
         <div class="ud-kpi">
           <i class="bi bi-truck ud-kpi__i"></i>
-          <span class="ud-kpi__n">{{ myDrivers.length }}</span>
-          <span class="ud-kpi__l">Chauffeurs liés</span>
+          <span class="ud-kpi__n">{{ biz.fleet.length }}</span>
+          <span class="ud-kpi__l">Chauffeurs de ma flotte</span>
         </div>
-        <div class="ud-kpi ud-kpi--amber">
-          <i class="bi bi-hourglass-split ud-kpi__i"></i>
-          <span class="ud-kpi__n">{{ parcelKpis.toCollect | number:'1.0-0' }}</span>
-          <span class="ud-kpi__l">TND à collecter</span>
-        </div>
-        <div class="ud-kpi ud-kpi--ok">
-          <i class="bi bi-cash-stack ud-kpi__i"></i>
-          <span class="ud-kpi__n">{{ parcelKpis.collected | number:'1.0-0' }}</span>
-          <span class="ud-kpi__l">TND collecté</span>
-        </div>
+      </div>
+
+      <div class="ud-lbl" style="margin-top: 28px;">Bien démarrer</div>
+      <div class="ud-video">
+        <app-biz-video [compact]="true" title="Shnell Business en 2 minutes : trajets, chauffeurs, flotte et API"></app-biz-video>
       </div>
 
       <div class="ud-lbl" style="margin-top: 28px;">Actions rapides</div>
       <div class="ud-quickactions">
-        <button type="button" class="ud-quickcard" (click)="setView('parcels')">
-          <i class="bi bi-geo-alt-fill"></i>
+        <button type="button" class="ud-quickcard" (click)="setView('jobs')">
+          <i class="bi bi-plus-square-fill"></i>
           <div>
-            <span class="ud-quickcard__t">Gérer les Arrêts</span>
-            <span class="ud-quickcard__d">Importer, filtrer et assigner vos arrêts à un chauffeur</span>
+            <span class="ud-quickcard__t">Créer des trajets</span>
+            <span class="ud-quickcard__d">Retrait, jusqu’à 50 arrêts, véhicules, ma flotte ou le réseau Shnell</span>
           </div>
           <i class="bi bi-chevron-right ud-quickcard__go"></i>
         </button>
-        <button type="button" class="ud-quickcard" (click)="setView('jobs')">
-          <i class="bi bi-grid-1x2-fill"></i>
+        <button type="button" class="ud-quickcard" (click)="setView('live')">
+          <i class="bi bi-broadcast"></i>
           <div>
-            <span class="ud-quickcard__t">Créer une Mission</span>
-            <span class="ud-quickcard__d">Retrait, arrêts, véhicule et chauffeur, de A à Z</span>
+            <span class="ud-quickcard__t">Trajets en cours</span>
+            <span class="ud-quickcard__d">Recherche, offres des chauffeurs, annulation, relance</span>
+          </div>
+          <i class="bi bi-chevron-right ud-quickcard__go"></i>
+        </button>
+        <button type="button" class="ud-quickcard" (click)="setView('history')">
+          <i class="bi bi-clock-history"></i>
+          <div>
+            <span class="ud-quickcard__t">Historique &amp; relevés</span>
+            <span class="ud-quickcard__d">Dépenses par mois, export Excel, relevé PDF pour la comptabilité</span>
           </div>
           <i class="bi bi-chevron-right ud-quickcard__go"></i>
         </button>
         <button type="button" class="ud-quickcard" (click)="setView('api')">
           <i class="bi bi-code-slash"></i>
           <div>
-            <span class="ud-quickcard__t">Intégration API</span>
-            <span class="ud-quickcard__d">Créez des missions depuis votre propre système</span>
+            <span class="ud-quickcard__t">API &amp; webhooks</span>
+            <span class="ud-quickcard__d">Créez et suivez vos livraisons depuis votre propre logiciel</span>
           </div>
           <i class="bi bi-chevron-right ud-quickcard__go"></i>
         </button>
-      </div>
-    </main>
-
-    <!-- ============ WORKSPACE · PARCELS ============ -->
-    <main class="ud-work ud-work--parcels" *ngIf="view === 'parcels'">
-      <div class="ud-workhead ud-workhead--editorial">
-        <div class="ud-workhead__main">
-          <span class="sh-eyebrow">Gérer les Arrêts</span>
-          <h1 class="ud-title">Définir, filtrer &amp; assigner vos arrêts</h1>
-          <p class="ud-lede">1. Importez ou ajoutez vos arrêts ci-dessous — 2. filtrez / recherchez ceux qui vous intéressent — 3. sélectionnez-les et regroupez-les en une mission à assigner à un chauffeur.</p>
-          <div class="ud-facts">
-            <span class="ud-fact"><i class="bi bi-box2"></i> {{ parcelKpis.total }} stored</span>
-            <span class="ud-fact"><i class="bi bi-geo"></i> {{ parcelKpis.located }} located</span>
-            <span class="ud-fact"><i class="bi bi-funnel"></i> {{ parcelKpis.filtered }} in view</span>
-            <span class="ud-fact ok" *ngIf="parcelKpis.selected"><i class="bi bi-check-circle-fill"></i> {{ parcelKpis.selected }} selected</span>
-            <span class="ud-fact"><i class="bi bi-cash-stack"></i> {{ parcelKpis.collected }} TND collecté</span>
-            <span class="ud-fact" *ngIf="parcelKpis.toCollect"><i class="bi bi-hourglass-split"></i> {{ parcelKpis.toCollect }} TND à collecter</span>
-          </div>
-        </div>
-        <button class="ud-btn ud-btn--ghost" (click)="loadParcels()" [disabled]="loadingParcels" title="Reload">
-          <span *ngIf="loadingParcels" class="spinner-border spinner-border-sm"></span>
-          <i class="bi bi-arrow-clockwise" *ngIf="!loadingParcels"></i>
-        </button>
-      </div>
-
-      <div class="ud-parcels">
-        <!-- query + list -->
-        <aside class="ud-parcels__side">
-
-          <!-- ===== Excel import → AI column-mapping → stops pool ===== -->
-          <div class="ud-panel ud-import">
-            <div class="ud-panel__head">
-              <h6><i class="bi bi-filetype-xlsx me-2"></i>Import Excel</h6>
-              <span class="ud-badge-ai"><i class="bi bi-stars"></i> AI mapping</span>
-            </div>
-            <div class="ud-panel__pad">
-
-              <ng-container *ngIf="importStage === 'idle'">
-                <p class="ud-mini">
-                  Upload a .xlsx / .xls / .csv of parcels. Gemini maps your columns
-                  (any names, FR/AR/EN, typos) to the stop schema. Rows land in the
-                  pool below — <b>not</b> attached to any order.
-                </p>
-                <label class="ud-btn ud-btn--soft ud-btn--block ud-filebtn">
-                  <i class="bi bi-upload me-1"></i> Choose a file
-                  <input type="file" accept=".xlsx,.xls,.csv" hidden (change)="onStopsFile($event)" />
-                </label>
-                <p class="ud-mini ud-danger" *ngIf="importError"><i class="bi bi-exclamation-triangle"></i> {{ importError }}</p>
-              </ng-container>
-
-              <ng-container *ngIf="importStage !== 'idle'">
-                <div class="ud-import__status">
-                  <ng-lottie class="ud-import__lottie" [options]="lot.pin"
-                             *ngIf="importStage === 'ai' || importStage === 'geocoding'"></ng-lottie>
-                  <span class="spinner-border spinner-border-sm"
-                        *ngIf="importStage === 'parsing' || importStage === 'saving'"></span>
-                  <i class="bi bi-check-circle-fill text-success" *ngIf="importStage === 'ready'"></i>
-                  <span class="ud-import__file">{{ importFileName }}</span>
-                  <span class="ud-import__stage">
-                    {{ importStage === 'parsing' ? 'Lecture…'
-                       : importStage === 'ai' ? 'Extraction IA…'
-                       : importStage === 'geocoding' ? 'Géocodage…'
-                       : importStage === 'saving' ? 'Enregistrement…'
-                       : 'Revue' }}
-                  </span>
-                </div>
-
-                <div class="ud-import__log" *ngIf="importLog.length">
-                  <div *ngFor="let l of importLog">{{ l }}</div>
-                </div>
-
-                <p class="ud-mini ud-danger" *ngIf="importError"><i class="bi bi-exclamation-triangle"></i> {{ importError }}</p>
-
-                <ng-container *ngIf="importStage === 'ready' || importStage === 'saving'">
-                  <div class="ud-import__kpis">
-                    <span><b>{{ importRows.length }}</b> reconnus</span>
-                    <span><b>{{ importKeepCount }}</b> à garder</span>
-                    <span><b>{{ importLocatedCount }}</b> localisés</span>
-                  </div>
-
-                  <div class="ud-import__rows">
-                    <label class="ud-import__row" *ngFor="let r of importRows">
-                      <input type="checkbox" [(ngModel)]="r.keep" />
-                      <span class="ud-import__row-main">
-                        <b>{{ r.name || '(sans nom)' }}</b>
-                        <span class="ud-mini">{{ r.address || '—' }}</span>
-                        <span class="ud-mini">
-                          {{ r.phone || 'pas de tél.' }}<ng-container *ngIf="r.gov"> · {{ r.gov }}</ng-container>
-                          <ng-container *ngIf="r.parcelPrice"> · {{ r.parcelPrice }} TND</ng-container>
-                          <ng-container *ngIf="r.expeditorId"> · {{ r.expeditorId }}</ng-container>
-                        </span>
-                        <span class="ud-mini" [class.ud-danger]="r.lat == null">{{ r.note }}</span>
-                      </span>
-                    </label>
-                  </div>
-
-                  <div class="ud-import__actions">
-                    <button class="ud-btn ud-btn--soft" (click)="cancelImport()" [disabled]="importStage === 'saving'">Annuler</button>
-                    <button class="ud-btn ud-btn--primary" (click)="registerImportedStops()"
-                            [disabled]="importStage === 'saving' || !importKeepCount">
-                      <span *ngIf="importStage === 'saving'" class="spinner-border spinner-border-sm me-2"></span>
-                      Enregistrer {{ importKeepCount }} arrêt(s)
-                    </button>
-                  </div>
-                </ng-container>
-              </ng-container>
-            </div>
-          </div>
-
-          <div class="ud-panel mt-3">
-            <div class="ud-panel__head"><h6><i class="bi bi-funnel-fill me-2"></i>Filter parcels</h6></div>
-            <div class="ud-panel__pad">
-              <input class="ud-inp" type="text" placeholder="Search name, phone, address, product…"
-                     [(ngModel)]="parcelSearch" (ngModelChange)="onParcelFilterChange()" />
-              <div class="ud-row2 mt-2">
-                <label>Governorate
-                  <select class="ud-inp" [(ngModel)]="parcelGov" (ngModelChange)="onParcelFilterChange()">
-                    <option value="">All</option>
-                    <option *ngFor="let g of parcelGovs" [value]="g">{{ g }}</option>
-                  </select>
-                </label>
-                <label>Status
-                  <select class="ud-inp" [(ngModel)]="parcelStatus" (ngModelChange)="onParcelFilterChange()">
-                    <option value="any">Any</option>
-                    <option *ngFor="let s of parcelStates" [value]="s">{{ stateLabels[s] }}</option>
-                  </select>
-                </label>
-              </div>
-              <div class="ud-checks mt-2">
-                <label><input type="checkbox" [(ngModel)]="parcelOnlyLocated" (ngModelChange)="onParcelFilterChange()"> Located only</label>
-                <label><input type="checkbox" [(ngModel)]="parcelOnlyPhone" (ngModelChange)="onParcelFilterChange()"> Has phone</label>
-              </div>
-
-              <hr class="my-3" />
-
-              <span class="ud-lbl"><i class="bi bi-bullseye me-1"></i>K-nearest to anchor</span>
-              <div class="ud-knn">
-                <input type="range" min="1" max="50" [(ngModel)]="kNearest" />
-                <span class="ud-knn__n">{{ kNearest }}</span>
-              </div>
-              <p class="ud-mini" *ngIf="!parcelAnchor"><i class="bi bi-info-circle me-1"></i>Click the map (or a parcel) to drop an anchor.</p>
-              <p class="ud-mini" *ngIf="parcelAnchor">
-                <i class="bi bi-crosshair me-1"></i>{{ parcelAnchor.lat | number:'1.4-4' }}, {{ parcelAnchor.lng | number:'1.4-4' }}
-                <button class="ud-linkbtn" (click)="clearAnchor()">clear</button>
-              </p>
-              <div class="ud-actions">
-                <button class="ud-btn ud-btn--soft" (click)="findKNearest()" [disabled]="!parcelAnchor">
-                  <i class="bi bi-magnet me-1"></i> Select {{ kNearest }} nearest
-                </button>
-              </div>
-
-              <hr class="my-3" />
-              <div class="ud-parcels__batch">
-                <button class="ud-btn ud-btn--soft" (click)="selectAllFilteredParcels()">Select all in view</button>
-                <button class="ud-btn ud-btn--soft" (click)="clearParcelSel()" [disabled]="!parcelSel.size">Clear ({{ parcelSel.size }})</button>
-              </div>
-              <button class="ud-btn ud-btn--primary ud-btn--block mt-2"
-                      [disabled]="!parcelKpis.selected" (click)="createOrderFromParcels()">
-                <i class="bi bi-bag-plus-fill me-1"></i> Batch {{ parcelKpis.selected }} into an order
-              </button>
-            </div>
-          </div>
-
-          <div class="ud-panel mt-3">
-            <div class="ud-panel__head">
-              <h6><i class="bi bi-list-ul me-2"></i>{{ filteredParcels.length }} parcels</h6>
-            </div>
-            <div class="ud-panel__pad ud-parcels__list">
-              <button *ngFor="let p of filteredParcels" class="ud-parcelrow"
-                      [class.is-sel]="parcelSel.has(p.id)" (click)="toggleParcelSel(p.id)">
-                <span class="ud-parcelrow__tick"><i class="bi" [ngClass]="parcelSel.has(p.id) ? 'bi-check-square-fill' : 'bi-square'"></i></span>
-                <span class="ud-parcelrow__body">
-                  <span class="ud-parcelrow__t">{{ p.name || p.address || 'Parcel' }}</span>
-                  <span class="ud-parcelrow__m">
-                    <span class="ud-state ud-state--{{ p.state }}">{{ stateLabels[p.state] }}</span>
-                    · {{ p.gov || '—' }}<ng-container *ngIf="p.phone"> · {{ p.phone }}</ng-container>
-                    <ng-container *ngIf="p.parcelPrice"> · <i class="bi bi-cash-coin"></i> {{ p.parcelPrice }} TND</ng-container>
-                    <ng-container *ngIf="p.dist != null"> · {{ p.dist }} km</ng-container>
-                    <ng-container *ngIf="p.lat == null"> · <span class="ud-warn">no location</span></ng-container>
-                  </span>
-                </span>
-                <button class="ud-parcelrow__go" (click)="$event.stopPropagation(); anchorFromParcel(p)" title="Anchor here" *ngIf="p.lat != null">
-                  <i class="bi bi-crosshair"></i>
-                </button>
-              </button>
-              <div class="ud-empty" *ngIf="!loadingParcels && filteredParcels.length === 0">
-                <ng-lottie class="ud-empty__lottie" [options]="lot.emptyBox"></ng-lottie>
-                <h4>{{ parcels.length ? 'Aucun colis ne correspond' : 'Aucun colis pour l’instant' }}</h4>
-                <p>{{ parcels.length
-                      ? 'Ajustez les filtres pour retrouver vos colis.'
-                      : 'Importez un fichier Excel — l’IA reconnaît vos colonnes automatiquement.' }}</p>
-              </div>
-            </div>
-          </div>
-        </aside>
-
-        <!-- map -->
-        <section class="ud-parcels__mapwrap">
-          <div class="ud-maptools ud-parcels__maptools">
-            <button [class.on]="parcelMapMode === 'street'" (click)="setParcelMapMode('street')"><i class="bi bi-map"></i> Map</button>
-            <button [class.on]="parcelMapMode === 'satellite'" (click)="setParcelMapMode('satellite')"><i class="bi bi-globe-americas"></i> Satellite</button>
-          </div>
-          <div #parcelMapEl class="ud-parcels__map"></div>
-        </section>
-      </div>
-
-      <!-- per-expeditor money analysis -->
-      <div class="ud-panel mt-3" *ngIf="expeditorRollups.length">
-        <div class="ud-panel__head">
-          <h6><i class="bi bi-shop me-2"></i>Analyse par expéditeur</h6>
-        </div>
-        <div class="ud-panel__pad" style="overflow-x:auto">
-          <table class="ud-table" style="width:100%; min-width:820px; border-collapse:collapse">
-            <thead>
-              <tr>
-                <th style="text-align:left">Expéditeur</th>
-                <th>Colis</th>
-                <th>En attente</th>
-                <th>En route</th>
-                <th>Livré</th>
-                <th>Non livré</th>
-                <th>Collecté (TND)</th>
-                <th>À collecter (TND)</th>
-                <th>Réglé (TND)</th>
-                <th>Dû à l'expéditeur (TND)</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr *ngFor="let r of expeditorRollups">
-                <td style="text-align:left"><strong>{{ r.expeditorId }}</strong></td>
-                <td class="text-center">{{ r.total }}</td>
-                <td class="text-center">{{ r.pending }}</td>
-                <td class="text-center">{{ r.inRoute }}</td>
-                <td class="text-center">{{ r.delivered }}</td>
-                <td class="text-center">{{ r.notDelivered }}</td>
-                <td class="text-center">{{ r.collected }}</td>
-                <td class="text-center">{{ r.toCollect }}</td>
-                <td class="text-center">{{ r.paidOut }}</td>
-                <td class="text-center"><strong>{{ r.outstanding }}</strong></td>
-                <td class="text-end">
-                  <button class="ud-btn ud-btn--soft" [disabled]="!r.outstanding"
-                          (click)="markExpeditorPaid(r.expeditorId)">
-                    <i class="bi bi-cash-stack me-1"></i> Marquer réglé
-                  </button>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
       </div>
     </main>
   </div>

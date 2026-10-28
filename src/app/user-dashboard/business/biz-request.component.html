@@ -1,0 +1,108 @@
+<div class="bz br">
+  <div class="br-loading" *ngIf="loading"><span class="bz-dim">Chargement…</span></div>
+
+  <ng-container *ngIf="!loading">
+    <!-- ===== Pitch ===== -->
+    <section class="br-hero">
+      <span class="br-eyebrow"><i class="bi bi-briefcase-fill"></i> Shnell Business</span>
+      <h1>Automatisez vos livraisons et votre logistique.</h1>
+      <p>Votre compte n’a pas encore accès à l’espace professionnel. Envoyez une demande : un conseiller Shnell vous appelle, valide votre activité et ouvre votre accès.</p>
+      <div class="br-feats">
+        <div><i class="bi bi-plus-square-fill"></i><b>100 trajets d’un coup</b><span>Collage depuis Excel, prix calculés par Shnell, plusieurs arrêts par trajet.</span></div>
+        <div><i class="bi bi-broadcast"></i><b>Suivi en direct</b><span>Recherche de chauffeurs, offres, position et état de chaque arrêt.</span></div>
+        <div><i class="bi bi-code-slash"></i><b>API &amp; webhooks</b><span>Votre logiciel crée les commandes et reçoit chaque changement.</span></div>
+        <div><i class="bi bi-file-earmark-spreadsheet"></i><b>Historique &amp; relevés</b><span>Dépenses par période, export Excel, relevé imprimable.</span></div>
+      </div>
+      <app-biz-video class="br-video" title="Comment Shnell Business automatise vos livraisons (2 min)"></app-biz-video>
+    </section>
+
+    <!-- ===== Status of an existing request ===== -->
+    <section class="bz-card br-status" *ngIf="status && !showForm">
+      <div class="br-steps">
+        <div class="br-step done"><i class="bi bi-send-check-fill"></i><span>Demande envoyée</span></div>
+        <div class="br-step" [class.done]="status === 'contacted' || status === 'approved'" [class.cur]="status === 'pending'">
+          <i class="bi bi-telephone-fill"></i><span>Appel d’un conseiller</span></div>
+        <div class="br-step" [class.done]="status === 'approved'" [class.cur]="status === 'contacted'">
+          <i class="bi bi-patch-check-fill"></i><span>Accès activé</span></div>
+      </div>
+      <ng-container [ngSwitch]="status">
+        <p *ngSwitchCase="'pending'"><b>Demande reçue le {{ submittedAtMs | date:'d MMM y, HH:mm' }}.</b>
+          Un conseiller Shnell vous appelle au <b dir="ltr">{{ form.phone }}</b> pour comprendre vos besoins (généralement sous 24 h ouvrées).</p>
+        <p *ngSwitchCase="'contacted'"><b>Nous avons échangé avec vous.</b> Votre accès est en cours de validation, cette page s’ouvrira automatiquement.</p>
+        <p *ngSwitchCase="'approved'"><b>Accès activé !</b> Chargement de votre espace…</p>
+      </ng-container>
+      <p class="bz-dim" *ngIf="reviewNote && status !== 'rejected'">Note de Shnell : {{ reviewNote }}</p>
+      <button class="bz-btn" (click)="editing = true" *ngIf="status !== 'approved'"><i class="bi bi-pencil"></i> Modifier ma demande</button>
+    </section>
+
+    <!-- ===== Form ===== -->
+    <section class="bz-card br-form" *ngIf="showForm">
+      <div class="bz-banner bz-banner--bad" *ngIf="status === 'rejected' && !editing">
+        <i class="bi bi-x-circle-fill"></i>
+        <span><b>Votre précédente demande n’a pas été acceptée.</b> {{ reviewNote }} Vous pouvez la compléter et la renvoyer.</span>
+      </div>
+      <div class="bz-card__h"><i class="bi bi-building-add"></i> Demander l’accès Shnell Business</div>
+
+      <div class="bz-two">
+        <label class="bz-field">Entreprise *
+          <input class="bz-input" [(ngModel)]="form.company" maxlength="120" placeholder="Ex. Acme SARL" />
+        </label>
+        <label class="bz-field">Secteur *
+          <select class="bz-input" [(ngModel)]="form.sector">
+            <option value="" disabled>Choisir…</option>
+            <option *ngFor="let s of sectors" [value]="s.id">{{ s.label }}</option>
+          </select>
+        </label>
+        <label class="bz-field">Nom du contact *
+          <input class="bz-input" [(ngModel)]="form.contactName" maxlength="120" />
+        </label>
+        <label class="bz-field">Téléphone *
+          <input class="bz-input" [(ngModel)]="form.phone" maxlength="40" inputmode="tel" dir="ltr" placeholder="+216 20 123 456" />
+        </label>
+        <label class="bz-field">Ville
+          <input class="bz-input" [(ngModel)]="form.city" maxlength="80" placeholder="Tunis, Sfax…" />
+        </label>
+        <label class="bz-field">Matricule fiscal <small class="bz-dim">(facultatif)</small>
+          <input class="bz-input" [(ngModel)]="form.taxId" maxlength="40" />
+        </label>
+      </div>
+
+      <div class="br-block">
+        <span class="br-lbl">Trajets par mois (estimation) *</span>
+        <div class="br-chips">
+          <button type="button" *ngFor="let v of volumes" class="br-chip" [class.on]="form.monthlyTrips === v" (click)="form.monthlyTrips = v">{{ v }}</button>
+        </div>
+      </div>
+
+      <div class="br-block">
+        <span class="br-lbl">Ce dont vous avez besoin</span>
+        <div class="br-needs">
+          <button type="button" *ngFor="let n of needList" class="br-need" [class.on]="form.needs.has(n.id)" (click)="toggleNeed(n.id)">
+            <i class="bi" [ngClass]="n.icon"></i><span>{{ n.label }}</span>
+            <i class="bi br-need__tick" [ngClass]="form.needs.has(n.id) ? 'bi-check-circle-fill' : 'bi-circle'"></i>
+          </button>
+        </div>
+      </div>
+
+      <div class="bz-two">
+        <label class="bz-field">Site web <small class="bz-dim">(facultatif)</small>
+          <input class="bz-input" [(ngModel)]="form.website" maxlength="200" placeholder="https://" />
+        </label>
+        <span></span>
+      </div>
+      <label class="bz-field br-block">Votre activité en quelques mots
+        <textarea class="bz-input" rows="3" [(ngModel)]="form.message" maxlength="1000"
+                  placeholder="Ce que vous transportez, d’où vers où, vos contraintes…"></textarea>
+      </label>
+
+      <div class="br-actions">
+        <button class="bz-btn" *ngIf="editing" (click)="editing = false">Annuler</button>
+        <button class="bz-btn bz-btn--primary" (click)="submit()" [disabled]="!valid || busy">
+          <i class="bi" [ngClass]="busy ? 'bi-hourglass-split' : 'bi-send-fill'"></i>
+          {{ status && status !== 'rejected' ? 'Mettre à jour ma demande' : 'Envoyer ma demande' }}
+        </button>
+      </div>
+      <p class="bz-dim br-legal">Un conseiller vous contacte pour vérifier votre activité. L’accès est gratuit : vous payez uniquement vos trajets.</p>
+    </section>
+  </ng-container>
+</div>

@@ -16,10 +16,10 @@ async function currentUserOrWait(auth: Auth) {
 }
 
 /** A user is barred from every authenticated surface when their account doc
- *  carries `isBan` (or the legacy `isBanned`) === true. Mirrors the check the
+ *  carries `isBanned` === true. Mirrors the check the
  *  two Flutter apps already run in their `main.dart`. */
 export function isUserBanned(data: any): boolean {
-  return data?.isBan === true || data?.isBanned === true;
+  return data?.isBanned === true;
 }
 
 /** Read `users/{uid}` and report whether the account is banned. Fails open
@@ -71,8 +71,11 @@ export class AdminGuard implements CanActivate {
 }
 
 /**
- * User dashboard guard — any authenticated account is allowed in, no role check,
- * EXCEPT a banned account, which is signed out and bounced to /sign-in.
+ * Shnell Business guard (/app) — same rule as the apps' auth gate: a signed-in
+ * account with its WhatsApp number verified (users/{uid}.isPhoneVerified,
+ * set by the server). Unverified or profile-less accounts go back to
+ * /sign-in, which resumes at the phone step. Admins pass. Banned accounts
+ * are signed out.
  */
 @Injectable({ providedIn: 'root' })
 export class AuthedGuard implements CanActivate {
@@ -82,10 +85,20 @@ export class AuthedGuard implements CanActivate {
     const user = await currentUserOrWait(this.auth);
     if (!user) return this.router.createUrlTree(['/sign-in']);
 
-    if (await accountBanned(this.firestore, user.uid)) {
+    let data: any = null;
+    try {
+      const snap = await getDoc(doc(this.firestore, 'users', user.uid));
+      data = snap.exists() ? snap.data() : null;
+    } catch (err) {
+      console.error('AuthedGuard read failed:', err);
+      return true;   // fail open on a read blip; the dashboard re-checks the ban live
+    }
+    if (isUserBanned(data)) {
       await signOut(this.auth).catch(() => {});
       return this.router.createUrlTree(['/sign-in'], { queryParams: { banned: 1 } });
     }
+    const admin = String(data?.role || '').trim().toLowerCase() === 'admin';
+    if (!admin && data?.isPhoneVerified !== true) return this.router.createUrlTree(['/sign-in']);
     return true;
   }
 }

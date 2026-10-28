@@ -1,4 +1,4 @@
-import { Component, EventEmitter, Input, OnDestroy, OnInit, Output } from '@angular/core';
+import { Component, EventEmitter, Input, OnChanges, OnDestroy, OnInit, Output } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
@@ -50,7 +50,7 @@ import { walletBalances } from '../../services/wallet';
   </div>`,
   styleUrls: ['../../hub.css'],
 })
-export class AttentionStripComponent implements OnInit, OnDestroy {
+export class AttentionStripComponent implements OnInit, OnChanges, OnDestroy {
   @Input() users: ShnellUser[] = [];
   @Input() vehicles: Vehicle[] = [];
   @Input() verifications: any[] = [];
@@ -72,7 +72,7 @@ export class AttentionStripComponent implements OnInit, OnDestroy {
       this.critical = a.filter(x => x.severity === 'critical').length;
     });
     this.hub.pendingRecharges$.pipe(takeUntil(this.destroy$)).subscribe(p => this.recharges = p.length);
-    this.hub.config$.pipe(takeUntil(this.destroy$)).subscribe(c => this.config = c);
+    this.hub.config$.pipe(takeUntil(this.destroy$)).subscribe(c => { this.config = c; this.recount(); });
     const midnight = new Date(); midnight.setHours(0, 0, 0, 0);
     this.hub.ledger$(midnight.getTime(), 1000).pipe(takeUntil(this.destroy$)).subscribe(rows => {
       this.todayRecharges = fmt(rows.filter(r => r.kind === 'recharge'));
@@ -82,20 +82,22 @@ export class AttentionStripComponent implements OnInit, OnDestroy {
 
   ngOnDestroy(): void { this.destroy$.next(); this.destroy$.complete(); }
 
-  get pendingVehicles(): number { return this.vehicles.filter(v => !v.isAdminApproved).length; }
+  pendingVehicles = 0;
+  toVerify = 0;
+  paused = 0;
 
-  get toVerify(): number {
+  ngOnChanges(): void { this.recount(); }
+
+  private recount(): void {
+    this.pendingVehicles = this.vehicles.filter(v => !v.isAdminApproved).length;
     // Same rule as the Driver Verifications tab: pending = not verified yet.
-    return this.verifications.filter(v => v.isVerified !== true).length;
-  }
-
-  get paused(): number {
+    this.toVerify = this.verifications.filter(v => v.isVerified !== true).length;
     let n = 0;
     for (const u of this.users) {
       if (u.role !== 'driver') continue;
       if (walletBalances(u as any).some(b => b.amount < this.floorIn(b.currency))) n++;
     }
-    return n;
+    this.paused = n;
   }
 
   private floorIn(cur: string): number {

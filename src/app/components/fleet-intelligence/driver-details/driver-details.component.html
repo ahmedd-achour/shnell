@@ -8,8 +8,8 @@
       <div>
         <div class="d-flex align-items-center gap-2 mb-1">
           <h3 class="mb-0 font-heading text-white fs-4">Driver Dossier: {{ driver.name }}</h3>
-          <span class="badge" [ngClass]="driver.isBan || driver.isBanned ? 'bg-danger' : 'bg-success'">
-            {{ driver.isBan || driver.isBanned ? 'BANNED' : 'ACTIVE' }}
+          <span class="badge" [ngClass]="driver.isBanned ? 'bg-danger' : 'bg-success'">
+            {{ driver.isBanned ? 'BANNED' : 'ACTIVE' }}
           </span>
           <span class="badge" [ngClass]="driver.accType === 'pro' ? 'bg-warning text-dark' : 'bg-info'">
             {{ (driver.accType || 'standard') | uppercase }}
@@ -68,11 +68,11 @@
             <label class="text-muted fs-8 fw-semibold d-block mb-1">Account Ban State:</label>
             <button
               class="btn btn-sm w-100 rounded-pill fw-bold"
-              [ngClass]="driver.isBan || driver.isBanned ? 'btn-outline-success' : 'btn-outline-danger'"
+              [ngClass]="driver.isBanned ? 'btn-outline-success' : 'btn-outline-danger'"
               [disabled]="isProcessing"
               (click)="toggleBanStatus()">
-              <i class="bi" [ngClass]="driver.isBan || driver.isBanned ? 'bi-check-circle me-1' : 'bi-slash-circle me-1'"></i>
-              {{ driver.isBan || driver.isBanned ? 'Unban Driver Account' : 'Ban Driver Account' }}
+              <i class="bi" [ngClass]="driver.isBanned ? 'bi-check-circle me-1' : 'bi-slash-circle me-1'"></i>
+              {{ driver.isBanned ? 'Unban Driver Account' : 'Ban Driver Account' }}
             </button>
           </div>
 

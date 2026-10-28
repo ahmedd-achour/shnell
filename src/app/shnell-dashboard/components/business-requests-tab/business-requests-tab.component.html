@@ -1,0 +1,78 @@
+<div class="hub-head">
+  <div>
+    <h3>Business requests</h3>
+    <p>Accounts asking for Shnell Business from the pro space (/app). Call them, mark the request contacted, then approve (Business turns on and they are notified) or refuse with a reason they will see. Every decision is written to the Activity Log.</p>
+  </div>
+  <div class="hub-actions">
+    <div class="hub-seg">
+      <button [class.on]="filter === 'open'" (click)="filter = 'open'">To handle</button>
+      <button [class.on]="filter === 'approved'" (click)="filter = 'approved'">Approved</button>
+      <button [class.on]="filter === 'rejected'" (click)="filter = 'rejected'">Refused</button>
+      <button [class.on]="filter === 'all'" (click)="filter = 'all'">All</button>
+    </div>
+  </div>
+</div>
+
+<div class="hub-kpis">
+  <div class="hub-kpi hub-kpi--click" [class.hub-kpi--alert]="kpis.pending" (click)="filter = 'pending'">
+    <span class="hub-kpi__label">New, not called</span><span class="hub-kpi__value">{{ kpis.pending }}</span></div>
+  <div class="hub-kpi hub-kpi--click" (click)="filter = 'contacted'">
+    <span class="hub-kpi__label">Contacted</span><span class="hub-kpi__value">{{ kpis.contacted }}</span></div>
+  <div class="hub-kpi"><span class="hub-kpi__label">Approved</span><span class="hub-kpi__value">{{ kpis.approved }}</span></div>
+  <div class="hub-kpi"><span class="hub-kpi__label">New this week</span><span class="hub-kpi__value">{{ kpis.week }}</span></div>
+</div>
+
+<div class="hub-card">
+  <div class="hub-card__body hub-toolbar">
+    <input class="hub-input hub-input--search" [(ngModel)]="search" placeholder="Search company, contact, phone, city…" aria-label="Search">
+  </div>
+
+  <div class="hub-empty" *ngIf="loading"><span class="spinner-border spinner-border-sm"></span></div>
+
+  <div class="hub-table-wrap" *ngIf="!loading">
+    <div class="hub-empty" *ngIf="!shown.length">No request here.</div>
+    <table class="hub-table" *ngIf="shown.length">
+      <thead><tr><th>Company</th><th>Contact</th><th>Activity</th><th>Needs</th><th>Received</th><th>Status</th><th></th></tr></thead>
+      <tbody>
+        <ng-container *ngFor="let r of shown">
+          <tr>
+            <td>
+              <a class="hub-link" (click)="openAccount.emit(r.uid)">{{ r.company }}</a>
+              <div class="hub-dim">{{ r.city || '—' }}<span *ngIf="r.taxId"> · MF {{ r.taxId }}</span></div>
+            </td>
+            <td>
+              {{ r.contactName }}
+              <div><a class="hub-link" [href]="'tel:' + r.phone" dir="ltr">{{ r.phone }}</a>
+                · <a class="hub-link" [href]="waLink(r.phone)" target="_blank" rel="noopener" title="WhatsApp"><i class="bi bi-whatsapp"></i></a></div>
+              <div class="hub-dim">{{ r.email }}</div>
+            </td>
+            <td>{{ sector(r.sector) }}<div class="hub-dim">{{ r.monthlyTrips }} trips / month</div></td>
+            <td><span class="hub-tag tone-info" *ngFor="let n of r.needs" style="margin:0 4px 4px 0" [title]="need(n)">{{ n }}</span></td>
+            <td>{{ r.createdAt | date:'dd MMM, HH:mm' }}<div class="hub-dim" *ngIf="r.submissions > 1">sent {{ r.submissions }}×</div></td>
+            <td>
+              <span class="hub-tag" [ngClass]="statusTone[r.status]">{{ statusLabel[r.status] }}</span>
+              <div class="hub-dim" *ngIf="r.reviewedAt">{{ r.reviewedAt | date:'dd MMM' }}</div>
+            </td>
+            <td class="text-end" style="white-space:nowrap">
+              <button class="hub-btn hub-btn--sm" (click)="expanded = expanded === r.uid ? null : r.uid">{{ expanded === r.uid ? 'Hide' : 'Details' }}</button>
+              <ng-container *ngIf="r.status === 'pending' || r.status === 'contacted' || r.status === 'rejected'">
+                <button class="hub-btn hub-btn--sm" *ngIf="r.status === 'pending'" (click)="contacted(r)" [disabled]="busy === r.uid">Contacted</button>
+                <button class="hub-btn hub-btn--sm hub-btn--success" (click)="approve(r)" [disabled]="busy === r.uid">Approve</button>
+                <button class="hub-btn hub-btn--sm hub-btn--danger" *ngIf="r.status !== 'rejected'" (click)="reject(r)" [disabled]="busy === r.uid">Refuse</button>
+              </ng-container>
+            </td>
+          </tr>
+          <tr *ngIf="expanded === r.uid">
+            <td colspan="7">
+              <div class="hub-dim">Message</div>
+              <p style="white-space:pre-wrap;margin:2px 0 8px">{{ r.message || '—' }}</p>
+              <div *ngIf="r.website"><span class="hub-dim">Website</span> <a class="hub-link" [href]="r.website" target="_blank" rel="noopener">{{ r.website }}</a></div>
+              <div><span class="hub-dim">Needs</span> {{ r.needs.length ? '' : '—' }}<span *ngFor="let n of r.needs; let last = last">{{ need(n) }}{{ last ? '' : ' · ' }}</span></div>
+              <div *ngIf="r.reviewNote"><span class="hub-dim">Note</span> {{ r.reviewNote }}</div>
+            </td>
+          </tr>
+        </ng-container>
+      </tbody>
+    </table>
+  </div>
+</div>

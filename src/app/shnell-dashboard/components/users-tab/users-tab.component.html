@@ -103,11 +103,11 @@
               <td>
                 <button
                   class="btn btn-sm rounded-pill px-3 py-1 fs-8 fw-bold"
-                  [ngClass]="(u.isBan || u.isBanned) ? 'btn-danger' : 'btn-outline-success'"
+                  [ngClass]="(u.isBanned) ? 'btn-danger' : 'btn-outline-success'"
                   [disabled]="processingBanId === (u.uid || u.id)"
                   (click)="toggleBan(u)">
-                  <i class="bi" [ngClass]="(u.isBan || u.isBanned) ? 'bi-shield-slash-fill me-1' : 'bi-shield-check me-1'"></i>
-                  {{ (u.isBan || u.isBanned) ? 'BANNED' : 'ACTIVE' }}
+                  <i class="bi" [ngClass]="(u.isBanned) ? 'bi-shield-slash-fill me-1' : 'bi-shield-check me-1'"></i>
+                  {{ (u.isBanned) ? 'BANNED' : 'ACTIVE' }}
                 </button>
               </td>
               <td class="text-end pe-4">

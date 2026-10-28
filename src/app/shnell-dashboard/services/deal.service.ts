@@ -21,7 +21,7 @@ export class DealService {
 
   async createDeal(input: CreateDealInput): Promise<string> {
     const orderRef = doc(this.firestore, 'orders', input.orderId);
-    await updateDoc(orderRef, { isAcepted: true });
+    await updateDoc(orderRef, { isAccepted: true });
 
     const dealRef = doc(collection(this.firestore, 'deals'));
     await setDoc(dealRef, {

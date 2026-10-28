@@ -1,9 +1,8 @@
 /**
  * Admin hub: one reading of the ledger (commissions/*) and of the audit log
  * (admin_audit/*) for every screen — Finance, Activity, Account 360, the
- * topbar bell. Ledger lines exist in two shapes (canonical schema 2 from
- * functions/lib/ledger.js, and the older DriverId / typeOfTransaction /
- * commissionDeducted names); normalizeLedger() turns both into LedgerRow.
+ * topbar bell. Ledger lines have one shape (functions/lib/ledger.js);
+ * normalizeLedger() turns a raw line into a typed LedgerRow.
  */
 
 /** Firestore Timestamp | Date | millis | {seconds} -> millis (0 when unknown). */
@@ -17,7 +16,7 @@ export function toMillis(v: any): number {
   return isNaN(t) ? 0 : t;
 }
 
-export type LedgerKind = 'commission' | 'recharge' | 'adjustment' | 'company_tour' | string;
+export type LedgerKind = 'commission' | 'recharge' | 'adjustment' | 'company_tour' | 'biz_subscription' | string;
 
 export interface LedgerRow {
   id: string;
@@ -44,15 +43,11 @@ const num = (v: any): number | null => (typeof v === 'number' && isFinite(v) ? v
 
 export function normalizeLedger(raw: any): LedgerRow {
   const d = raw || {};
-  const kind: LedgerKind = d.kind || d.typeOfTransaction || 'commission';
-  let delta = num(d.delta);
-  if (delta === null) {
-    const amt = Math.abs(num(d.commissionDeducted) ?? 0);
-    delta = kind === 'recharge' ? amt : -amt;
-  }
+  const kind: LedgerKind = d.kind || 'commission';
+  const delta = num(d.delta) ?? 0;
   return {
     id: d.id,
-    uid: String(d.uid || d.DriverId || d.driverId || d.userId || d.companyId || ''),
+    uid: String(d.uid || ''),
     kind,
     delta: Math.round(delta * 100) / 100,
     currencyCode: d.currencyCode || 'TND',
@@ -66,7 +61,7 @@ export function normalizeLedger(raw: any): LedgerRow {
     adminUid: d.adminUid || null,
     approvedBy: d.approvedBy || null,
     reason: d.reason || null,
-    dealAmount: num(d.dealAmount) ?? num(d.DealAmount),
+    dealAmount: num(d.dealAmount),
   };
 }
 
@@ -75,6 +70,7 @@ export const LEDGER_KIND_META: Record<string, { label: string; icon: string; ton
   recharge:     { label: 'Office recharge', icon: 'bi-cash-coin',          tone: 'success' },
   adjustment:   { label: 'Adjustment',      icon: 'bi-sliders',            tone: 'warning' },
   company_tour: { label: 'Partner tour',    icon: 'bi-buildings',          tone: 'info' },
+  biz_subscription: { label: 'Business Pro', icon: 'bi-briefcase-fill', tone: 'info' },
 };
 
 export function ledgerMeta(kind: string) {

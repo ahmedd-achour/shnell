@@ -7,14 +7,13 @@ import { vehicleImage, onVehicleImgError } from '../shared/vehicle-assets';
 export interface OrderWithDocId {
   docId: string; // Firestore document ID for deletion
   id?: string;
-  userID?: string;
-  userId?: string;
+  clientId?: string;
   price?: number;
   distance?: number;
   namePickUp?: string;
   stops?: string[];
   vehicleType?: string;
-  isAcepted?: boolean;
+  isAccepted?: boolean;
   timestamp: Date;
   scheduleAt?: Date | null;
   governorate?: string;
@@ -105,13 +104,12 @@ export class ExpiredOrdersComponent implements OnInit {
             docId: docSnap.id,
             id: docSnap.id,
             namePickUp: data.namePickUp || 'Unnamed pickup',
-            userID: data.userID || data.userId || 'N/A',
-            userId: data.userId || data.userID || 'N/A',
+            clientId: data.clientId || 'N/A',
             price: data.price ?? 0,
             distance: data.distance ?? 0,
             stops: Array.isArray(data.stops) ? data.stops : [],
             vehicleType: data.vehicleType || '—',
-            isAcepted: !!data.isAcepted,
+            isAccepted: !!data.isAccepted,
             governorate: data.governorate || 'Tunis',
             region: data.region || 'Grand Tunis',
             timestamp,
@@ -179,7 +177,7 @@ export class ExpiredOrdersComponent implements OnInit {
     return this.expiredOrders.filter(o => {
       const matchesSearch = !q ||
         o.namePickUp?.toLowerCase().includes(q) ||
-        o.userID?.toLowerCase().includes(q) ||
+        o.clientId?.toLowerCase().includes(q) ||
         o.docId.toLowerCase().includes(q) ||
         o.vehicleType?.toLowerCase().includes(q);
 
@@ -316,7 +314,7 @@ export class ExpiredOrdersComponent implements OnInit {
     const data = this.filteredExpiredOrders.map(o => ({
       'Doc ID': o.docId,
       'Pickup Location': o.namePickUp,
-      'User ID': o.userID,
+      'User ID': o.clientId,
       'Stops Count': o.stops ? o.stops.length : 0,
       'Estimated Price (TND)': o.price || 0,
       'Vehicle Type': o.vehicleType || 'N/A',

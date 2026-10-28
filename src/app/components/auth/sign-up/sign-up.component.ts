@@ -112,7 +112,7 @@ export class SignUpComponent {
         phone,
         role: 'company-onheld',
         accType: 'standard',
-        isBan: false,
+        isBanned: false,
         darkMode: true,
         drivers: [], // roster this company can direct-assign to (see profile.component.ts)
       });

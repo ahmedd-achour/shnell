@@ -194,6 +194,11 @@
                 <label class="form-label fs-8">Stop fee</label>
                 <input type="number" step="0.1" class="form-control form-control-sm" formControlName="stop_fee" />
               </div>
+              <div class="col-6">
+                <label class="form-label fs-8">Return trips: minimum distance (km)</label>
+                <input type="number" step="1" min="1" max="500" class="form-control form-control-sm" formControlName="return_min_km" />
+                <div class="fs-9 text-muted mt-1">Shortest return a driver can post, and shortest customer trip on it (1–500).</div>
+              </div>
               <div class="col-12">
                 <label class="form-label fs-8">Customer app update link</label>
                 <input type="url" class="form-control form-control-sm" formControlName="update_link_customer_app" placeholder="https://play.google.com/…" />

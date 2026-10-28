@@ -79,7 +79,7 @@ export class UsersTabComponent implements OnInit {
     const userId = user.uid || user.id;
     if (!userId) return;
 
-    const currentBan = user.isBan || user.isBanned || false;
+    const currentBan = user.isBanned || false;
     const ok = await confirmAction({
       title: currentBan ? `Débannir ${user.name} ?` : `Bannir ${user.name} ?`,
       text: currentBan
@@ -93,7 +93,6 @@ export class UsersTabComponent implements OnInit {
     this.processingBanId = userId;
     try {
       const newBanState = await this.dashboardDataService.toggleUserBan(userId, currentBan);
-      user.isBan = newBanState;
       user.isBanned = newBanState;
       toastSuccess(newBanState ? 'Compte banni' : 'Compte débanni');
     } catch (err: any) {

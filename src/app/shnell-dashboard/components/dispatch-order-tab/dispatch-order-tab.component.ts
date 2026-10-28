@@ -410,8 +410,7 @@ export class DispatchOrderTabComponent implements OnInit, AfterViewInit, OnDestr
           destination: { latitude: Number(s.lat), longitude: Number(s.lng) },
           destinationName: s.name.trim(),
           receiverPhone: s.phone.trim() ? s.phone.trim() : null,
-          state: 'pending',
-          isDelivered: false   // legacy mirror
+          state: 'pending'
         });
         stopIds.push(ref.id);
       }
@@ -427,7 +426,7 @@ export class DispatchOrderTabComponent implements OnInit, AfterViewInit, OnDestr
         ? Timestamp.fromDate(new Date(this.scheduleAt)) : Timestamp.now();
 
       await setDoc(orderDocRef, {
-        userID: this.selectedUserId || 'ADMIN_CONSOLE',
+        clientId: this.selectedUserId || 'ADMIN_CONSOLE',
         price: Number(this.price) || 0,
         distance: Number(this.distance) || 0,
         namePickUp: this.pickupName.trim(),
@@ -437,7 +436,6 @@ export class DispatchOrderTabComponent implements OnInit, AfterViewInit, OnDestr
         timestamp: serverTimestamp(),
         vehicleType: this.vehicleType || 'camion',
         isAccepted: true,
-        isAcepted: true,
         scheduleAt: scheduleAtVal,
         category: 'eco',
         optionalAssets: optionalAssetsVal,

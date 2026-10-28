@@ -1,7 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import {
   Firestore, collection, doc, getDoc, onSnapshot, query, where, orderBy, limit,
-  runTransaction, serverTimestamp, updateDoc, writeBatch, Timestamp,
+  runTransaction, serverTimestamp, updateDoc, Timestamp,
 } from '@angular/fire/firestore';
 import { Auth } from '@angular/fire/auth';
 import { Functions, httpsCallable } from '@angular/fire/functions';
@@ -139,6 +139,15 @@ export class BizService {
     return list.sort((a, b) => (a.maxWeightKg || 1e9) - (b.maxWeightKg || 1e9) || a.name.localeCompare(b.name));
   }
 
+  /** Re-reads users/{uid}.drivers (a driver accepted or left an invitation). */
+  async reloadFleet(): Promise<void> {
+    const uid = this.uid;
+    if (!uid) return;
+    const me = await getDoc(doc(this.fs, 'users', uid)).catch(() => null);
+    const u: any = me?.exists() ? me.data() : {};
+    this.fleet = await this.loadFleet(Array.isArray(u.drivers) ? u.drivers.map(String) : []);
+  }
+
   private async loadFleet(ids: string[]): Promise<FleetDriver[]> {
     const rows = await Promise.all(ids.slice(0, 200).map(async (id) => {
       const s = await getDoc(doc(this.fs, 'users', id)).catch(() => null);
@@ -166,16 +175,6 @@ export class BizService {
     this.saveTimer = setTimeout(() => {
       try { localStorage.setItem(this.storeKey, JSON.stringify(this.drafts)); } catch { /* storage unavailable */ }
     }, 400);
-  }
-
-  /** Adds a draft (from the parcels view); returns it. */
-  addDraft(seed: Partial<BizTrip>): BizTrip {
-    const t = { ...newTrip(this.drafts.length + 1), ...seed };
-    const blank = this.drafts.length === 1 && this.drafts[0].status === 'draft' && this.drafts[0].pickupLat == null
-      && this.drafts[0].stops.every((s) => !s.address);
-    if (blank) this.drafts = [t]; else this.drafts.push(t);
-    this.save();
-    return t;
   }
 
   /* ------------------------------ route planning ------------------------------ */
@@ -343,15 +342,15 @@ export class BizService {
       for (const [k, v] of recent) orders.set(k, v);
       for (const [k, v] of open) orders.set(k, v);
       cb([...orders.values()]
-        .filter((o) => String(o.createdVia || '').startsWith('business') || o.dispatchMode === 'multi' || o.chosenDriver)
+        .filter((o) => /^(business|api)/.test(String(o.createdVia || '')) || o.dispatchMode === 'multi' || o.chosenDriver)
         .map((o) => this.liveOf(o, searches.get(o.id), bids.filter((b) => b.idOrder === o.id), deals.filter((d) => d.idOrder === o.id)))
         .sort((a, b) => b.createdAtMs - a.createdAtMs));
     };
     const subs = [
-      onSnapshot(query(collection(this.fs, 'orders'), where('userID', '==', uid),
+      onSnapshot(query(collection(this.fs, 'orders'), where('clientId', '==', uid),
         where('timestamp', '>=', Timestamp.fromMillis(Date.now() - LIVE_WINDOW_MS)), orderBy('timestamp', 'asc')),
         (s) => { recent.clear(); s.forEach((d) => recent.set(d.id, { ...d.data(), id: d.id })); emit(); }, (e) => console.warn('[biz] orders', e)),
-      onSnapshot(query(collection(this.fs, 'orders'), where('userID', '==', uid), where('isAccepted', '==', false), limit(BIZ_MAX_TRIPS + 50)),
+      onSnapshot(query(collection(this.fs, 'orders'), where('clientId', '==', uid), where('isAccepted', '==', false), limit(BIZ_MAX_TRIPS + 50)),
         (s) => { open.clear(); s.forEach((d) => open.set(d.id, { ...d.data(), id: d.id })); emit(); }, (e) => console.warn('[biz] open', e)),
       onSnapshot(query(collection(this.fs, 'dispatch_searches'), where('orderSummary.clientId', '==', uid), limit(400)),
         (s) => { searches.clear(); s.forEach((d) => searches.set(d.id, d.data())); emit(); }, (e) => console.warn('[biz] searches', e)),
@@ -365,13 +364,15 @@ export class BizService {
 
   private liveOf(o: any, s: any, bids: any[], deals: any[]): LiveTrip {
     const ms = (v: any) => (v?.toMillis ? v.toMillis() : Number(v) || 0);
-    const deal = deals.find((d) => ['accepted', 'acepted', 'almost', 'terminated'].includes(String(d.status))) || null;
+    const deal = deals.find((d) => ['accepted', 'almost', 'terminated'].includes(String(d.status))) || null;
     let state: LiveState;
-    if (o.status === 'cancelled') state = 'cancelled';
+    if (o.status === 'canceled') state = 'canceled';
     else if (o.status === 'expired') state = 'expired';
     else if (deal?.status === 'terminated') state = 'delivered';
     else if (deal?.status === 'almost') state = 'in_progress';
     else if (deal || o.chosenDriver) state = 'assigned';
+    // Own driver declined (declineFleetJob): nothing searches until Relancer.
+    else if (o.fleetDeclined && !s) state = 'no_driver';
     else if (s?.status === 'scheduled') state = 'scheduled';
     else if (bids.length) state = 'offers';
     else if (s?.status === 'searching' || !s) state = 'searching';
@@ -395,14 +396,16 @@ export class BizService {
       startsAtMs: ms(s?.startsAt),
       notified: Object.keys(s?.notifiedDriverIds || {}).length,
       bids: bids.map((b): LiveBid => ({
-        driverId: String(b.idDriver), amount: Number(b.amount ?? b.ammount) || 0,
+        driverId: String(b.idDriver), amount: Number(b.amount) || 0,
         currency: String(b.currencyCode || o.currencyCode || 'TND'), vehicleType: String(b.vehicleType || ''), at: ms(b.timestamp),
       })).sort((a, b) => a.amount - b.amount),
       driverId: String(deal?.idDriver || o.chosenDriver || ''),
       dealId: deal?.id || '',
       dealStatus: String(deal?.status || ''),
       revision: rev,
-      ownFleet: o.createdVia === 'business_fleet',
+      ownFleet: String(o.createdVia || '').endsWith('_fleet'),
+      fleetDeclinedBy: !deal && o.fleetDeclined?.driverId ? String(o.fleetDeclined.driverId) : null,
+      viaApi: String(o.createdVia || '').startsWith('api'),
     };
   }
 
@@ -415,30 +418,26 @@ export class BizService {
       const orderRef = doc(this.fs, 'orders', orderId);
       const fresh = await tx.get(orderRef);
       const o: any = fresh.data();
-      if (!fresh.exists() || o.isAcepted === true || o.isAccepted === true || o.status === 'cancelled' || String(o.chosenDriver || '')) {
+      if (!fresh.exists() || o.isAccepted === true || o.status === 'canceled' || String(o.chosenDriver || '')) {
         throw new Error('Ce trajet est déjà pris.');
       }
       const bidSnap = await tx.get(doc(this.fs, 'bids', `${orderId}_${driverId}`));
       const b: any = bidSnap.data();
-      const amount = Number(b?.amount ?? b?.ammount);
+      const amount = Number(b?.amount);
       if (!bidSnap.exists() || b.isActive !== true || amount !== shownAmount) throw new Error('Cette offre a changé, rechargez.');
       tx.set(doc(collection(this.fs, 'deals')), {
         idDriver: driverId, idOrder: orderId, idUser: uid, status: 'accepted',
         timestamp: serverTimestamp(), createdBy: uid, agreedPrice: amount,
       });
-      tx.update(orderRef, { isAcepted: true, isAccepted: true, chosenDriver: driverId, price: amount });
+      tx.update(orderRef, { isAccepted: true, chosenDriver: driverId, price: amount });
     });
   }
 
   /** Cancels a trip nobody holds yet (pending_order_widget in the client app). */
   async cancelOrder(orderId: string): Promise<void> {
-    const uid = this.uid;
-    const batch = writeBatch(this.fs);
-    batch.update(doc(this.fs, 'orders', orderId), {
-      isAcepted: true, isAccepted: true, status: 'cancelled', cancelledBy: uid, cancelledAt: serverTimestamp(),
+    await updateDoc(doc(this.fs, 'orders', orderId), {
+      isAccepted: true, status: 'canceled', canceledBy: this.uid, canceledAt: serverTimestamp(),
     });
-    batch.set(doc(collection(this.fs, 'cancelations')), { idOrder: orderId, cancelledBy: uid, time: Timestamp.now() });
-    await batch.commit();
   }
 
   /** Cancels an assigned trip with a reason (cancel_ride_sheet in the client app). */
@@ -447,6 +446,12 @@ export class BizService {
       status: 'canceled', canceledBy: this.uid, canceledAt: serverTimestamp(),
       cancelReason: reason, cancelNote: note, cancelRebook: rebook,
     });
+  }
+
+  /** The driver's phone on a live trip of this account (tripContactPhone). */
+  async driverPhone(orderId: string): Promise<{ phone: string; name: string }> {
+    const r = await httpsCallable<any, { phone: string; name: string }>(this.fns, 'tripContactPhone')({ orderId });
+    return r.data;
   }
 
   async retry(orderId: string): Promise<void> {

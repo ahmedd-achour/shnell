@@ -1,0 +1,161 @@
+<div class="ad" [class.ad--page]="standalone">
+  <header class="ad-head" *ngIf="standalone">
+    <span class="ad-eyebrow">Shnell for developers</span>
+    <h1>Shnell API v1</h1>
+    <p>Create and follow Shnell deliveries from your own software: the same prices, the same drivers and the same live search as the Shnell app.
+      Keys are created in your Shnell Business dashboard.</p>
+  </header>
+
+  <!-- overview -->
+  <section class="bz-card ad-sec">
+    <div class="bz-card__h"><i class="bi bi-compass"></i> Overview</div>
+    <div class="ad-grid">
+      <div>
+        <span class="ad-lbl">Base URL</span>
+        <div class="ad-keyrow">
+          <code class="ad-code-inline">{{ base }}</code>
+          <button class="bz-icon" (click)="copy(base)" title="Copy"><i class="bi bi-clipboard"></i></button>
+        </div>
+        <span class="ad-lbl">Authentication</span>
+        <p>Send your key on every request:</p>
+        <pre class="ad-pre">Authorization: Bearer {{ key }}</pre>
+        <p class="bz-dim">Keys never expire. Keep them on your server, never in a website or mobile app: a key can book paid trips. If one leaks, revoke it in the dashboard and create a new one.</p>
+      </div>
+      <div>
+        <span class="ad-lbl">How it works</span>
+        <ol class="ad-steps">
+          <li><b>Price</b> the trip (<code>POST /quotes</code>), optional.</li>
+          <li><b>Create</b> the order (<code>POST /orders</code>): Shnell starts looking for a driver.</li>
+          <li><b>Follow</b> it with a <b>webhook</b> (recommended) or <code>GET /orders/&#123;id&#125;</code>.</li>
+        </ol>
+        <span class="ad-lbl">Limits</span>
+        <ul class="ad-list">
+          <li>120 requests a minute per key</li>
+          <li>50 stops per order, 100 open orders at a time</li>
+          <li>JSON in, JSON out, dates in ISO 8601 (UTC), prices in the trip's currency</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- quickstart -->
+  <section class="bz-card ad-sec">
+    <div class="bz-card__h">
+      <i class="bi bi-lightning-charge"></i> Quickstart: create an order
+      <span class="bz-flex"></span>
+      <div class="ad-tabs">
+        <button [class.on]="lang === 'curl'" (click)="lang = 'curl'">cURL</button>
+        <button [class.on]="lang === 'node'" (click)="lang = 'node'">Node.js</button>
+        <button [class.on]="lang === 'python'" (click)="lang = 'python'">Python</button>
+        <button [class.on]="lang === 'php'" (click)="lang = 'php'">PHP</button>
+      </div>
+    </div>
+    <div class="ad-codewrap">
+      <button class="bz-icon ad-copy" (click)="copy(snippet)" title="Copy"><i class="bi bi-clipboard"></i></button>
+      <pre class="ad-pre">{{ snippet }}</pre>
+    </div>
+  </section>
+
+  <!-- endpoints -->
+  <section class="bz-card ad-sec">
+    <div class="bz-card__h"><i class="bi bi-list-columns-reverse"></i> Endpoints</div>
+    <div class="ad-ep" *ngFor="let e of endpoints" [class.open]="open.has(e.id)">
+      <button class="ad-ep__head" (click)="toggle(e.id)">
+        <span class="ad-method" [class.get]="e.method === 'GET'">{{ e.method }}</span>
+        <code class="ad-path">{{ e.path }}</code>
+        <span class="ad-ep__title">{{ e.title }}</span>
+        <i class="bi" [ngClass]="open.has(e.id) ? 'bi-chevron-up' : 'bi-chevron-down'"></i>
+      </button>
+      <div class="ad-ep__body" *ngIf="open.has(e.id)">
+        <p>{{ e.summary }}</p>
+        <ul class="ad-list" *ngIf="e.notes?.length">
+          <li *ngFor="let n of e.notes">{{ n }}</li>
+        </ul>
+        <div class="ad-grid">
+          <div *ngIf="bodyOf(e)">
+            <span class="ad-lbl">Request body</span>
+            <div class="ad-codewrap">
+              <button class="bz-icon ad-copy" (click)="copy(bodyOf(e))" title="Copy"><i class="bi bi-clipboard"></i></button>
+              <pre class="ad-pre">{{ bodyOf(e) }}</pre>
+            </div>
+          </div>
+          <div>
+            <span class="ad-lbl">Response</span>
+            <pre class="ad-pre">{{ responseOf(e) }}</pre>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- states -->
+  <section class="bz-card ad-sec">
+    <div class="bz-card__h"><i class="bi bi-diagram-3"></i> Order states</div>
+    <table class="bz-table">
+      <thead><tr><th>state</th><th>Meaning</th></tr></thead>
+      <tbody>
+        <tr *ngFor="let s of states"><td><code>{{ s.s }}</code></td><td>{{ s.d }}</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- stop states -->
+  <section class="bz-card ad-sec">
+    <div class="bz-card__h"><i class="bi bi-geo-alt-fill"></i> Stop states</div>
+    <p>Each stop of an order moves on its own, as the driver works through the route. Find it by your <code>reference</code>.</p>
+    <table class="bz-table">
+      <thead><tr><th>stop state</th><th>Meaning</th></tr></thead>
+      <tbody>
+        <tr *ngFor="let s of stopStates"><td><code>{{ s.s }}</code></td><td>{{ s.d }}</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- webhooks -->
+  <section class="bz-card ad-sec">
+    <div class="bz-card__h"><i class="bi bi-broadcast-pin"></i> Webhooks</div>
+    <p>Set an https URL in the dashboard (API → Webhook). Each time one of your orders changes state, Shnell sends <code>order.&lt;state&gt;</code>
+      (for example <code>order.assigned</code>, <code>order.delivered</code>) with the full order, the same object as <code>GET /orders/&#123;id&#125;</code>.
+      Orders created in the dashboard send events too.</p>
+    <p><b>Driver counter-offers.</b> While an order is open, a driver can propose their own price instead of yours. Each new or re-priced offer sends
+      <code>order.offer</code>, and a pulled offer sends <code>order.offer_withdrawn</code>. The event's <code>data</code> is
+      <code>&#123; orderId, currency, listPrice, offer: &#123; driverId, driverName, amount, vehicleType &#125;, order &#125;</code>.
+      Accept it with <code>POST /orders/&#123;id&#125;/offers/&#123;driverId&#125;/accept</code> and <code>&#123;"amount": offer.amount&#125;</code>,
+      or ignore it and keep waiting for a driver at your price. Without a webhook, poll <code>GET /orders/&#123;id&#125;</code>: open offers are listed in <code>offers</code>.</p>
+    <p><b>Every stop.</b> When the driver moves a stop, Shnell sends <code>stop.on_the_way</code>, <code>stop.delivered</code> or <code>stop.failed</code>.
+      The event's <code>data</code> is <code>&#123; orderId, stop, order &#125;</code>: <code>stop</code> carries your <code>reference</code>, the cash to collect,
+      <code>deliveredAt</code>, or <code>failReason</code> and <code>failedAt</code>; <code>order</code> is the full order. Each move is sent once,
+      so you can update your own parcel tracking stop by stop, without waiting for the whole trip.</p>
+    <ul class="ad-list">
+      <li>Answer with a 2xx within 5 seconds. A failed delivery is retried once.</li>
+      <li>Check the signature with your webhook secret before trusting an event, and ignore events older than 5 minutes.</li>
+      <li>An event can arrive twice: use <code>data.id</code> + <code>data.state</code> (order events) or <code>data.stop.id</code> + <code>data.stop.state</code> (stop events) to skip duplicates.</li>
+    </ul>
+    <div class="ad-grid">
+      <div>
+        <span class="ad-lbl">What you receive</span><pre class="ad-pre">{{ webhookPayload }}</pre>
+        <span class="ad-lbl">A stop event</span><pre class="ad-pre">{{ stopWebhookPayload }}</pre>
+      </div>
+      <div>
+        <span class="ad-lbl">Verify the signature</span>
+        <div class="ad-codewrap">
+          <button class="bz-icon ad-copy" (click)="copy(webhookVerify)" title="Copy"><i class="bi bi-clipboard"></i></button>
+          <pre class="ad-pre">{{ webhookVerify }}</pre>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- errors -->
+  <section class="bz-card ad-sec">
+    <div class="bz-card__h"><i class="bi bi-exclamation-octagon"></i> Errors</div>
+    <p>Errors always look like <code>&#123; "error": &#123; "code": "stop_phone_required", "message": "stops[0].phone is required." &#125; &#125;</code>.
+      Use <code>code</code> in your logic, show <code>message</code> to your team.</p>
+    <table class="bz-table">
+      <thead><tr><th>HTTP</th><th>When</th></tr></thead>
+      <tbody>
+        <tr *ngFor="let e of errors"><td><code>{{ e.c }}</code></td><td>{{ e.m }}</td></tr>
+      </tbody>
+    </table>
+  </section>
+</div>

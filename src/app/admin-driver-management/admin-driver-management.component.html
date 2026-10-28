@@ -12,11 +12,11 @@
           <span class="fw-bold">{{ rat.avg }}</span>
           <span class="rat-count">({{ rat.count }} avis)</span>
         </div>
-        <span class="status-pill text-uppercase fs-8" [ngClass]="driver.isBan ? 'error' : (driver.isActive ? 'success' : 'warning')">
-          <i class="bi bi-circle-fill fs-8"></i> {{ driver.isBan ? 'Banni' : (driver.isActive ? 'En ligne' : 'Hors ligne') }}
+        <span class="status-pill text-uppercase fs-8" [ngClass]="driver.isBanned ? 'error' : (driver.isActive ? 'success' : 'warning')">
+          <i class="bi bi-circle-fill fs-8"></i> {{ driver.isBanned ? 'Banni' : (driver.isActive ? 'En ligne' : 'Hors ligne') }}
         </span>
-        <button class="btn btn-sm rounded-pill fw-bold" [ngClass]="driver.isBan ? 'btn-success' : 'btn-danger'" (click)="toggleBan(driver)" [disabled]="isUpdating">
-          <i class="bi" [ngClass]="driver.isBan ? 'bi-check-circle' : 'bi-slash-circle'"></i> {{ driver.isBan ? 'Débannir' : 'Bannir' }}
+        <button class="btn btn-sm rounded-pill fw-bold" [ngClass]="driver.isBanned ? 'btn-success' : 'btn-danger'" (click)="toggleBan(driver)" [disabled]="isUpdating">
+          <i class="bi" [ngClass]="driver.isBanned ? 'bi-check-circle' : 'bi-slash-circle'"></i> {{ driver.isBanned ? 'Débannir' : 'Bannir' }}
         </button>
       </div>
     </div>
@@ -185,7 +185,7 @@
                 <i class="bi bi-truck fs-3 text-warning"></i>
               </div>
               <div>
-                <span class="plate-number d-block text-main font-mono fw-bold fs-5">{{ vehicle.matVehicle || vehicle.id }}</span>
+                <span class="plate-number d-block text-main font-mono fw-bold fs-5">{{ vehicle.licensePlate || vehicle.id }}</span>
                 <span class="status-pill info fs-8">{{ vehicle.type }}</span>
               </div>
             </div>
@@ -204,9 +204,9 @@
 
         <div class="card-glass-body p-4">
           <div class="docs-row d-flex gap-4 flex-wrap">
-            <div class="doc-item" *ngIf="vehicle.carteGrise || vehicle.carteGriseAsset || vehicle.registrationCardUrl">
-              <div class="doc-preview rounded-3 border border-subtle overflow-hidden cursor-pointer position-relative" (click)="openImage(vehicle.registrationCardUrl || vehicle.carteGriseAsset || vehicle.carteGrise, 'Carte Grise')">
-                <img [src]="vehicle.registrationCardUrl || vehicle.carteGriseAsset || vehicle.carteGrise" alt="Carte Grise Document" (error)="handleImageError($event)" style="height: 100px; width: 150px; object-fit: cover;">
+            <div class="doc-item" *ngIf="vehicle.carteGriseUrl">
+              <div class="doc-preview rounded-3 border border-subtle overflow-hidden cursor-pointer position-relative" (click)="openImage(vehicle.carteGriseUrl, 'Carte Grise')">
+                <img [src]="vehicle.carteGriseUrl" alt="Carte Grise Document" (error)="handleImageError($event)" style="height: 100px; width: 150px; object-fit: cover;">
                 <div class="doc-overlay position-absolute inset-0 d-flex flex-column align-items-center justify-content-center p-2 text-center">
                   <i class="bi bi-search text-brand fs-5 mb-1"></i>
                   <span class="fs-8 fw-bold text-white">Carte Grise</span>
@@ -215,9 +215,9 @@
               <div class="doc-label-text text-muted fs-8 fw-semibold mt-1">Carte Grise</div>
             </div>
 
-            <div class="doc-item" *ngIf="vehicle.cin || vehicle.cinAsset || vehicle.nationalIdUrl">
-              <div class="doc-preview rounded-3 border border-subtle overflow-hidden cursor-pointer position-relative" (click)="openImage(vehicle.nationalIdUrl || vehicle.cinAsset || vehicle.cin, 'CIN Chauffeur')">
-                <img [src]="vehicle.nationalIdUrl || vehicle.cinAsset || vehicle.cin" alt="CIN Identity Document" (error)="handleImageError($event)" style="height: 100px; width: 150px; object-fit: cover;">
+            <div class="doc-item" *ngIf="cinUrl$ | async as cinUrl">
+              <div class="doc-preview rounded-3 border border-subtle overflow-hidden cursor-pointer position-relative" (click)="openImage(cinUrl, 'CIN Chauffeur')">
+                <img [src]="cinUrl" alt="CIN Identity Document" (error)="handleImageError($event)" style="height: 100px; width: 150px; object-fit: cover;">
                 <div class="doc-overlay position-absolute inset-0 d-flex flex-column align-items-center justify-content-center p-2 text-center">
                   <i class="bi bi-search text-brand fs-5 mb-1"></i>
                   <span class="fs-8 fw-bold text-white">CIN Chauffeur</span>
@@ -226,9 +226,9 @@
               <div class="doc-label-text text-muted fs-8 fw-semibold mt-1">CIN Chauffeur</div>
             </div>
 
-            <div class="doc-item" *ngIf="vehicle.vehiculeAsset || vehicle.vehicleAssetUrl">
-              <div class="doc-preview rounded-3 border border-subtle overflow-hidden cursor-pointer position-relative" (click)="openImage(vehicle.vehicleAssetUrl || vehicle.vehiculeAsset, 'Photo Véhicule')">
-                <img [src]="vehicle.vehicleAssetUrl || vehicle.vehiculeAsset" alt="Vehicle Asset Photograph" (error)="handleImageError($event)" style="height: 100px; width: 150px; object-fit: cover;">
+            <div class="doc-item" *ngIf="vehicle.vehicleAssetUrl">
+              <div class="doc-preview rounded-3 border border-subtle overflow-hidden cursor-pointer position-relative" (click)="openImage(vehicle.vehicleAssetUrl, 'Photo Véhicule')">
+                <img [src]="vehicle.vehicleAssetUrl" alt="Vehicle Asset Photograph" (error)="handleImageError($event)" style="height: 100px; width: 150px; object-fit: cover;">
                 <div class="doc-overlay position-absolute inset-0 d-flex flex-column align-items-center justify-content-center p-2 text-center">
                   <i class="bi bi-search text-brand fs-5 mb-1"></i>
                   <span class="fs-8 fw-bold text-white">Photo Véhicule</span>

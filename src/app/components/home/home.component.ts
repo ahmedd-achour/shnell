@@ -123,7 +123,6 @@ private normalizePhoneNumber(phone: string): string {
         const q = query(
           stopsRef,
           where('phoneNumber', '==', this.phoneNumber),
-          //where('isdelivered', '==', null)
         );
 
         const querySnapshot = await getDocs(q);

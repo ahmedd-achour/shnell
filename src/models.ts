@@ -3,17 +3,10 @@ export interface Bid {
   idOrder: string;
   idDriver: string;
   idUser: string;
-  ammount: number;
+  amount: number;
   currencyCode?: string;
   isActive: boolean;
   timestamp?: Date | any;
-}
-
-export interface Cancelation {
-  id?: string;
-  idDeal: string;
-  cancelledBy: string;
-  time?: Date | any;
 }
 
 /** Has the driver/company payment side of the deal been settled? */
@@ -24,7 +17,7 @@ export interface Deals {
   idOrder: string;
   idDriver: string;
   idUser: string;
-  status: 'accepted' | 'acepted' | 'almost' | 'terminated' | string;
+  status: 'accepted' | 'almost' | 'terminated' | 'canceled';
   timestamp?: Date | any;
   /** Flat mission price agreed with the driver (spec §5) — fixed after acceptance. */
   agreedPrice?: number;
@@ -38,14 +31,12 @@ export interface Deals {
   acceptedAt?: Date | any;
   startedAt?: Date | any;
   completedAt?: Date | any;
-  cancelledAt?: Date | any;
+  canceledAt?: Date | any;
 }
 
 export type Deal = Deals;
 
-/** Lifecycle of a single stop / parcel. Replaces the old `isDelivered` boolean.
- *  Writers dual-write `state` + a mirror `isDelivered: state === 'delivered'`;
- *  readers prefer `state` and fall back to the legacy bool for old docs. */
+/** Lifecycle of a single stop / parcel (stops/{id}.state). */
 export type StopState = 'pending' | 'inRoute' | 'delivered' | 'notDelivered';
 
 /** Has the parcel's cash (parcelPrice) been settled with the expeditor yet? */
@@ -58,10 +49,6 @@ export interface DropOffData {
     longitude: number;
   };
   destinationName: string;
-  /** @deprecated legacy mirror — read `state` instead */
-  isdelivered?: boolean;
-  /** @deprecated legacy mirror — read `state` instead */
-  isDelivered?: boolean;
   state?: StopState;
   name?: string;           // optional recipient / contact name for this stop
   receiverPhone?: string;  // optional contact phone for this stop
@@ -139,7 +126,7 @@ export interface GlobalConfig {
 
 export interface Orders {
   id: string;
-  userID: string;
+  clientId: string;
   userId?: string;
   price: number;
   /** ISO 4217 code of price (the trip's country currency). */
@@ -152,7 +139,7 @@ export interface Orders {
   };
   stops: string[]; // List of stop IDs in stops collection
   vehicleType: string;
-  isAcepted: boolean;
+  isAccepted: boolean;
   scheduleAt?: Date | any | null;
   category: string;
   optionalAssets: string[] | null;
@@ -189,22 +176,20 @@ export interface ShnellUser {
   darkMode?: boolean;
   platform?: string;
   isPhoneVerified?: boolean;
-  isBan?: boolean;
   isBanned?: boolean;
 }
 
+/** vehicles/{id}. The carte grise lives in vehicles/{id}/private/papers and the
+ *  driver's ID card in drivers/{uid}, never on this document. */
 export interface Vehicle {
   id?: string;
-  carteGrise: string;
-  cin: string;
   idDriver: string;
+  /** Key of the settings/vehicles catalog ('' until the AI or an admin sets it). */
   type: string;
-  vehiculeAsset: string;
+  vehicleAssetUrl: string;
   isAssetsApproved: boolean;
   isAdminApproved: boolean;
   allAssets: string[];
-  carteGriseAsset?: string;
-  cinAsset?: string;
   driverName?: string;
   /** "ai_pending" | "ai" | "admin" — absent on vehicles from older app builds. */
   typeSource?: string;
@@ -243,22 +228,32 @@ export interface VehicleAiSuggestion {
   servedBy?: string;
 }
 
+/** A ledger line, commissions/{id}: one wallet movement (functions/lib/ledger.js). */
 export interface Commission {
   id?: string;
-  userId?: string;
-  DriverId?: string;
-  commissionDeducted: number;
-  percentageFees?: number;
-  DealAmount: number;
-  orderId?: string;
-  driverId?: string;
-  time?: Date | any;
-  typeOfTransaction?: 'commission' | 'recharge' | 'adjustment' | string;
-  /** Currency of this ledger line (= the wallet balance it moved). */
-  currencyCode?: string;
-  /** That currency's wallet balance right after this line. */
+  schema?: number;
+  /** Whose wallet moved. */
+  uid: string;
+  kind: 'commission' | 'recharge' | 'adjustment' | 'company_tour';
+  /** Signed change of the wallet (+ credit, - debit). */
+  delta: number;
+  currencyCode: string;
+  balanceBefore?: number;
   balanceAfter?: number;
+  orderId?: string;
+  dealId?: string;
+  requestId?: string;
+  reference?: string;
+  /** Commission lines: the customer, the order price, the billed price, the rate (0..1). */
+  clientId?: string;
+  dealAmount?: number;
+  billedAmount?: number;
+  commissionRate?: number;
+  /** Office lines. */
   reason?: string;
+  adminUid?: string;
+  approvedBy?: string | null;
+  time?: Date | any;
 }
 
 export interface DriverRTDBLocation {

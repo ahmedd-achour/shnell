@@ -20,6 +20,8 @@ interface CompanyApplication {
   cinNumber?: string;
   cinFileUrl?: string;
   companyPaperUrl?: string;
+  /** Driver-app pro applications: the subscription payment receipt. */
+  paymentReceiptUrl?: string;
   isAdminApproved?: boolean;
   plan?: 'payg' | 'pro';
   commissionRate?: number;

@@ -72,8 +72,8 @@
                 </div>
               </td>
               <td>
-                <div class="text-white fs-7 fw-semibold">{{ getUserName(o.userId || o.userID) }}</div>
-                <small class="text-muted font-monospace fs-8">{{ o.userId || o.userID || 'N/A' }}</small>
+                <div class="text-white fs-7 fw-semibold">{{ getUserName(o.clientId) }}</div>
+                <small class="text-muted font-monospace fs-8">{{ o.clientId || 'N/A' }}</small>
               </td>
               <td>
                 <div class="text-light fs-8">
@@ -114,7 +114,7 @@
                     <i class="bi bi-hourglass-split me-1"></i>{{ getPendingSubStatus(o).label }}
                   </span>
                 </ng-template>
-                <div class="small text-muted mt-1" *ngIf="o.isAcepted">
+                <div class="small text-muted mt-1" *ngIf="o.isAccepted">
                   <i class="bi bi-archive-fill me-1 text-secondary"></i>Soft-Deleted
                 </div>
               </td>
@@ -126,7 +126,7 @@
                   class="btn btn-sm btn-outline-danger rounded-pill px-3 py-1 fs-8"
                   [disabled]="processingDeleteId === o.id"
                   (click)="softDeleteOrder(o)"
-                  title="Soft Delete Order (sets isAcepted = true)">
+                  title="Soft Delete Order (sets isAccepted = true)">
                   <span *ngIf="processingDeleteId === o.id" class="spinner-border spinner-border-sm me-1"></span>
                   <i *ngIf="processingDeleteId !== o.id" class="bi bi-trash3-fill me-1"></i>Soft Delete
                 </button>
@@ -147,7 +147,7 @@
                           <li class="list-group-item bg-transparent text-light border-secondary px-2 py-1" *ngFor="let b of getOrderBids(o.id!)">
                             <div class="d-flex justify-content-between align-items-center">
                               <span><i class="bi bi-person text-muted me-1"></i>{{ getUserName(b.idDriver) }}</span>
-                              <span class="badge bg-success">{{ b.ammount | number:'1.2-2' }} {{ b.currencyCode || 'TND' }}</span>
+                              <span class="badge bg-success">{{ b.amount | number:'1.2-2' }} {{ b.currencyCode || 'TND' }}</span>
                             </div>
                             <small class="text-muted">{{ b.timestamp?.seconds ? (b.timestamp.seconds * 1000) : b.timestamp | date:'short' }}</small>
                           </li>

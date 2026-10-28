@@ -120,7 +120,7 @@ export class DriverDetailsComponent implements OnInit, OnDestroy {
       collectionData(dealsQuery).subscribe(deals => {
         if (deals) {
           this.metrics.completedOrders = deals.filter((d: any) => d.status === 'completed' || d.status === 'accepted').length;
-          this.metrics.cancelledOrders = deals.filter((d: any) => d.status === 'cancelled').length;
+          this.metrics.cancelledOrders = deals.filter((d: any) => d.status === 'canceled').length;
           const total = this.metrics.completedOrders + this.metrics.cancelledOrders;
           this.metrics.acceptanceRate = total > 0 ? Math.round((this.metrics.completedOrders / total) * 100) : 0;
           this.metrics.totalRevenue = this.metrics.completedOrders * 25;
@@ -142,21 +142,19 @@ export class DriverDetailsComponent implements OnInit, OnDestroy {
     if (!this.driver || !this.driverId) return;
     this.isProcessing = true;
     try {
-      const currentBan = !!(this.driver.isBan || this.driver.isBanned);
+      const currentBan = !!(this.driver.isBanned);
       const newBan = !currentBan;
       const userRef = doc(this.firestore, `users/${this.driverId}`);
       await updateDoc(userRef, {
-        isBan: newBan,
         isBanned: newBan,
         isActive: !newBan
       });
 
-      this.driver.isBan = newBan;
       this.driver.isBanned = newBan;
       this.driver.isActive = !newBan;
 
       // Broadcast update across open tabs (map tab)
-      this.crossTabSyncService.notifyDriverUpdated(this.driverId, { isBan: newBan, isActive: !newBan });
+      this.crossTabSyncService.notifyDriverUpdated(this.driverId, { isBanned: newBan, isActive: !newBan });
     } catch (e) {
       console.error('Error updating ban status:', e);
     } finally {
@@ -269,14 +267,7 @@ export class DriverDetailsComponent implements OnInit, OnDestroy {
 
   getVehicleAssetUrl(v: Vehicle | null): string {
     if (!v) return 'https://images.unsplash.com/photo-1601584115197-04ecc0da31d7?w=400&auto=format&fit=crop&q=80';
-    const candidate = [
-      (v as any).vehicleAssetUrl,
-      (v as any).vehiculeAsset,
-      (v as any).vehicleAsset,
-      (v as any).vehicleImage,
-      (v as any).vehiculeImage,
-      (v as any).photo
-    ].find(c => c && typeof c === 'string' && (c.startsWith('http') || c.startsWith('data:') || c.startsWith('assets/')));
+    const candidate = [v.vehicleAssetUrl].find(c => c && typeof c === 'string' && (c.startsWith('http') || c.startsWith('data:') || c.startsWith('assets/')));
 
     if (candidate) return candidate.trim();
 
@@ -328,12 +319,7 @@ export class DriverDetailsComponent implements OnInit, OnDestroy {
     const list: { url: string; label: string }[] = [];
     const seen = new Set<string>();
 
-    const mainAssets = [
-      this.getValidUrl((v as any).vehicleAsset),
-      this.getValidUrl((v as any).vehicleImage),
-      this.getValidUrl((v as any).carteGriseFront),
-      this.getValidUrl((v as any).carteIdentityFront)
-    ];
+    const mainAssets = [this.getValidUrl(v.vehicleAssetUrl)];
     mainAssets.forEach(a => { if (a) seen.add(a); });
 
     const rawAdditional = [

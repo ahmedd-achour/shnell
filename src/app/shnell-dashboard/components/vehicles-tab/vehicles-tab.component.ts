@@ -229,14 +229,7 @@ export class VehiclesTabComponent implements OnInit {
 
   getVehicleAssetUrl(v: Vehicle | null): string {
     if (!v) return 'https://images.unsplash.com/photo-1601584115197-04ecc0da31d7?w=400&auto=format&fit=crop&q=80';
-    const candidate = [
-      (v as any).vehicleAssetUrl,
-      (v as any).vehiculeAsset,
-      (v as any).vehicleAsset,
-      (v as any).vehicleImage,
-      (v as any).vehiculeImage,
-      (v as any).photo
-    ].find(c => c && typeof c === 'string' && (c.startsWith('http') || c.startsWith('data:') || c.startsWith('assets/')));
+    const candidate = [v.vehicleAssetUrl].find(c => c && typeof c === 'string' && (c.startsWith('http') || c.startsWith('data:') || c.startsWith('assets/')));
 
     if (candidate) return candidate.trim();
 
@@ -272,12 +265,7 @@ export class VehiclesTabComponent implements OnInit {
     const list: { url: string; label: string }[] = [];
     const seen = new Set<string>();
 
-    const mainAssets = [
-      (v as any).vehicleAsset,
-      (v as any).vehicleImage,
-      (v as any).vehiculeImage,
-      (v as any).photo
-    ];
+    const mainAssets = [v.vehicleAssetUrl];
     mainAssets.forEach(a => {
       if (a && typeof a === 'string' && (a.startsWith('http') || a.startsWith('data:') || a.startsWith('assets/'))) {
         seen.add(a.trim());

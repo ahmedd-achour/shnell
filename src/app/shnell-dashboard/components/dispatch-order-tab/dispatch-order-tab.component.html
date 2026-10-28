@@ -74,8 +74,8 @@
               <span class="fw-bold d-block text-truncate">{{ d.name || 'Unnamed driver' }}</span>
               <span class="fs-9 text-muted d-block text-truncate"><i class="bi bi-telephone me-1"></i>{{ d.phone || d.email || '—' }}</span>
             </span>
-            <span class="status-pill fs-9" [ngClass]="(d.isBan || d.isBanned) ? 'error' : 'success'">
-              {{ (d.isBan || d.isBanned) ? 'Banned' : 'Active' }}
+            <span class="status-pill fs-9" [ngClass]="(d.isBanned) ? 'error' : 'success'">
+              {{ (d.isBanned) ? 'Banned' : 'Active' }}
             </span>
             <i class="bi bi-check-circle-fill text-brand ms-1" *ngIf="(d.uid || d.id) === selectedDriverId"></i>
           </button>

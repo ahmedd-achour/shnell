@@ -18,8 +18,6 @@ export interface BizStop {
   expeditorId: string;
   lat: number | null;
   lng: number | null;
-  /** Pool stop this row came from (parcels view), if any. */
-  poolId?: string;
 }
 
 export interface BizQuoteOption {
@@ -88,7 +86,7 @@ export interface FleetDriver { id: string; name: string; phone: string; }
 /** What the live board shows for one booked trip. */
 export type LiveState =
   | 'scheduled' | 'searching' | 'offers' | 'no_driver'
-  | 'assigned' | 'in_progress' | 'delivered' | 'cancelled' | 'expired';
+  | 'assigned' | 'in_progress' | 'delivered' | 'canceled' | 'expired';
 
 export interface LiveBid { driverId: string; amount: number; currency: string; vehicleType: string; at: number; }
 
@@ -113,6 +111,10 @@ export interface LiveTrip {
   dealStatus: string;
   revision: { trips: number; price: number; currency: string } | null;
   ownFleet: boolean;
+  /** Own driver who declined this trip (it is unassigned again). */
+  fleetDeclinedBy: string | null;
+  /** Booked through the public API (not this console). */
+  viaApi: boolean;
 }
 
 export function rid(): string {

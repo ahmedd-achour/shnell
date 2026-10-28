@@ -72,7 +72,7 @@ export class DispatchCenterTabComponent implements OnInit, OnDestroy {
   get pendingOrders(): Orders[] {
     const q = this.searchQuery.toLowerCase().trim();
     return this.orders
-      .filter(o => o.isAcepted !== true)
+      .filter(o => o.isAccepted !== true)
       .filter(o => !q || o.id?.toLowerCase().includes(q) || o.namePickUp?.toLowerCase().includes(q))
       .sort((a, b) => (b.timestamp?.seconds || 0) - (a.timestamp?.seconds || 0));
   }
@@ -103,7 +103,7 @@ export class DispatchCenterTabComponent implements OnInit, OnDestroy {
     try {
       const [stops, company] = await Promise.all([
         this.dashboardDataService.getStopsByIds(order.stops || []),
-        this.dashboardDataService.getCompanyDoc(order.userID || order.userId || '')
+        this.dashboardDataService.getCompanyDoc(order.clientId || '')
       ]);
       this.orderStops = stops;
 
@@ -171,12 +171,12 @@ export class DispatchCenterTabComponent implements OnInit, OnDestroy {
       await this.dealService.createDeal({
         orderId: order.id,
         driverId: this.selectedDriverId,
-        userId: order.userID || order.userId || '',
+        userId: order.clientId || '',
         price: this.price,
         commissionPercentage: this.commissionPercentage,
         commissionAmount: this.commissionAmount
       });
-      order.isAcepted = true;
+      order.isAccepted = true;
       toastSuccess('Mission dispatched — deal created');
       this.selectedOrderId = null;
     } catch (err) {

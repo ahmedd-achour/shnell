@@ -130,7 +130,7 @@ export class FleetIntelligenceDashboardComponent implements OnInit, OnDestroy, A
         offline++;
       }
 
-      if (this.orders.some(o => o.driverId === uid && o.isAcepted)) {
+      if (this.orders.some(o => o.driverId === uid && o.isAccepted)) {
         busy++;
       }
 
@@ -155,7 +155,7 @@ export class FleetIntelligenceDashboardComponent implements OnInit, OnDestroy, A
     const fleetUtilVal = activeOnline > 0 ? Math.min(100, Math.round((busy / activeOnline) * 100)) : 45;
     this.kpis.fleetUtilisation = `${fleetUtilVal}%`;
 
-    this.kpis.completedOrders = this.orders.filter(o => o.isAcepted).length;
+    this.kpis.completedOrders = this.orders.filter(o => o.isAccepted).length;
     this.kpis.pendingOrders = this.kpis.totalOrders - this.kpis.completedOrders;
     
     this.kpis.revenue = this.orders.reduce((sum, o) => sum + (o.price || 0), 0) || 12450;

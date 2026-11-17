@@ -9,6 +9,7 @@ import { ServiceComponent } from './components/service/service.component';
 import { ContactComponent } from './components/contact/contact.component';
 import { BlogComponent } from './components/blog/blog.component';
 import { PrivacyPolicyComponent } from './components/privacy-policy/privacy-policy.component';
+import { DeleteAccountComponent } from './components/delete-account/delete-account.component';
 import { SidebarComponent } from './components/sidebar/sidebar.component';
 import { FleetIntelligenceDashboardComponent } from './components/fleet-intelligence/fleet-intelligence.component';
 import { DriverDetailsComponent } from './components/fleet-intelligence/driver-details/driver-details.component';
@@ -77,6 +78,8 @@ const routes: Routes = [
     { path: 'sign-in', component: SignInComponent },
     { path: 'blog', component: BlogComponent },
     { path: 'privacy-policy', component: PrivacyPolicyComponent },
+    { path: 'delete-account', component: DeleteAccountComponent },
+    { path: 'data-deletion', component: DeleteAccountComponent },
     { path: 'developers', component: DevelopersPageComponent },
   ]
 },

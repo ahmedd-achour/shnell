@@ -1,0 +1,164 @@
+/* Dark navy + yellow, big bold type — same visual language as dadarentcar.com */
+:host {
+  display: block;
+  --da-navy: #0B1B3F;
+  --da-navy-2: #12285A;
+  --da-yellow: #FFC107;
+  --da-yellow-2: #FFB300;
+  --da-ink: #0F172A;
+  --da-muted: #475569;
+  --da-line: #E2E8F0;
+  background: #F4F6FB;
+  font-family: var(--sh-font-body, 'Inter', system-ui, sans-serif);
+}
+
+.da-wrap { max-width: 1100px; margin-inline: auto; padding-inline: 16px; }
+
+/* ---------- hero ---------- */
+.da-hero {
+  position: relative;
+  overflow: hidden;
+  background: radial-gradient(circle at 85% 10%, rgba(255, 193, 7, 0.22), transparent 45%),
+              linear-gradient(160deg, var(--da-navy) 0%, var(--da-navy-2) 100%);
+  color: #fff;
+  padding-block: clamp(3rem, 8vw, 6rem);
+}
+.da-hero .da-wrap { position: relative; }
+
+.da-langs {
+  position: absolute; top: -1.5rem; right: 16px;
+  display: inline-flex; gap: 4px; padding: 4px;
+  border-radius: 999px; background: rgba(255, 255, 255, 0.1);
+}
+.da-langs button {
+  border: 0; background: transparent; color: #CBD5E1;
+  font-weight: 800; font-size: .85rem; padding: 6px 14px; border-radius: 999px; cursor: pointer;
+}
+.da-langs button.on { background: #fff; color: var(--da-navy); }
+
+.da-eyebrow {
+  display: inline-block; padding: 6px 14px; border-radius: 999px;
+  border: 1px solid rgba(255, 193, 7, .5); color: var(--da-yellow);
+  font-weight: 800; font-size: .85rem; letter-spacing: .04em; text-transform: uppercase;
+}
+.da-hero h1 {
+  font-family: var(--sh-font-display, 'Manrope', sans-serif);
+  font-weight: 900;
+  font-size: clamp(2.6rem, 8vw, 5.5rem);
+  line-height: 1.02;
+  letter-spacing: -0.035em;
+  margin: 1.25rem 0 1.25rem;
+  color: #fff;
+}
+.da-hl { color: var(--da-yellow); }
+.da-lead { max-width: 720px; font-size: clamp(1.1rem, 2.2vw, 1.35rem); line-height: 1.6; color: #E2E8F0; margin: 0; }
+
+.da-apps-label { margin: 2rem 0 .75rem; font-weight: 800; font-size: .9rem; text-transform: uppercase; letter-spacing: .06em; color: #94A3B8; }
+.da-apps { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 2rem; }
+.da-app {
+  display: flex; align-items: center; gap: 12px;
+  padding: 10px 20px 10px 10px; border-radius: 999px;
+  background: rgba(255, 255, 255, .08); border: 1px solid rgba(255, 255, 255, .14);
+}
+.da-app strong { display: block; font-size: 1.05rem; font-weight: 800; color: #fff; }
+.da-app small { color: #94A3B8; font-family: var(--sh-font-mono, monospace); font-size: .8rem; }
+.da-app__ic {
+  width: 44px; height: 44px; flex: none; display: grid; place-items: center;
+  border-radius: 50%; background: var(--da-yellow); color: var(--da-navy); font-size: 1.1rem;
+}
+
+/* ---------- buttons / pills ---------- */
+.da-btn {
+  display: inline-flex; align-items: center; gap: 10px;
+  padding: 16px 28px; border-radius: 999px;
+  font-weight: 900; font-size: 1.1rem; text-decoration: none;
+  transition: transform 150ms, background-color 150ms;
+}
+.da-btn:hover { transform: translateY(-2px); }
+.da-btn--yellow { background: var(--da-yellow); color: var(--da-navy); }
+.da-btn--yellow:hover { background: var(--da-yellow-2); color: var(--da-navy); }
+.da-btn--navy { background: var(--da-navy); color: #fff; }
+.da-btn--navy:hover { background: var(--da-navy-2); color: #fff; }
+
+.da-pill {
+  display: inline-block; padding: 8px 16px; border-radius: 999px;
+  background: #EEF2FF; color: var(--da-navy); font-weight: 900; font-size: .95rem;
+}
+.da-pill--yellow { background: var(--da-yellow); }
+
+/* ---------- body ---------- */
+.da-main { padding-block: clamp(2.5rem, 6vw, 4.5rem); }
+.da-h2 {
+  font-family: var(--sh-font-display, 'Manrope', sans-serif);
+  font-weight: 900; font-size: clamp(2rem, 5vw, 3.25rem);
+  letter-spacing: -0.03em; color: var(--da-ink); margin: 0 0 1.5rem;
+  scroll-margin-top: 90px;
+}
+.da-grid { display: grid; gap: 20px; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); margin-bottom: 20px; }
+.da-grid--3 { grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
+
+.da-card {
+  background: #fff; border: 1px solid var(--da-line); border-radius: 24px;
+  padding: clamp(1.25rem, 3vw, 2rem);
+  box-shadow: 0 10px 30px rgba(15, 23, 42, .06);
+}
+.da-card p { font-size: 1.08rem; line-height: 1.65; color: var(--da-muted); margin: 1rem 0; }
+.da-card h3 { font-size: 1.4rem; font-weight: 900; color: var(--da-ink); margin: 0 0 1rem; display: flex; align-items: center; gap: 10px; }
+.da-card--dark { background: linear-gradient(160deg, var(--da-navy), var(--da-navy-2)); border: 0; }
+.da-card--dark p { color: #E2E8F0; }
+.da-card--wide { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 20px; scroll-margin-top: 90px; }
+.da-card--wide > div { flex: 1 1 380px; }
+.da-card--wide p { margin: 0; }
+
+/* ---- Shnell Driver "bids flow" language: job card, tags, route, amount ---- */
+.da-card--job { padding: 0; overflow: hidden; border-radius: 22px; }
+.da-job-head {
+  padding: 18px 22px 16px;
+  background: linear-gradient(135deg, rgba(14, 122, 95, .12), rgba(14, 122, 95, .03));
+  border-bottom: 1px solid rgba(14, 122, 95, .15);
+}
+.da-job-head h3 { margin: 12px 0 0; }
+.da-tag {
+  display: inline-flex; align-items: center; gap: 6px; margin-right: 6px;
+  padding: 4px 10px; border-radius: 8px;
+  font-size: .75rem; font-weight: 800; letter-spacing: .04em; text-transform: uppercase;
+  color: #0E7A5F; background: rgba(14, 122, 95, .1);
+}
+.da-tag--filled { background: #0E7A5F; color: #fff; }
+
+.da-route { list-style: none; margin: 0; padding: 20px 22px 24px; }
+.da-route li { position: relative; display: flex; gap: 14px; padding-bottom: 18px; }
+.da-route li.last { padding-bottom: 0; }
+.da-route li:not(.last)::before {          /* connector line */
+  content: ""; position: absolute; left: 6px; top: 18px; bottom: -2px; width: 2px; background: #CBD5E1;
+}
+.da-route__dot {
+  flex: none; width: 14px; height: 14px; margin-top: 5px; border-radius: 3px;
+  border: 3px solid #0E7A5F; background: #fff; position: relative; z-index: 1;
+}
+.da-route li.first .da-route__dot { border-radius: 50%; background: var(--da-yellow); border-color: var(--da-yellow-2); }
+.da-route li.last .da-route__dot { background: #0E7A5F; }
+.da-route__txt { font-size: 1.12rem; line-height: 1.5; color: var(--da-ink); font-weight: 600; }
+.da-route__txt b { font-weight: 900; color: var(--da-navy); }
+
+.da-amount {
+  display: flex; flex-direction: column; align-items: center;
+  padding: 18px 12px 14px; border-radius: 22px;
+  background: rgba(255, 193, 7, .14); border: 1.6px solid rgba(255, 179, 0, .45);
+}
+.da-amount__val {
+  font-size: 4rem; line-height: 1.05; font-weight: 900; color: var(--da-navy);
+  font-variant-numeric: tabular-nums; letter-spacing: -0.03em;
+}
+.da-amount__unit { font-size: .85rem; font-weight: 800; letter-spacing: .12em; color: var(--da-muted); }
+
+.da-contact { font-size: 1rem !important; }
+.da-contact a { color: var(--da-yellow); font-weight: 800; text-decoration: none; word-break: break-word; }
+
+.da-list { margin: 0; padding-left: 1.2rem; }
+.da-list li { font-size: 1.04rem; line-height: 1.6; color: var(--da-muted); margin-bottom: .55rem; }
+.da-ic { width: 40px; height: 40px; display: inline-grid; place-items: center; border-radius: 12px; background: #FFF8E1; color: #B7791F; font-size: 1rem; }
+.da-ic--red { background: #FEE2E2; color: #DC2626; }
+
+.da-foot { margin-top: 2.5rem; text-align: center; color: var(--da-muted); line-height: 1.8; }
+.da-foot a { color: var(--da-navy); font-weight: 900; font-size: 1.1rem; }

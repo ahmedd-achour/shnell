@@ -1,0 +1,98 @@
+<div class="da">
+
+  <!-- Dark hero -->
+  <header class="da-hero">
+    <div class="da-wrap">
+      <div class="da-langs" role="group" aria-label="Language">
+        <button type="button" [class.on]="lang === 'fr'" (click)="setLang('fr')">FR</button>
+        <button type="button" [class.on]="lang === 'en'" (click)="setLang('en')">EN</button>
+      </div>
+
+      <span class="da-eyebrow">{{ t.eyebrow }}</span>
+      <h1>{{ t.title1 }}<br><span class="da-hl">{{ t.title2 }}</span></h1>
+      <p class="da-lead">{{ t.lead }}</p>
+
+      <p class="da-apps-label">{{ t.appsLabel }}</p>
+      <div class="da-apps">
+        <div class="da-app" *ngFor="let a of apps">
+          <span class="da-app__ic"><i [class]="a.icon"></i></span>
+          <span>
+            <strong>{{ a.name }}</strong>
+            <small>{{ a.pkg }}</small>
+          </span>
+        </div>
+      </div>
+
+      <a class="da-btn da-btn--yellow" href="#how">
+        <i class="fa-solid fa-user-xmark"></i> {{ t.cta }}
+      </a>
+    </div>
+  </header>
+
+  <main class="da-wrap da-main">
+
+    <h2 id="how" class="da-h2">{{ t.howTitle }}</h2>
+    <div class="da-grid">
+      <section class="da-card da-card--job">
+        <div class="da-job-head">
+          <span class="da-tag da-tag--filled"><i class="fa-solid fa-mobile-screen"></i> {{ lang === 'fr' ? 'Rapide' : 'Fast' }}</span>
+          <span class="da-tag"><i class="fa-solid fa-gift"></i> {{ lang === 'fr' ? 'Gratuit' : 'Free' }}</span>
+          <h3>{{ t.opt1 }}</h3>
+        </div>
+        <!-- route timeline, like pickup → drop-off on a job card -->
+        <ol class="da-route">
+          <li *ngFor="let s of t.steps; let i = index; let last = last" [class.first]="i === 0" [class.last]="last">
+            <span class="da-route__dot"></span>
+            <span class="da-route__txt"><b>{{ i + 1 }}.</b> {{ s }}</span>
+          </li>
+        </ol>
+      </section>
+
+      <section class="da-card da-card--dark">
+        <span class="da-pill da-pill--yellow">{{ t.opt2 }}</span>
+        <p>{{ t.opt2Text }}</p>
+        <a class="da-btn da-btn--yellow" [href]="mailto('account')">
+          <i class="fa-solid fa-envelope"></i> {{ t.opt2Btn }}
+        </a>
+        <p class="da-contact">
+          <a [href]="'mailto:' + email">{{ email }}</a><br>
+          {{ t.orCall }} <a href="tel:+21628292024">{{ phone }}</a>
+        </p>
+      </section>
+    </div>
+
+    <div class="da-grid da-grid--3">
+      <section class="da-card">
+        <h3><i class="fa-solid fa-trash-can da-ic da-ic--red"></i> {{ t.delTitle }}</h3>
+        <ul class="da-list"><li *ngFor="let d of t.deleted">{{ d }}</li></ul>
+      </section>
+      <section class="da-card">
+        <h3><i class="fa-solid fa-box-archive da-ic"></i> {{ t.keptTitle }}</h3>
+        <ul class="da-list"><li *ngFor="let k of t.kept">{{ k }}</li></ul>
+      </section>
+      <section class="da-card">
+        <h3><i class="fa-solid fa-clock da-ic"></i> {{ t.delayTitle }}</h3>
+        <div class="da-amount">
+          <span class="da-amount__val">30</span>
+          <span class="da-amount__unit">{{ lang === 'fr' ? 'JOURS MAX.' : 'DAYS MAX.' }}</span>
+        </div>
+        <p>{{ t.delay }}</p>
+      </section>
+    </div>
+
+    <section id="data" class="da-card da-card--wide">
+      <div>
+        <h3>{{ t.partTitle }}</h3>
+        <p>{{ t.partText }}</p>
+      </div>
+      <a class="da-btn da-btn--navy" [href]="mailto('data')">
+        <i class="fa-solid fa-eraser"></i> {{ t.partBtn }}
+      </a>
+    </section>
+
+    <p class="da-foot">
+      <a routerLink="/privacy-policy">{{ t.privacy }} →</a><br>
+      {{ t.footer }}
+    </p>
+  </main>
+</div>

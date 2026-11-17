@@ -23,6 +23,7 @@ import { FooterComponent } from './components/footer/footer.component';
 import { ServiceComponent } from './components/service/service.component';
 import { ContactComponent } from './components/contact/contact.component';
 import { PrivacyPolicyComponent } from './components/privacy-policy/privacy-policy.component';
+import { DeleteAccountComponent } from './components/delete-account/delete-account.component';
 import { BlogComponent } from './components/blog/blog.component';
 
 import { HeaderComponent } from './components/header/header.component';
@@ -65,6 +66,7 @@ export function playerFactory() {
     ServiceComponent,
     ContactComponent,
     PrivacyPolicyComponent,
+    DeleteAccountComponent,
     BlogComponent,
     PartnerdashComponent,
     SidebarComponent,

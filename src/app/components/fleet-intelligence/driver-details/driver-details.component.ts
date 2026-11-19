@@ -273,7 +273,9 @@ export class DriverDetailsComponent implements OnInit, OnDestroy {
 
     if (v.type) {
       const t = v.type.toLowerCase().trim();
-      if (t.includes('medium_heavy')) return 'assets/trucks/medium_heavy.png';
+      if (t.includes('tow') || t.includes('depann') || t.includes('dépann')) return 'assets/trucks/tow_truck.png';
+      if (t.includes('tow') || t.includes('depann') || t.includes('dépann')) return 'assets/trucks/tow_truck.png';
+    if (t.includes('medium_heavy')) return 'assets/trucks/medium_heavy.png';
       if (t.includes('super_heavy')) return 'assets/trucks/super_heavy.png';
       if (t.includes('light') || t.includes('voiture') || t.includes('car')) return 'assets/trucks/light.png';
       if (t.includes('heavy')) return 'assets/trucks/heavy.png';
@@ -288,6 +290,7 @@ export class DriverDetailsComponent implements OnInit, OnDestroy {
   getTruckTypeAsset(type?: string): string {
     if (!type) return 'assets/trucks/medium.png';
     const t = type.toLowerCase().trim();
+    if (t.includes('tow') || t.includes('depann') || t.includes('dépann')) return 'assets/trucks/tow_truck.png';
     if (t.includes('medium_heavy')) return 'assets/trucks/medium_heavy.png';
     if (t.includes('super_heavy')) return 'assets/trucks/super_heavy.png';
     if (t.includes('light') || t.includes('voiture') || t.includes('car')) return 'assets/trucks/light.png';

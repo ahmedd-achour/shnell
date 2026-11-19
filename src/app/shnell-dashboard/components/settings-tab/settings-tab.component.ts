@@ -45,7 +45,7 @@ export class SettingsTabComponent implements OnInit, OnDestroy {
   stopBands: PricingBand[] = [];
   parcelBands: PricingBand[] = [];
 
-  vehicleTypesList: string[] = ['super_light', 'light', 'medium', 'medium_heavy', 'heavy', 'super_heavy', 'popular'];
+  vehicleTypesList: string[] = ['super_light', 'light', 'medium', 'medium_heavy', 'heavy', 'super_heavy', 'popular', 'tow_truck'];
   vehicleSettingsData: Record<string, VehicleSettings> = {};
 
   /** Per-vehicle, per-country pricing rows, edited in the UI then folded into

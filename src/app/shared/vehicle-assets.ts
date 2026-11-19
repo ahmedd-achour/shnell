@@ -5,7 +5,7 @@
  */
 const KNOWN = [
   'super_light', 'light', 'light_medium', 'medium',
-  'medium_heavy', 'heavy', 'super_heavy', 'popular', 'isuzu'
+  'medium_heavy', 'heavy', 'super_heavy', 'popular', 'isuzu', 'tow_truck'
 ];
 
 export const VEHICLE_IMAGE_FALLBACK = 'assets/trucks/medium.png';
@@ -13,6 +13,7 @@ export const VEHICLE_IMAGE_FALLBACK = 'assets/trucks/medium.png';
 export function vehicleImage(key: string | null | undefined): string {
   const k = (key || '').toLowerCase().trim().replace(/\s+/g, '_');
   if (KNOWN.includes(k)) return `assets/trucks/${k}.png`;
+  if (k.includes('tow') || k.includes('depann') || k.includes('dépann')) return 'assets/trucks/tow_truck.png';
   if (k.includes('super_heavy')) return 'assets/trucks/super_heavy.png';
   if (k.includes('medium_heavy')) return 'assets/trucks/medium_heavy.png';
   if (k.includes('heavy')) return 'assets/trucks/heavy.png';

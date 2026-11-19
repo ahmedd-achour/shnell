@@ -477,7 +477,7 @@ export class BizService {
 
 export function vehicleImage(key: string): string {
   const k = (key || '').toLowerCase();
-  const known = ['super_light', 'light', 'light_medium', 'medium', 'medium_heavy', 'heavy', 'super_heavy', 'popular', 'isuzu'];
+  const known = ['super_light', 'light', 'light_medium', 'medium', 'medium_heavy', 'heavy', 'super_heavy', 'popular', 'isuzu', 'tow_truck'];
   if (known.includes(k)) return `assets/trucks/${k}.png`;
   if (k.includes('super_heavy')) return 'assets/trucks/super_heavy.png';
   if (k.includes('medium_heavy')) return 'assets/trucks/medium_heavy.png';

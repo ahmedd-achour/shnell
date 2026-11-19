@@ -81,7 +81,7 @@ export class DispatchOrderTabComponent implements OnInit, AfterViewInit, OnDestr
     'Heavy Straps', 'Moving Blankets', 'Hand Truck / Trolley',
     'Extra Helper / Loader', 'Packaging Boxes', 'Disassembly Tools'
   ];
-  vehicleTypeList: string[] = ['super_light', 'light', 'medium', 'medium_heavy', 'heavy', 'super_heavy', 'popular'];
+  vehicleTypeList: string[] = ['super_light', 'light', 'medium', 'medium_heavy', 'heavy', 'super_heavy', 'popular', 'tow_truck'];
 
   driverSearchQuery = '';
   isSubmitting = false;

@@ -56,3 +56,14 @@ details[open] > summary::before { transform: rotate(90deg); }
   background: rgba(245, 159, 0, 0.08);
 }
 .demo-switch { width: 2.6em; height: 1.4em; cursor: pointer; }
+
+/* Client app services: one tile per service, dimmed when closed. */
+.service-toggle {
+  border: 1px solid var(--bs-border-color);
+  border-radius: 14px;
+  padding: 12px 14px;
+  transition: opacity 0.2s ease, background 0.2s ease;
+}
+.service-toggle--off { opacity: 0.55; background: rgba(0, 0, 0, 0.03); }
+.service-toggle__img { width: 64px; height: 40px; object-fit: contain; flex-shrink: 0; }
+.min-w-0 { min-width: 0; }

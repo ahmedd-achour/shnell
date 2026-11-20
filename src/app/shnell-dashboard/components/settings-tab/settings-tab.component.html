@@ -41,6 +41,43 @@
       </div>
     </div>
 
+    <!-- ============ CLIENT APP SERVICES ============ -->
+    <div class="col-12">
+      <div class="card dashboard-card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <h6 class="mb-0 fw-bold"><i class="bi bi-grid-3x3-gap-fill me-2 text-brand"></i>Client app services</h6>
+          <code class="fs-9 text-muted">settings/config.client_services</code>
+        </div>
+        <div class="card-body">
+          <div class="fs-8 text-muted mb-3">
+            The services on the client app's home screen. A switch applies <b>at once</b> to every open app, no update
+            needed: a closed service disappears from the row, and the server refuses its quotes (older apps too).
+            With a single service open, the row is hidden. At least one service stays open.
+          </div>
+          <div class="row g-3">
+            <div class="col-12 col-md-4" *ngFor="let s of clientServiceList">
+              <div class="service-toggle d-flex align-items-center gap-3" [class.service-toggle--off]="!clientServices[s.id]">
+                <img [src]="s.image" [alt]="s.label" class="service-toggle__img" />
+                <div class="flex-grow-1 min-w-0">
+                  <div class="fw-bold">{{ s.label }}</div>
+                  <div class="fs-9 text-muted">{{ s.hint }}</div>
+                </div>
+                <div class="form-check form-switch m-0 flex-shrink-0">
+                  <input #sw class="form-check-input" type="checkbox" role="switch" [id]="'svc_' + s.id"
+                         [checked]="clientServices[s.id]" [disabled]="savingService !== null"
+                         (change)="toggleClientService(s.id, sw.checked, sw)" />
+                  <label class="form-check-label fs-8 fw-bold" [for]="'svc_' + s.id" [class.text-success]="clientServices[s.id]">
+                    <span *ngIf="savingService === s.id" class="spinner-border spinner-border-sm me-1"></span>
+                    {{ clientServices[s.id] ? 'OPEN' : 'CLOSED' }}
+                  </label>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- ============ STRATEGIC CONTROLS ============ -->
     <div class="col-12">
       <div class="card dashboard-card">

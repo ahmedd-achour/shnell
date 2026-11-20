@@ -529,6 +529,12 @@ export class DashboardDataService {
     await this.adminCall('adminUpdateAccount', { userId, accType });
   }
 
+  /** Client app home services (settings/config.client_services). The app
+   *  hides a closed one live and quoteTrip refuses it (functions/lib/client_services.js). */
+  async setClientServices(services: Record<'freight' | 'towing' | 'parcel', boolean>): Promise<void> {
+    await this.adminCall('adminSaveSettings', { docId: 'config', data: { client_services: services } });
+  }
+
   async updateConfigParams(params: {
     version_customer_app?: string;
     version_driver_app?: string;

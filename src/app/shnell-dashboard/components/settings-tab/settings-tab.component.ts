@@ -22,6 +22,8 @@ export const DEFAULT_REACH_TEXT =
   'Shnell t3lmek enou famma offre 9rib menek tawa 🚚\n' +
   'Choufha 9bal ma y9blha chauffeur a5er w temchi 3lik! 👉 https://play.google.com/store/apps/details?id=com.shnell.shnell_driver';
 
+type ClientServiceId = 'freight' | 'towing' | 'parcel';
+
 @Component({
   selector: 'app-settings-tab',
   standalone: true,
@@ -38,6 +40,15 @@ export class SettingsTabComponent implements OnInit, OnDestroy {
   reachLog: any[] = [];
   demoMode = false;
   savingDemo = false;
+
+  /** Client app home row (settings/config.client_services): live on/off. */
+  readonly clientServiceList: { id: ClientServiceId; label: string; hint: string; image: string }[] = [
+    { id: 'freight', label: 'Marchandises', hint: 'Truck rental, moving, construction, appliances…', image: 'assets/services/freight.png' },
+    { id: 'towing', label: 'Remorquage', hint: 'Breakdown or accident: tow truck only', image: 'assets/services/towing.png' },
+    { id: 'parcel', label: 'Colis', hint: 'Parcels: scooter up to large van', image: 'assets/services/parcel.png' },
+  ];
+  clientServices: Record<ClientServiceId, boolean> = { freight: true, towing: true, parcel: true };
+  savingService: ClientServiceId | null = null;
   vehicleForms: Record<string, FormGroup> = {};
 
   /** Editable rows for the three pricing bands — mirrors `vehiclePricing`'s row-array pattern. */
@@ -132,6 +143,33 @@ export class SettingsTabComponent implements OnInit, OnDestroy {
       toastError('Failed to switch demo mode');
     } finally {
       this.savingDemo = false;
+    }
+  }
+
+  get openServiceCount(): number {
+    return Object.values(this.clientServices).filter(Boolean).length;
+  }
+
+  /** Opens / closes one service of the client app, live (no app update). */
+  async toggleClientService(id: ClientServiceId, on: boolean, input: HTMLInputElement): Promise<void> {
+    if (!on && this.openServiceCount <= 1) {
+      input.checked = true;
+      toastError('At least one service must stay open');
+      return;
+    }
+    const next = { ...this.clientServices, [id]: on };
+    this.savingService = id;
+    try {
+      await this.dashboardDataService.setClientServices(next);
+      this.clientServices = next;
+      const name = this.clientServiceList.find((s) => s.id === id)?.label || id;
+      toastSuccess(on ? `${name} is open in the client app` : `${name} is closed in the client app`);
+    } catch (err) {
+      console.error('Client services error:', err);
+      input.checked = !on;
+      toastError('Failed to update the service');
+    } finally {
+      this.savingService = null;
     }
   }
 
@@ -238,6 +276,8 @@ export class SettingsTabComponent implements OnInit, OnDestroy {
               update_link_driver_app: configDoc.update_link_driver_app || ''
             });
             this.demoMode = configDoc.demo_mode_enabled === true;
+            const cs = configDoc.client_services || {};
+            this.clientServices = { freight: cs.freight !== false, towing: cs.towing !== false, parcel: cs.parcel !== false };
             // Don't overwrite what the admin is editing on a live update.
             if (!this.strategicForm.dirty) {
               this.strategicForm.patchValue({
